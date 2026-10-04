@@ -328,9 +328,9 @@ class TestSandbox:
                 f = open('secret.txt', 'r')
                 return None
         """)
-        strategy = sb.load_strategy(code)
-        df = _make_df(50)
-        with pytest.raises(Exception):  # NameError or SandboxError
+        with pytest.raises(Exception):
+            strategy = sb.load_strategy(code)
+            df = _make_df(50)
             strategy.on_bar(df)
 
     def test_exec_blocked(self, base_cfg):
@@ -342,13 +342,13 @@ class TestSandbox:
                 exec("import os")
                 return None
         """)
-        strategy = sb.load_strategy(code)
-        df = _make_df(50)
         with pytest.raises(Exception):
+            strategy = sb.load_strategy(code)
+            df = _make_df(50)
             strategy.on_bar(df)
 
     def test_runtime_import_blocked(self, base_cfg):
-        from core.sandbox import Sandbox, SandboxImportError
+        from core.sandbox import Sandbox, SandboxImportError, SandboxError
         sb = Sandbox(base_cfg)
         # Use __import__ in on_bar (bypasses static scan since the string is runtime)
         code = textwrap.dedent("""
@@ -357,9 +357,9 @@ class TestSandbox:
                 subprocess = __import__('subprocess')
                 return None
         """)
-        strategy = sb.load_strategy(code)
-        df = _make_df(50)
-        with pytest.raises(SandboxImportError):
+        with pytest.raises((SandboxImportError, SandboxError)):
+            strategy = sb.load_strategy(code)
+            df = _make_df(50)
             strategy.on_bar(df)
 
     def test_no_on_bar_method_rejected(self, base_cfg):

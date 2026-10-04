@@ -187,42 +187,30 @@ class _LookaheadVisitor(ast.NodeVisitor):
 
 
 def static_scan(source: str, allowed_imports: set[str] | None = None) -> StaticScanResult:
-    """Run all static checks on strategy source code.
+    """Run all static checks on strategy source code using the hardened AST policy.
 
     Returns StaticScanResult. passed=True means no errors (warnings are OK).
     """
-    if allowed_imports is None:
-        allowed_imports = ALLOWED_IMPORTS
+    from sandbox.policy import validate_ast_policy
 
-    violations: list[LookaheadViolation] = []
-    banned: list[str] = []
+    policy_res = validate_ast_policy(source, allowed_imports=allowed_imports)
 
-    # 1. Parse AST
-    try:
-        tree = ast.parse(source)
-    except SyntaxError as e:
-        return StaticScanResult(
-            passed=False,
-            violations=[LookaheadViolation(
-                line=e.lineno or 0, col=e.offset or 0,
-                pattern="syntax_error", detail=str(e),
-            )],
-            summary="Code has syntax errors.",
+    violations: list[LookaheadViolation] = [
+        LookaheadViolation(
+            line=v.line,
+            col=v.col,
+            pattern=v.pattern,
+            detail=v.detail,
+            severity=v.severity,
         )
+        for v in policy_res.violations
+    ]
 
-    # 2. AST walk
-    visitor = _LookaheadVisitor()
-    visitor.visit(tree)
-    violations.extend(visitor.violations)
-    banned.extend(visitor.banned_imports)
-
-    # 3. Source-level regex patterns
+    # Source-level regex patterns for advisory warnings
     for i, line in enumerate(source.splitlines(), 1):
         for pattern, detail in SOURCE_PATTERNS:
             if re.search(pattern, line):
-                # Don't double-report things already caught by AST
-                if not any(v.line == i and v.pattern in ("shift_negative", "banned_import")
-                           for v in violations):
+                if not any(v.line == i for v in violations):
                     violations.append(LookaheadViolation(
                         line=i, col=0, pattern="regex_match",
                         detail=detail, severity="warning",
@@ -242,7 +230,7 @@ def static_scan(source: str, allowed_imports: set[str] | None = None) -> StaticS
     return StaticScanResult(
         passed=passed,
         violations=violations,
-        banned_imports=banned,
+        banned_imports=policy_res.banned_imports,
         summary=summary,
     )
 
