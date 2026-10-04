@@ -114,10 +114,12 @@ class Orchestrator:
         self._sandbox = Sandbox(cfg)
         self._db = get_db(mongo_db_name(cfg))
 
-        # Track past ideas for diversity
+        # Track past ideas and diversity system (Phase F9)
         self._past_ideas: list[str] = []
         self._past_failures: list[str] = []
         self._trial_count = 0
+        from strategy.diversity import DiversityRegistry
+        self._diversity = DiversityRegistry(cfg)
 
     def run_trial(self, timeframe: str = "1h") -> TrialRecord:
         """Run a single trial: ideate → generate → validate → backtest → gate."""
@@ -140,10 +142,38 @@ class Orchestrator:
             record.strategy_name = idea.get("name", "unnamed")
             self._past_ideas.append(record.strategy_name)
 
+            # Diversity Gate: Logic Fingerprint check before backtest
+            dup_res = self._diversity.check_logic_fingerprint(record.strategy_name, idea)
+            if dup_res.is_duplicate:
+                self._trial_count = max(0, self._trial_count - 1)
+                record.status = "rejected"
+                record.rejected_at = "logic_duplicate"
+                record.error_message = dup_res.reason
+                self._past_failures.append(f"{record.strategy_name}: duplicate of {dup_res.duplicate_of}")
+                return self._finish(record, t0)
+
             # ── Step 2: Generate code ───────────────────────────────────
             code = self._generate_code(idea, timeframe)
             record.source_code = code
             record.source_hash = hashlib.sha256(code.encode()).hexdigest()[:16]
+
+            # Diversity Gate: Code Structure check
+            is_struct_dup, struct_dup_of, struct_sim = self._diversity.check_code_structure(code)
+            if is_struct_dup:
+                record.status = "rejected"
+                record.rejected_at = "code_structure_duplicate"
+                record.error_message = f"High AST structural similarity ({struct_sim:.2f}) with {struct_dup_of}"
+                self._past_failures.append(f"{record.strategy_name}: structural duplicate of {struct_dup_of}")
+                return self._finish(record, t0)
+
+            # Diversity Gate: Semantic check
+            is_sem_dup, sem_dup_of, sem_sim = self._diversity.check_semantic_similarity(idea)
+            if is_sem_dup:
+                record.status = "rejected"
+                record.rejected_at = "semantic_duplicate"
+                record.error_message = f"High semantic similarity ({sem_sim:.2f}) with {sem_dup_of}"
+                self._past_failures.append(f"{record.strategy_name}: semantic duplicate of {sem_dup_of}")
+                return self._finish(record, t0)
 
             # ── Step 3: Static scan ─────────────────────────────────────
             code = self._scan_and_fix(code, record)
@@ -170,12 +200,48 @@ class Orchestrator:
             record.status = pipeline_res.status
             record.rejected_at = pipeline_res.stopped_at
 
+            cell = (
+                str(idea.get("concept_family", "momentum")).lower(),
+                timeframe,
+                str(idea.get("session", "all")).lower(),
+                str(idea.get("regime", "all")).lower(),
+            )
+
             if not pipeline_res.all_passed:
                 self._past_failures.append(f"{record.strategy_name}: failed {pipeline_res.stopped_at}")
+                self._diversity.coverage_map.record_attempt(cell, passed=False)
+                return self._finish(record, t0)
+
+            # Diversity Gate: Behavioural redundancy check
+            from strategy.diversity import check_behavioural_similarity
+            cand_ret = pipeline_res.train_result.daily_returns if pipeline_res.train_result else None
+            is_redundant = False
+            if cand_ret is not None:
+                for cid, cdata in self._diversity.strategies.items():
+                    stored_ret = cdata.get("daily_returns")
+                    if stored_ret is not None:
+                        b_check = check_behavioural_similarity(cand_ret, stored_ret)
+                        if b_check.is_redundant:
+                            is_redundant = True
+                            record.status = "redundant"
+                            record.rejected_at = "behavioural_redundancy"
+                            record.error_message = f"Redundant with {cid}: {b_check.reason}"
+                            self._past_failures.append(f"{record.strategy_name}: redundant with {cid}")
+                            break
+
+            if is_redundant:
+                self._diversity.coverage_map.record_attempt(cell, passed=False)
                 return self._finish(record, t0)
 
             # Promoted to candidate (unproven)
             record.status = "candidate"
+            self._diversity.register_strategy(
+                record.strategy_name,
+                spec=idea,
+                source=code,
+                daily_returns=cand_ret,
+            )
+            self._diversity.coverage_map.record_attempt(cell, passed=True)
             return self._finish(record, t0)
 
         except LLMRateLimitError as e:

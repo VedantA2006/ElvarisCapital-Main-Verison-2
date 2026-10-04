@@ -202,6 +202,12 @@ diversity:
   fingerprint_cosine_threshold: 0.88
   behavior_correlation_threshold: 0.70
   trade_overlap_threshold: 0.70
+  code_structure_threshold: 0.85
+  semantic_similarity_threshold: 0.80
+  coverage_map:
+    max_consecutive_failures: 5
+    cooling_cycles: 20
+    exploration_rate: 0.20
 
 # ─── LLM ─────────────────────────────────────────────────────────────────
 llm:
