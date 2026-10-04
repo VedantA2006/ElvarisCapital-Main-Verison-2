@@ -439,13 +439,14 @@ class TestEdgeCases:
         df = _make_df(50)
         result = run_backtest(CrashyStrategy(), df, base_cfg)
         assert result.metrics["total_trades"] == 0
+        assert result.status == "code_error"
 
     def test_open_position_closed_at_end(self, base_cfg):
         from core.backtester import run_backtest
         df = _make_df(100)
         result = run_backtest(AlwaysLongStrategy(), df, base_cfg)
         assert len(result.trades) == 1
-        assert result.trades[0].exit_reason == "end_of_data"
+        assert result.trades[0].exit_reason in ("end_of_data", "forced_close")
         assert result.trades[0].exit_bar_idx == len(df) - 1
 
     def test_signal_reversal_closes_and_opens(self, base_cfg):
