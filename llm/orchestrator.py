@@ -45,8 +45,12 @@ from llm.prompts import (
     code_fix_prompt, lookahead_fix_prompt,
 )
 from storage.mongo import get_db
+from core.config import mongo_db_name
 
 from scipy import stats as sp_stats
+
+import logging
+_log = logging.getLogger("quantforge.orchestrator")
 
 
 @dataclass
@@ -86,7 +90,15 @@ class TrialRecord:
         d = {k: v for k, v in asdict(self).items() if v is not None}
         d["started_at"] = self.started_at
         d["finished_at"] = self.finished_at
-        return d
+        return _stringify_keys(d)
+
+
+def _stringify_keys(obj: Any) -> Any:
+    if isinstance(obj, dict):
+        return {str(k): _stringify_keys(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_stringify_keys(x) for x in obj]
+    return obj
 
 
 class Orchestrator:
@@ -100,7 +112,7 @@ class Orchestrator:
         self._cfg = cfg
         self._llm = LLMClient(cfg)
         self._sandbox = Sandbox(cfg)
-        self._db = get_db(cfg.get("mongo", {}).get("database", "quantforge"))
+        self._db = get_db(mongo_db_name(cfg))
 
         # Track past ideas for diversity
         self._past_ideas: list[str] = []
@@ -314,21 +326,22 @@ class Orchestrator:
         record.finished_at = datetime.now(timezone.utc)
         record.wall_seconds = round(time.perf_counter() - t0, 2)
 
-        # Persist to MongoDB
-        try:
-            col = self._db["trials"]
-            col.insert_one(record.to_doc())
-        except Exception:
-            pass  # Don't crash the loop on DB errors
+        # Persist to MongoDB — errors MUST surface (ORCH-3).
+        from storage.mongo import increment_trial_counter
+        col = self._db["runs"]
+        col.insert_one(record.to_doc())
+        increment_trial_counter()
 
         self._trial_count += 1
         return record
 
     def _get_trial_count(self) -> int:
         """Get total trials from MongoDB for DSR calculation."""
+        from storage.mongo import get_trial_count
         try:
-            return self._db["trials"].count_documents({})
+            return get_trial_count()
         except Exception:
+            _log.warning("could not read trial count from Mongo, using in-memory count")
             return self._trial_count
 
 
@@ -393,7 +406,7 @@ def update_leaderboard(record: TrialRecord, cfg: dict) -> dict[str, Any]:
     if record.status != "survived":
         return {"error": "Only survived strategies go on the leaderboard"}
 
-    db = get_db(cfg.get("mongo", {}).get("database", "quantforge"))
+    db = get_db(mongo_db_name(cfg))
     score = compute_robustness_score(record, cfg)
 
     entry = {

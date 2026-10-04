@@ -1,0 +1,37 @@
+# QuantForge: Autonomous Strategy Discovery Engine
+# Core dependencies — pin majors, allow patches.
+
+# Data
+pandas>=2.1,<3
+numpy>=1.26,<3
+scipy>=1.11,<2
+numba>=0.58,<1
+scikit-learn>=1.3,<2
+
+# Config / secrets
+PyYAML>=6,<7
+python-dotenv>=1,<2
+pydantic>=2,<3
+
+# MongoDB
+pymongo>=4.6,<5
+
+# LLM API
+requests>=2.31,<3
+httpx>=0.25,<1
+tenacity>=8.2,<10
+tiktoken>=0.5,<1
+
+# Dashboard
+Jinja2>=3.1,<4
+
+# CLI / UX
+rich>=13,<16
+
+# Process control
+psutil>=5.9,<7
+
+# Dev / test
+pytest>=7.4,<10
+pytest-timeout>=2.2,<3
+mongomock>=4.1,<5

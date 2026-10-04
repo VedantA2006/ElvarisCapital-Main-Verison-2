@@ -7,6 +7,7 @@ Secrets come from .env only. Never log or expose the connection string.
 
 from __future__ import annotations
 
+import logging
 import os
 from datetime import datetime, timezone
 
@@ -15,6 +16,8 @@ from pymongo import MongoClient, ASCENDING, DESCENDING, IndexModel, ReturnDocume
 from pymongo.collection import Collection
 from pymongo.database import Database
 from pymongo.errors import DuplicateKeyError
+
+_log = logging.getLogger("quantforge.mongo")
 
 
 _client: MongoClient | None = None
@@ -75,7 +78,16 @@ def col_key_status() -> Collection:
     return get_db()["key_status"]
 
 def col_trials() -> Collection:
+    """DEPRECATED: use col_runs() for run documents, col_counters() for counters."""
     return get_db()["trials"]
+
+def col_runs() -> Collection:
+    """Run documents (one per pipeline attempt)."""
+    return get_db()["runs"]
+
+def col_counters() -> Collection:
+    """Atomic counters (trial count, etc.)."""
+    return get_db()["counters"]
 
 def col_coverage_map() -> Collection:
     return get_db()["coverage_map"]
@@ -135,9 +147,20 @@ def ensure_indexes() -> None:
         IndexModel([("label", ASCENDING)], unique=True),
     ])
 
-    col_trials().create_indexes([
+    # ── counters (atomic increment; not the same as run documents) ──
+    col_counters().create_indexes([
         IndexModel([("counter_id", ASCENDING)], unique=True),
     ])
+
+    # ── runs (one per pipeline attempt, formerly mixed into 'trials') ──
+    col_runs().create_indexes([
+        IndexModel([("trial_id", ASCENDING)], unique=True, sparse=True),
+        IndexModel([("status", ASCENDING)]),
+        IndexModel([("started_at", DESCENDING)]),
+    ])
+
+    # ── one-time migration: move legacy trial docs out of 'trials' ──────
+    _migrate_legacy_trials()
 
     col_coverage_map().create_indexes([
         IndexModel([
@@ -178,6 +201,42 @@ def ensure_indexes() -> None:
     ])
 
 
+# ─── Legacy migration ──────────────────────────────────────────────────────
+
+def _migrate_legacy_trials() -> None:
+    """One-time migration: move counter docs and run docs out of the old 'trials'
+    collection into 'counters' and 'runs'.  Safe to call multiple times (idempotent).
+    """
+    db = get_db()
+    legacy = db["trials"]
+    if legacy.estimated_document_count() == 0:
+        return
+
+    # Move counter documents → counters
+    for doc in legacy.find({"counter_id": {"$exists": True}}):
+        try:
+            col_counters().insert_one(doc)
+        except DuplicateKeyError:
+            _log.debug("counter doc already migrated: %s", doc.get("counter_id"))
+        legacy.delete_one({"_id": doc["_id"]})
+
+    # Move run documents → runs
+    for doc in legacy.find({"trial_id": {"$exists": True}}):
+        try:
+            col_runs().insert_one(doc)
+        except DuplicateKeyError:
+            _log.debug("run doc already migrated: %s", doc.get("trial_id"))
+        legacy.delete_one({"_id": doc["_id"]})
+
+    # Drop the old problematic unique index on counter_id if it still exists
+    try:
+        legacy.drop_index("counter_id_1")
+    except Exception as exc:
+        _log.debug("could not drop legacy counter_id index: %s", exc)
+
+    _log.info("legacy trials migration complete")
+
+
 # ─── Helpers ────────────────────────────────────────────────────────────────
 
 def increment_trial_counter() -> int:
@@ -185,7 +244,7 @@ def increment_trial_counter() -> int:
 
     Uses upsert + $inc so it works from a cold start.
     """
-    result = col_trials().find_one_and_update(
+    result = col_counters().find_one_and_update(
         {"counter_id": "global"},
         {"$inc": {"count": 1}},
         upsert=True,
@@ -196,7 +255,7 @@ def increment_trial_counter() -> int:
 
 def get_trial_count() -> int:
     """Read the current trial count without incrementing."""
-    doc = col_trials().find_one({"counter_id": "global"})
+    doc = col_counters().find_one({"counter_id": "global"})
     if doc is None:
         return 0
     return int(doc["count"])

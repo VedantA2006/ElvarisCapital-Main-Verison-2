@@ -35,7 +35,7 @@ def load_config(config_path: str | Path | None = None) -> dict[str, Any]:
     """Load config.yaml and resolve relative paths against PROJECT_ROOT."""
     path = Path(config_path) if config_path else PROJECT_ROOT / "config.yaml"
     with open(path, "r", encoding="utf-8") as f:
-        cfg = yaml.safe_load(f)
+        cfg = _safe_load_no_dupes(f.read())
 
     # Resolve the data dir relative to the project root
     base_dir = Path(cfg["data"]["base_dir"])
@@ -47,8 +47,55 @@ def load_config(config_path: str | Path | None = None) -> dict[str, Any]:
     return cfg
 
 
+class _NoDuplicateKeyLoader(yaml.SafeLoader):
+    """YAML loader that raises on duplicate keys at any nesting level."""
+    pass
+
+
+def _no_duplicate_key_constructor(loader, node):
+    mapping = {}
+    for key_node, value_node in node.value:
+        key = loader.construct_object(key_node, deep=False)
+        if key in mapping:
+            raise ValueError(
+                f"duplicate YAML key {key!r} at line {key_node.start_mark.line + 1}"
+            )
+        mapping[key] = loader.construct_object(value_node, deep=False)
+    return mapping
+
+
+_NoDuplicateKeyLoader.add_constructor(
+    yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
+    _no_duplicate_key_constructor,
+)
+
+
+def _safe_load_no_dupes(text: str) -> dict:
+    return yaml.load(text, Loader=_NoDuplicateKeyLoader)
+
+
 def _validate_config(cfg: dict[str, Any]) -> None:
     """Fail fast on config values that would break core guarantees."""
+
+    # ── Allowed top-level keys ──────────────────────────────────────────
+    _ALLOWED_TOP = {
+        "data", "sessions", "market_hours", "validation", "splits", "costs",
+        "contract", "sizing", "strategy", "gates", "diversity", "llm",
+        "forward", "sandbox", "robustness_weights", "mongo", "dashboard",
+        "logging", "cross_asset",
+    }
+    unknown_top = set(cfg.keys()) - _ALLOWED_TOP
+    if unknown_top:
+        raise ValueError(f"unknown top-level config keys: {sorted(unknown_top)}")
+
+    # ── Allowed sub-keys in commonly-mistyped sections ──────────────────
+    _TRAIN_KEYS = {"min_profit_factor", "min_sharpe", "max_drawdown", "min_expectancy"}
+    if "train" in cfg.get("gates", {}):
+        bad = set(cfg["gates"]["train"].keys()) - _TRAIN_KEYS
+        if bad:
+            raise ValueError(f"unknown keys in gates.train: {sorted(bad)}")
+
+    # ── Split ratios ────────────────────────────────────────────────────
     s = cfg["splits"]
     total = s["train_ratio"] + s["validation_ratio"] + s["holdout_ratio"]
     if abs(total - 1.0) > 1e-9:
@@ -58,15 +105,55 @@ def _validate_config(cfg: dict[str, Any]) -> None:
     if s["embargo_days"] < 0:
         raise ValueError("embargo_days must be >= 0")
 
+    # ── Timeframes ──────────────────────────────────────────────────────
     enabled = cfg["data"]["enabled_timeframes"]
     all_tfs = cfg["data"]["all_timeframes"]
     unknown = set(enabled) - set(all_tfs)
     if unknown:
         raise ValueError(f"enabled_timeframes contains unknown timeframes: {unknown}")
 
+    # ── Secrets check ───────────────────────────────────────────────────
     for secret in SECRET_ENV_VARS:
         if _contains_value(cfg, os.environ.get(secret)):
             raise ValueError(f"A secret ({secret}) appears inside config.yaml. Secrets belong in .env only.")
+
+    # ── Range checks on critical numeric parameters ─────────────────────
+    _range_checks = [
+        (("sizing", "risk_per_trade"),    0.0001, 1.0,    "risk_per_trade must be in (0, 1]"),
+        (("sizing", "initial_equity"),    1.0,    None,   "initial_equity must be > 0"),
+        (("costs", "spread", "default"),  0.0,    None,   "spread.default must be >= 0"),
+        (("gates", "dsr", "min_probability"), 0.0, 1.0,   "dsr.min_probability must be in [0, 1]"),
+        (("sandbox", "wall_clock_timeout"), 1,    None,   "wall_clock_timeout must be >= 1"),
+    ]
+    for path, lo, hi, msg in _range_checks:
+        node = cfg
+        for k in path:
+            if not isinstance(node, dict) or k not in node:
+                break
+            node = node[k]
+        else:
+            if not isinstance(node, (int, float)):
+                raise ValueError(f"{'.'.join(path)} must be numeric, got {type(node).__name__}")
+            if lo is not None and node < lo:
+                raise ValueError(msg)
+            if hi is not None and node > hi:
+                raise ValueError(msg)
+
+    # ── Type checks on numeric fields ───────────────────────────────────
+    _type_checks = [
+        (("gates", "train", "min_sharpe"), (int, float)),
+        (("gates", "train", "min_profit_factor"), (int, float)),
+        (("gates", "train", "max_drawdown"), (int, float)),
+    ]
+    for path, expected in _type_checks:
+        node = cfg
+        for k in path:
+            if not isinstance(node, dict) or k not in node:
+                break
+            node = node[k]
+        else:
+            if not isinstance(node, expected):
+                raise ValueError(f"{'.'.join(path)} must be {expected}, got {type(node).__name__}")
 
 
 def _contains_value(obj: Any, needle: str | None) -> bool:

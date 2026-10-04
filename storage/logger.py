@@ -58,6 +58,7 @@ class QuantForgeLogger:
 
         # Flag to control Mongo writes (can be disabled for testing)
         self.mongo_enabled = True
+        self.dropped_writes = 0
 
     def log(
         self,
@@ -97,9 +98,11 @@ class QuantForgeLogger:
         if self.mongo_enabled:
             try:
                 col_logs().insert_one(doc)
-            except Exception:
+            except Exception as exc:
+                self.dropped_writes += 1
                 # If Mongo is down, the JSONL file still has the entry
-                pass
+                self._logger.warning("Mongo log write failed (%s), dropped_writes=%d",
+                                     exc, self.dropped_writes)
 
     def info(self, message: str, **kwargs: Any) -> None:
         self.log("INFO", message, **kwargs)

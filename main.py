@@ -133,9 +133,10 @@ def cmd_run(args: argparse.Namespace) -> int:
 def cmd_leaderboard(args: argparse.Namespace) -> int:
     """Show the current leaderboard."""
     from storage.mongo import get_db
+    from core.config import mongo_db_name
 
     cfg = load_config(args.config)
-    db = get_db(cfg)
+    db = get_db(mongo_db_name(cfg))
     entries = list(db["leaderboard"].find().sort("robustness_score", -1).limit(args.top))
 
     if not entries:

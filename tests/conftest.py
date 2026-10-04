@@ -1,4 +1,10 @@
-"""Shared pytest fixtures. Tests ALWAYS use the test Mongo database."""
+"""Shared pytest fixtures. Tests ALWAYS use the test Mongo database.
+
+Mongo backend for tests is chosen by the QF_TEST_MONGO environment variable:
+    QF_TEST_MONGO=mock  (default)  in-memory mongomock, no server needed
+    QF_TEST_MONGO=real             the real server from MONGO_URL, database
+                                   `mongo.test_database` (must end in _test)
+"""
 
 from __future__ import annotations
 
@@ -20,6 +26,52 @@ load_env()
 _BASE_CFG = load_config()
 os.environ["QF_MONGO_DB"] = _BASE_CFG["mongo"]["test_database"]
 
+QF_TEST_MONGO = os.environ.get("QF_TEST_MONGO", "mock").strip().lower()
+if QF_TEST_MONGO not in ("mock", "real"):
+    raise RuntimeError(f"QF_TEST_MONGO must be 'mock' or 'real', got {QF_TEST_MONGO!r}")
+
+
+def _install_mock_client() -> None:
+    """Point storage.mongo's singleton at a brand-new in-memory client."""
+    import mongomock
+    from pymongo.operations import IndexModel
+    orig_create_indexes = mongomock.collection.Collection.create_indexes
+
+    def _patched_create_indexes(self, indexes, session=None):
+        for index in indexes:
+            if not isinstance(index, IndexModel):
+                raise TypeError(f"{index} is not an instance of pymongo.operations.IndexModel")
+        return [
+            self.create_index(
+                list(index.document['key'].items()),
+                session=session,
+                expireAfterSeconds=index.document.get('expireAfterSeconds'),
+                unique=index.document.get('unique', False),
+                sparse=index.document.get('sparse', False),
+                name=index.document.get('name'))
+            for index in indexes
+        ]
+
+    mongomock.collection.Collection.create_indexes = _patched_create_indexes
+    from storage import mongo
+    mongo._client = mongomock.MongoClient()
+    mongo._db = None
+
+
+# Install the mock BEFORE any test module imports code that calls get_client(),
+# so no test can reach a real server by accident in mock mode.
+if QF_TEST_MONGO == "mock":
+    _install_mock_client()
+
+
+def _reset_test_db():
+    from storage import mongo
+    db = mongo.get_db()
+    assert db.name.endswith("_test"), f"Refusing to use non-test DB {db.name}"
+    mongo.get_client().drop_database(db.name)
+    mongo.ensure_indexes()
+    return db
+
 
 @pytest.fixture(scope="session")
 def base_cfg() -> dict:
@@ -29,12 +81,13 @@ def base_cfg() -> dict:
 @pytest.fixture(scope="session")
 def test_db():
     """Clean test database (dropped at session start). Refuses to touch non-test DBs."""
-    from storage import mongo
-    db = mongo.get_db()
-    assert db.name.endswith("_test"), f"Refusing to use non-test DB {db.name}"
-    mongo.get_client().drop_database(db.name)
-    mongo.ensure_indexes()
-    yield db
+    yield _reset_test_db()
+
+
+@pytest.fixture
+def fresh_db():
+    """A clean test database for ONE test (function scope, full isolation)."""
+    yield _reset_test_db()
 
 
 # ─── Synthetic market data on a realistic XAUUSD calendar ──────────────────

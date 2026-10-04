@@ -12,6 +12,7 @@ Handles:
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import time
@@ -20,6 +21,8 @@ from datetime import datetime, timezone
 from typing import Any
 
 import requests
+
+_log = logging.getLogger("quantforge.llm.client")
 
 
 @dataclass
@@ -142,8 +145,8 @@ class LLMClient:
         # Try direct parse first
         try:
             return json.loads(text)
-        except json.JSONDecodeError:
-            pass
+        except json.JSONDecodeError as exc:
+            _log.debug("direct JSON parse failed (%s); trying fenced/embedded JSON", exc)
 
         # Extract from markdown code fence
         patterns = [

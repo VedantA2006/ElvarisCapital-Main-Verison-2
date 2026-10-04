@@ -30,7 +30,9 @@ Cost model (Section 5):
 
 from __future__ import annotations
 
+import logging
 import time
+import traceback
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 from enum import Enum
@@ -38,6 +40,8 @@ from typing import Any, Protocol
 
 import numpy as np
 import pandas as pd
+
+_log = logging.getLogger("quantforge.backtester")
 
 
 # ─── Types ──────────────────────────────────────────────────────────────────
@@ -220,6 +224,8 @@ def run_backtest(strategy: StrategyProtocol, df: pd.DataFrame, cfg: dict,
     peak_equity = equity
     trades: list[Trade] = []
     equity_curve: list[EquityPoint] = []
+    strategy_errors = 0
+    first_strategy_error: str | None = None
 
     # Position state
     pos_dir: Direction | None = None
@@ -326,8 +332,14 @@ def run_backtest(strategy: StrategyProtocol, df: pd.DataFrame, cfg: dict,
         signal: Signal | None = None
         try:
             signal = strategy.on_bar(bars.iloc[: i + 1])
-        except Exception:
-            pass  # strategy error → no signal, logged at a higher level
+        except Exception as exc:
+            # Never invisible: counted, first traceback kept, logged once.
+            # (Turning a crash into a hard rejection is BT-12, backtester phase.)
+            strategy_errors += 1
+            if first_strategy_error is None:
+                first_strategy_error = traceback.format_exc()[-4000:]
+                _log.warning("strategy.on_bar raised at bar %d: %s: %s",
+                             i, type(exc).__name__, exc)
 
         # === Phase C: Execute signal at bar i+1 open ========================
         if signal is not None and i + 1 < N:
@@ -399,6 +411,8 @@ def run_backtest(strategy: StrategyProtocol, df: pd.DataFrame, cfg: dict,
             "total_bars": N,
             "live_bars": N - first_live,
             "warmup_bars": first_live,
+            "strategy_errors": strategy_errors,
+            "first_strategy_error": first_strategy_error,
         },
         wall_seconds=round(wall_seconds, 3),
     )
@@ -499,7 +513,7 @@ def compute_metrics(trades: list[Trade], equity_curve: list[EquityPoint],
     for t in trades:
         y = t.entry_time.year
         yearly[y] = yearly.get(y, 0.0) + t.net_pnl
-    m["yearly_pnl"] = {k: round(v, 2) for k, v in sorted(yearly.items())}
+    m["yearly_pnl"] = {str(k): round(v, 2) for k, v in sorted(yearly.items())}
 
     # Profit concentration
     if len(winners) > 0:

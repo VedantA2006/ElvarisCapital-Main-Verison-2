@@ -72,7 +72,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", len(body))
-        self.send_header("Access-Control-Allow-Origin", "*")
+
         self.end_headers()
         self.wfile.write(body)
 
@@ -83,17 +83,17 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         return {"entries": entries}
 
     def _get_trials(self, limit=50):
-        trials = list(self.db["trials"].find(
+        trials = list(self.db["runs"].find(
             {}, {"_id": 0, "source_code": 0, "train_result.trades": 0,
                  "val_result.trades": 0, "train_result.equity_curve_summary": 0}
         ).sort("started_at", -1).limit(limit))
         return {"trials": trials}
 
     def _get_stats(self):
-        total = self.db["trials"].count_documents({})
-        survived = self.db["trials"].count_documents({"status": "survived"})
-        rejected = self.db["trials"].count_documents({"status": "rejected"})
-        errors = self.db["trials"].count_documents({"status": "error"})
+        total = self.db["runs"].count_documents({})
+        survived = self.db["runs"].count_documents({"status": "survived"})
+        rejected = self.db["runs"].count_documents({"status": "rejected"})
+        errors = self.db["runs"].count_documents({"status": "error"})
 
         # Rejection breakdown
         pipeline = [
@@ -101,7 +101,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             {"$group": {"_id": "$rejected_at", "count": {"$sum": 1}}},
             {"$sort": {"count": -1}},
         ]
-        rejection_breakdown = list(self.db["trials"].aggregate(pipeline))
+        rejection_breakdown = list(self.db["runs"].aggregate(pipeline))
 
         return {
             "total_trials": total,
@@ -116,7 +116,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         }
 
     def _get_trial_detail(self, trial_id: str):
-        trial = self.db["trials"].find_one(
+        trial = self.db["runs"].find_one(
             {"trial_id": trial_id}, {"_id": 0}
         )
         if not trial:
@@ -583,8 +583,9 @@ def run_dashboard(cfg: dict | None = None):
     host = cfg.get("dashboard", {}).get("web_host", "127.0.0.1")
     port = cfg.get("dashboard", {}).get("web_port", 8000)
 
+    from core.config import mongo_db_name
     DashboardHandler.cfg = cfg
-    DashboardHandler.db = get_db(cfg.get("mongo", {}).get("database", "quantforge"))
+    DashboardHandler.db = get_db(mongo_db_name(cfg))
 
     server = HTTPServer((host, port), DashboardHandler)
     print(f"QuantForge Dashboard running at http://{host}:{port}")

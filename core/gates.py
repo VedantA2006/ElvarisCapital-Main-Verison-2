@@ -370,8 +370,8 @@ def gate_regime_concentration(metrics: dict[str, Any], cfg: dict) -> GateResult:
               f"(max={max_conc*100:.0f}%). {'PASS' if passed else 'FAIL: profit too concentrated'}")
 
     return GateResult(gate="regime_concentration", passed=passed, detail=detail,
-                      data={"yearly_pnl": yearly, "max_concentration": round(concentration, 4),
-                            "best_year": best_year})
+                      data={"yearly_pnl": {str(k): v for k, v in yearly.items()}, "max_concentration": round(concentration, 4),
+                            "best_year": str(best_year)})
 
 
 # ═══════════════════════════════════════════════════════════════════════════
