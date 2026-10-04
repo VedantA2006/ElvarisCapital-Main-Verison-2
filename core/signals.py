@@ -224,8 +224,8 @@ def validate_and_record_signal(
 
     # Entry validations
     sig_cfg = cfg.get("signals", cfg.get("strategy", {}))
-    min_sl_usd = sig_cfg.get("min_sl_usd", 0.0)
-    min_sl_atr_mult = sig_cfg.get("min_sl_atr_multiple", 0.0)
+    min_sl_usd = sig_cfg.get("min_sl_usd", 1.0)
+    min_sl_atr_mult = sig_cfg.get("min_sl_atr_multiple", 0.3)
     min_required_sl = max(min_sl_usd, min_sl_atr_mult * (atr_prev if np.isfinite(atr_prev) else 1.0))
     max_sl_usd = sig_cfg.get("max_sl_usd", 1000.0)
 
@@ -253,8 +253,8 @@ def validate_and_record_signal(
     # Validate tp_distance if provided
     tp_dist = signal.tp_distance
     if not np.isnan(tp_dist):
-        min_tp_spread_mult = sig_cfg.get("min_tp_spread_multiple", 0.0)
-        min_tp_usd = sig_cfg.get("min_tp_usd", 0.0)
+        min_tp_spread_mult = sig_cfg.get("min_tp_spread_multiple", 3.0)
+        min_tp_usd = sig_cfg.get("min_tp_usd", 0.50)
         required_min_tp = max(min_tp_usd, min_tp_spread_mult * current_spread)
         if required_min_tp > 0 and tp_dist < required_min_tp:
             tape.invalid_signals += 1

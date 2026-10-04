@@ -80,7 +80,7 @@ def _validate_config(cfg: dict[str, Any]) -> None:
     # ── Allowed top-level keys ──────────────────────────────────────────
     _ALLOWED_TOP = {
         "data", "sessions", "market_hours", "validation", "splits", "costs",
-        "contract", "sizing", "strategy", "gates", "diversity", "llm",
+        "contract", "sizing", "strategy", "signals", "gates", "diversity", "llm",
         "forward", "sandbox", "robustness_weights", "mongo", "dashboard",
         "logging", "cross_asset",
     }

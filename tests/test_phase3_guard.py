@@ -227,7 +227,7 @@ class TestDelayTest:
         # when delayed, because the "future" info is now 2 bars ahead
         assert result.original_sharpe != result.delayed_sharpe
 
-    def test_zero_sharpe_passes_trivially(self, base_cfg):
+    def test_zero_sharpe_fails_delay_explicitly(self, base_cfg):
         from core.lookahead_guard import run_delay_test
 
         class DoNothing:
@@ -236,7 +236,8 @@ class TestDelayTest:
 
         df = _make_df(100)
         result = run_delay_test(DoNothing, df, base_cfg)
-        assert result.passed  # original Sharpe <= 0 → trivially passes
+        assert not result.passed  # LH-5: non-profitable base fails delay test explicitly
+        assert "not profitable" in result.detail.lower() or "sharpe <= 0" in result.detail.lower()
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -261,9 +262,8 @@ class TestTruncationTest:
 
         df = _make_df(400, seed=5)
         result = run_truncation_test(SimpleMomentum, df, base_cfg, num_cuts=5)
-        # Should run without errors
-        assert len(result.cut_results) == 5
-        assert isinstance(result.sharpe_cv, float)
+        assert result.passed
+        assert result.num_cuts >= 2
 
     def test_small_dataset_skips(self, base_cfg):
         from core.lookahead_guard import run_truncation_test
@@ -275,7 +275,7 @@ class TestTruncationTest:
         df = _make_df(50)
         result = run_truncation_test(Anything, df, base_cfg, num_cuts=5)
         assert result.passed
-        assert "too small" in result.detail
+        assert "too small" in result.detail.lower()
 
 
 # ═══════════════════════════════════════════════════════════════════════════

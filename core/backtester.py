@@ -232,15 +232,18 @@ def prepare_simulation_arrays(df: pd.DataFrame, cfg: dict) -> tuple[
     return opens, highs, lows, closes, timestamps, spreads, atrs, is_rollover, rollover_multiplier
 
 
-def run_backtest(
-    strategy: StrategyProtocol,
+def generate_signal_tape(
+    strategy: Any,
     df: pd.DataFrame,
     cfg: dict,
     warmup_bars: int = 0,
-    use_fast: bool = True,
-) -> BacktestResult:
-    """Run full backtest with honest execution and MTM accounting."""
-    t0 = time.perf_counter()
+    seed: int = 42,
+) -> tuple[SignalTape, int, str | None]:
+    """Generate and validate a SignalTape by running strategy over df.
+
+    Handles string source code (via Sandbox), strategy instances, or callables.
+    Returns (tape, strategy_errors, first_strategy_error).
+    """
     bars = df.reset_index(drop=True)
     n_bars = len(bars)
 
@@ -259,105 +262,104 @@ def run_backtest(
     strategy_errors = 0
     first_strategy_error: str | None = None
 
-    # Step 1: Strategy signal generation
-    for i in range(first_live, n_bars):
+    strat_obj = None
+    if isinstance(strategy, str):
+        from core.sandbox import Sandbox
+        strat_obj = Sandbox(cfg).load_strategy(strategy, seed=seed)
+    elif isinstance(strategy, type):
+        strat_obj = strategy()
+    elif callable(strategy) and not hasattr(strategy, "on_bar"):
+        strat_obj = strategy()
+    else:
+        strat_obj = strategy
+
+    try:
+        for i in range(first_live, n_bars):
+            try:
+                sig = strat_obj.on_bar(bars.iloc[: i + 1])
+            except Exception as exc:
+                # BT-12: Strategy exceptions are NOT swallowed!
+                strategy_errors += 1
+                tb_str = traceback.format_exc()
+                first_strategy_error = tb_str
+                _log.error("strategy.on_bar raised at bar %d: %s: %s\n%s", i, type(exc).__name__, exc, tb_str)
+                return tape, strategy_errors, first_strategy_error
+
+            if sig is None:
+                continue
+
+            # Handle legacy Signal instances with absolute stop_loss / take_profit or missing SL
+            if isinstance(sig, Signal):
+                modern_sig = sig
+                if np.isnan(sig.sl_distance):
+                    try:
+                        modern_sig = Signal.from_prices(
+                            close=closes[i],
+                            direction=sig.direction,
+                            stop_loss=sig.stop_loss,
+                            take_profit=sig.take_profit,
+                            tag=sig.tag,
+                        )
+                    except SignalValidationError as ve:
+                        # Inverted stop or invalid price level: BT-1 caught!
+                        strategy_errors += 1
+                        tb_str = traceback.format_exc()
+                        first_strategy_error = tb_str
+                        _log.error("Signal validation failed at bar %d: %s", i, ve)
+                        return tape, strategy_errors, first_strategy_error
+
+                validate_and_record_signal(
+                    signal=modern_sig,
+                    bar_idx=i,
+                    tape=tape,
+                    atr_prev=atrs[i],
+                    current_spread=spreads[i],
+                    cfg=cfg,
+                )
+
+        # Validate signal tape
         try:
-            sig = strategy.on_bar(bars.iloc[: i + 1])
-        except Exception as exc:
-            # BT-12: Strategy exceptions are NOT swallowed!
+            tape.validate_or_raise()
+        except SignalValidationError as ve:
             strategy_errors += 1
             tb_str = traceback.format_exc()
             first_strategy_error = tb_str
-            _log.error("strategy.on_bar raised at bar %d: %s: %s\n%s", i, type(exc).__name__, exc, tb_str)
-            wall_seconds = time.perf_counter() - t0
-            return BacktestResult(
-                trades=[],
-                equity_curve=[],
-                metrics={"total_trades": 0, "error": "code_error", "exception": str(exc)},
-                metadata={
-                    "timeframe": df.attrs.get("timeframe", ""),
-                    "split": df.attrs.get("split", ""),
-                    "file_hash": df.attrs.get("file_hash", ""),
-                    "slice_hash": df.attrs.get("slice_hash", ""),
-                    "total_bars": n_bars,
-                    "strategy_errors": strategy_errors,
-                    "first_strategy_error": first_strategy_error,
-                },
-                wall_seconds=round(wall_seconds, 3),
-                status="code_error",
-            )
+            return tape, strategy_errors, first_strategy_error
 
-        if sig is None:
-            continue
+    finally:
+        if hasattr(strat_obj, "close"):
+            try:
+                strat_obj.close()
+            except Exception as ex:
+                _log.debug("Strategy close error: %s", ex)
 
-        # Handle legacy Signal instances with absolute stop_loss / take_profit or missing SL
-        if isinstance(sig, Signal):
-            modern_sig = sig
-            if np.isnan(sig.sl_distance):
-                try:
-                    modern_sig = Signal.from_prices(
-                        close=closes[i],
-                        direction=sig.direction,
-                        stop_loss=sig.stop_loss,
-                        take_profit=sig.take_profit,
-                        tag=sig.tag,
-                    )
-                except SignalValidationError as ve:
-                    # Inverted stop or invalid price level: BT-1 caught!
-                    strategy_errors += 1
-                    tb_str = traceback.format_exc()
-                    first_strategy_error = tb_str
-                    _log.error("Signal validation failed at bar %d: %s", i, ve)
-                    wall_seconds = time.perf_counter() - t0
-                    return BacktestResult(
-                        trades=[],
-                        equity_curve=[],
-                        metrics={"total_trades": 0, "error": "code_error", "exception": str(ve)},
-                        metadata={
-                            "timeframe": df.attrs.get("timeframe", ""),
-                            "split": df.attrs.get("split", ""),
-                            "file_hash": df.attrs.get("file_hash", ""),
-                            "slice_hash": df.attrs.get("slice_hash", ""),
-                            "total_bars": n_bars,
-                            "strategy_errors": strategy_errors,
-                            "first_strategy_error": first_strategy_error,
-                        },
-                        wall_seconds=round(wall_seconds, 3),
-                        status="code_error",
-                    )
-            validate_and_record_signal(
-                signal=modern_sig,
-                bar_idx=i,
-                tape=tape,
-                atr_prev=atrs[i],
-                current_spread=spreads[i],
-                cfg=cfg,
-            )
+    return tape, strategy_errors, first_strategy_error
 
-    # Validate signal tape
-    try:
-        tape.validate_or_raise()
-    except SignalValidationError as ve:
-        strategy_errors += 1
-        tb_str = traceback.format_exc()
-        first_strategy_error = tb_str
-        wall_seconds = time.perf_counter() - t0
-        return BacktestResult(
-            trades=[],
-            equity_curve=[],
-            metrics={"total_trades": 0, "error": "code_error", "exception": str(ve)},
-            metadata={
-                "timeframe": df.attrs.get("timeframe", ""),
-                "split": df.attrs.get("split", ""),
-                "file_hash": df.attrs.get("file_hash", ""),
-                "slice_hash": df.attrs.get("slice_hash", ""),
-                "total_bars": n_bars,
-                "strategy_errors": strategy_errors,
-                "first_strategy_error": first_strategy_error,
-            },
-            wall_seconds=round(wall_seconds, 3),
-            status="code_error",
-        )
+
+def run_simulation_on_tape(
+    tape: SignalTape,
+    df: pd.DataFrame,
+    cfg: dict,
+    use_fast: bool = True,
+    warmup_bars: int = 0,
+    strategy_errors: int = 0,
+    first_strategy_error: str | None = None,
+) -> BacktestResult:
+    """Execute simulation on a pre-computed SignalTape and compute MTM analytics."""
+    t0 = time.perf_counter()
+    bars = df.reset_index(drop=True)
+    n_bars = len(bars)
+
+    first_live = 0
+    if "is_warmup" in bars.columns:
+        w = np.where(~bars["is_warmup"].to_numpy())[0]
+        if len(w) > 0:
+            first_live = int(w[0])
+    first_live = max(first_live, warmup_bars)
+
+    opens, highs, lows, closes, timestamps, spreads, atrs, is_rollover, rollover_multiplier = (
+        prepare_simulation_arrays(bars, cfg)
+    )
 
     # Step 2: Execute simulation
     sim = FastSimulator(cfg) if use_fast else EventSimulator(cfg)
@@ -420,6 +422,54 @@ def run_backtest(
         wall_seconds=round(wall_seconds, 3),
         status="completed",
     )
+
+
+def run_backtest(
+    strategy: StrategyProtocol | str | Any,
+    df: pd.DataFrame,
+    cfg: dict,
+    warmup_bars: int = 0,
+    use_fast: bool = True,
+) -> BacktestResult:
+    """Run full backtest with honest execution and MTM accounting."""
+    t0 = time.perf_counter()
+    tape, strategy_errors, first_strategy_error = generate_signal_tape(
+        strategy=strategy,
+        df=df,
+        cfg=cfg,
+        warmup_bars=warmup_bars,
+    )
+
+    if strategy_errors > 0 or first_strategy_error:
+        wall_seconds = time.perf_counter() - t0
+        return BacktestResult(
+            trades=[],
+            equity_curve=[],
+            metrics={"total_trades": 0, "error": "code_error", "exception": first_strategy_error},
+            metadata={
+                "timeframe": df.attrs.get("timeframe", ""),
+                "split": df.attrs.get("split", ""),
+                "file_hash": df.attrs.get("file_hash", ""),
+                "slice_hash": df.attrs.get("slice_hash", ""),
+                "total_bars": len(df),
+                "strategy_errors": strategy_errors,
+                "first_strategy_error": first_strategy_error,
+            },
+            wall_seconds=round(wall_seconds, 3),
+            status="code_error",
+        )
+
+    res = run_simulation_on_tape(
+        tape=tape,
+        df=df,
+        cfg=cfg,
+        use_fast=use_fast,
+        warmup_bars=warmup_bars,
+        strategy_errors=strategy_errors,
+        first_strategy_error=first_strategy_error,
+    )
+    res.wall_seconds = round(time.perf_counter() - t0, 3)
+    return res
 
 
 def compute_metrics(

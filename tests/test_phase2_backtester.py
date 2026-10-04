@@ -284,8 +284,8 @@ class TestSLTP:
                     self.entered = True
                     price = float(bars["close"].iloc[-1])
                     return Signal(direction=Direction.LONG,
-                                  stop_loss=price * 0.9999,
-                                  take_profit=price * 1.0001)
+                                  stop_loss=price - 2.0,
+                                  take_profit=price + 2.0)
                 return None
 
         result = run_backtest(WideRangeStrategy(), df, base_cfg)

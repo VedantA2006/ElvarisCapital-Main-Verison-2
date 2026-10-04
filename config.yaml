@@ -113,6 +113,15 @@ strategy:
     - pandas
     - numba
     - math
+    - random
+
+# ─── Signals Contract & Validation (Phase F2.2) ──────────────────────────
+signals:
+  min_sl_usd: 1.0
+  min_sl_atr_multiple: 0.3
+  max_sl_usd: 1000.0
+  min_tp_spread_multiple: 3.0
+  min_tp_usd: 0.50
 
 # ─── Train Gates (Section 7, gates 1-3) ──────────────────────────────────
 gates:

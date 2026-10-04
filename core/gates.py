@@ -56,6 +56,41 @@ class GatePipelineResult:
                 "gates": [r.to_doc() for r in self.results]}
 
 
+def check_suspicion(metrics: dict[str, Any], cfg: dict) -> tuple[bool, list[str]]:
+    """Check if performance metrics are suspiciously high (Section 6F & F4.6)."""
+    susp = cfg.get("gates", {}).get("suspicion", {})
+    suspicions = []
+
+    sharpe = float(metrics.get("sharpe", 0.0) or 0.0)
+    max_sharpe = float(susp.get("max_sharpe_1h_4h", 3.0))
+    if sharpe > max_sharpe:
+        suspicions.append(f"Sharpe={sharpe:.2f} > {max_sharpe:.2f}")
+
+    pf = float(metrics.get("profit_factor", 0.0) or 0.0)
+    max_pf = float(susp.get("max_profit_factor", 3.0))
+    if pf > max_pf:
+        suspicions.append(f"profit_factor={pf:.2f} > {max_pf:.2f}")
+
+    wr = float(metrics.get("win_rate", 0.0) or 0.0)
+    max_wr = float(susp.get("max_win_rate", 0.85))
+    if wr > max_wr:
+        suspicions.append(f"win_rate={wr:.2f} > {max_wr:.2f}")
+
+    pc = float(metrics.get("profit_concentration_top5pct", 0.0) or 0.0)
+    max_pc = float(susp.get("profit_concentration_top5_pct", 0.70))
+    if pc > max_pc:
+        suspicions.append(f"top5% concentration={pc:.2f} > {max_pc:.2f}")
+
+    dd = float(metrics.get("max_drawdown", 1.0) or 1.0)
+    if dd < 0.01 and metrics.get("total_trades", 0) > 10:
+        suspicions.append(f"max_drawdown={dd:.4f} < 1% (almost no drawdown)")
+
+    return len(suspicions) > 0, suspicions
+
+
+check_suspicion_and_audit = check_suspicion
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # Gates 1-3: Train Performance
 # ═══════════════════════════════════════════════════════════════════════════
@@ -111,19 +146,8 @@ def gate_train_performance(metrics: dict[str, Any], cfg: dict,
     if cgr > g["cost_gross_ratio_max"]:
         failures.append(f"cost_ratio={cgr:.3f} > {g['cost_gross_ratio_max']}")
 
-    # Suspicion flags (not hard rejections, but logged)
-    susp = g.get("suspicion", {})
-    suspicions: list[str] = []
-    if sharpe > susp.get("max_sharpe_1h_4h", 99):
-        suspicions.append(f"Sharpe={sharpe:.2f} suspiciously high")
-    if pf > susp.get("max_profit_factor", 99):
-        suspicions.append(f"PF={pf:.2f} suspiciously high")
-    wr = metrics.get("win_rate", 0)
-    if wr > susp.get("max_win_rate", 1.0):
-        suspicions.append(f"win_rate={wr:.2f} suspiciously high")
-    pc = metrics.get("profit_concentration_top5pct", 0)
-    if pc > susp.get("profit_concentration_top5_pct", 1.0):
-        suspicions.append(f"top5% concentration={pc:.2f}")
+    # Suspicion flags (Section 6F & F4.6)
+    is_susp, suspicions = check_suspicion(metrics, cfg)
     data["suspicions"] = suspicions
 
     passed = len(failures) == 0
@@ -567,3 +591,366 @@ def run_train_gates(train_metrics: dict[str, Any], trade_pnls: list[float],
         return GatePipelineResult(all_passed=False, results=results, stopped_at=g10.gate)
 
     return GatePipelineResult(all_passed=True, results=results)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Deep Audit & Gate Pipeline (F4.6 & F4.7)
+# ═══════════════════════════════════════════════════════════════════════════
+
+def run_deep_audit(
+    strategy_or_source: Any,
+    df: pd.DataFrame,
+    cfg: dict,
+    metrics: dict[str, Any],
+    seed: int = 9999,
+) -> GateResult:
+    """Run deep audit when suspicion is triggered (F4.6).
+
+    Re-runs truncation with 40 cuts, determinism with different seed, and delay test.
+    If any fail, rejects as suspected_leak.
+    """
+    from core.lookahead_guard import (
+        run_truncation_test,
+        run_determinism_test,
+        run_delay_test_on_tape,
+    )
+    from core.backtester import generate_signal_tape
+
+    is_susp, reasons = check_suspicion(metrics, cfg)
+    if not is_susp:
+        return GateResult(gate="deep_audit", passed=True, detail="Metrics within normal bounds; deep audit skipped.")
+
+    # 1. Determinism with alternate seed
+    det_res = run_determinism_test(strategy_or_source, df, cfg, seed=seed)
+    if not det_res.passed:
+        return GateResult(
+            gate="deep_audit",
+            passed=False,
+            detail=f"REJECTED (suspected_leak): deep audit determinism failed: {det_res.detail}",
+            data={"reasons": reasons, "diverging_bar": det_res.first_diverging_bar},
+        )
+
+    # 2. Truncation with 40 cuts
+    trunc_res = run_truncation_test(strategy_or_source, df, cfg, num_cuts=40, seed=seed)
+    if not trunc_res.passed:
+        return GateResult(
+            gate="deep_audit",
+            passed=False,
+            detail=f"REJECTED (suspected_leak): deep audit truncation failed: {trunc_res.detail}",
+            data={"reasons": reasons, "diverging_bar": trunc_res.first_diverging_bar},
+        )
+
+    # 3. Delay test on fresh tape
+    tape, errs, first_err = generate_signal_tape(strategy_or_source, df, cfg, seed=seed)
+    if errs > 0:
+        return GateResult(
+            gate="deep_audit",
+            passed=False,
+            detail=f"REJECTED (suspected_leak): deep audit tape generation failed: {first_err}",
+            data={"reasons": reasons},
+        )
+    delay_res = run_delay_test_on_tape(tape, df, cfg)
+    if not delay_res.passed:
+        return GateResult(
+            gate="deep_audit",
+            passed=False,
+            detail=f"REJECTED (suspected_leak): deep audit delay test failed: {delay_res.detail}",
+            data={"reasons": reasons},
+        )
+
+    # Extreme suspicion ceiling (result too good to be true)
+    sharpe = float(metrics.get("sharpe", 0.0) or 0.0)
+    wr = float(metrics.get("win_rate", 0.0) or 0.0)
+    if sharpe > 4.5 or wr > 0.95:
+        return GateResult(
+            gate="deep_audit",
+            passed=False,
+            detail="REJECTED (suspected_leak): result too good to be true; check for lookahead.",
+            data={"reasons": reasons, "manual_review": True},
+        )
+
+    return GateResult(
+        gate="deep_audit",
+        passed=True,
+        detail="Deep audit passed (40-cut truncation, alternate-seed determinism, and delay verified). Manual review recommended.",
+        data={"reasons": reasons, "manual_review": True},
+    )
+
+
+@dataclass
+class CandidateEvaluationResult:
+    passed: bool
+    stopped_at: str | None = None
+    gate_results: list[GateResult] = field(default_factory=list)
+    train_result: Any = None
+    val_result: Any = None
+    train_tape: Any = None
+    manual_review: bool = False
+    rejection_reason: str = ""
+
+    def to_doc(self) -> dict[str, Any]:
+        return {
+            "passed": self.passed,
+            "stopped_at": self.stopped_at,
+            "manual_review": self.manual_review,
+            "rejection_reason": self.rejection_reason,
+            "gates": [g.to_doc() for g in self.gate_results],
+        }
+
+
+class GatePipeline:
+    """Cheapest and most safety-critical first evaluation pipeline (Section F4.7).
+
+    Execution order:
+    1. Static AST Policy Scan (static_scan)
+    2. Compile / Smoke Run in Sandbox (Sandbox.load_strategy)
+    3. Determinism Test (run_determinism_test)
+    4. Truncation Test (run_truncation_test)
+    5. Train Simulation & Performance Gate (gate_train_performance)
+    6. Delay Test on Train Tape (run_delay_test_on_tape)
+    7. Suspicion Audit (run_deep_audit) -> reject as suspected_leak
+    8. Robustness Gates (Monte Carlo, Regime, DSR, PBO)
+    9. Validation Split (ONLY evaluated after all train & lookahead gates pass)
+    """
+
+    def __init__(self, cfg: dict):
+        self.cfg = cfg
+
+    def evaluate_candidate(
+        self,
+        source: str,
+        df_train: pd.DataFrame,
+        df_val: pd.DataFrame | None = None,
+        strategy_class_name: str = "Strategy",
+        params: dict | None = None,
+        n_trials: int = 1,
+    ) -> CandidateEvaluationResult:
+        from core.lookahead_guard import (
+            static_scan,
+            run_determinism_test,
+            run_truncation_test,
+            run_delay_test_on_tape,
+        )
+        from core.sandbox import Sandbox, SandboxError
+        from core.backtester import generate_signal_tape, run_simulation_on_tape
+
+        gate_results: list[GateResult] = []
+
+        # Gate 1: Static AST Policy
+        scan_res = static_scan(source)
+        g_scan = GateResult(
+            gate="static_policy",
+            passed=scan_res.passed,
+            detail=scan_res.summary,
+            data=scan_res.to_doc(),
+        )
+        gate_results.append(g_scan)
+        if not scan_res.passed:
+            return CandidateEvaluationResult(
+                passed=False,
+                stopped_at="static_policy",
+                gate_results=gate_results,
+                rejection_reason=f"Static policy violation: {scan_res.summary}",
+            )
+
+        # Gate 2: Compile & Smoke run in sandbox
+        sb = Sandbox(self.cfg)
+        try:
+            strat = sb.load_strategy(source, strategy_class_name=strategy_class_name, params=params)
+            strat.close()
+        except Exception as exc:
+            g_smoke = GateResult(gate="compile_smoke", passed=False, detail=str(exc))
+            gate_results.append(g_smoke)
+            return CandidateEvaluationResult(
+                passed=False,
+                stopped_at="compile_smoke",
+                gate_results=gate_results,
+                rejection_reason=f"Sandbox instantiation failed: {exc}",
+            )
+        gate_results.append(GateResult(gate="compile_smoke", passed=True, detail="Clean sandbox load"))
+
+        # Gate 3: Determinism Test
+        det_res = run_determinism_test(source, df_train, self.cfg)
+        g_det = GateResult(gate="determinism", passed=det_res.passed, detail=det_res.detail, data=det_res.to_doc())
+        gate_results.append(g_det)
+        if not det_res.passed:
+            return CandidateEvaluationResult(
+                passed=False,
+                stopped_at="determinism",
+                gate_results=gate_results,
+                rejection_reason=f"Determinism test failed: {det_res.detail}",
+            )
+
+        # Gate 4: Truncation Test
+        num_cuts = self.cfg.get("gates", {}).get("truncation", {}).get("num_cut_points", 20)
+        trunc_res = run_truncation_test(source, df_train, self.cfg, num_cuts=num_cuts)
+        g_trunc = GateResult(gate="truncation", passed=trunc_res.passed, detail=trunc_res.detail, data=trunc_res.to_doc())
+        gate_results.append(g_trunc)
+        if not trunc_res.passed:
+            return CandidateEvaluationResult(
+                passed=False,
+                stopped_at="truncation",
+                gate_results=gate_results,
+                rejection_reason=f"Truncation test failed: {trunc_res.detail}",
+            )
+
+        # Gate 5: Train Backtest & Performance
+        tf = df_train.attrs.get("timeframe", "1h")
+        tape_train, errs, first_err = generate_signal_tape(source, df_train, self.cfg)
+        if errs > 0:
+            g_train = GateResult(gate="train_performance", passed=False, detail=f"Tape generation error: {first_err}")
+            gate_results.append(g_train)
+            return CandidateEvaluationResult(
+                passed=False,
+                stopped_at="train_performance",
+                gate_results=gate_results,
+                rejection_reason=f"Strategy error on train data: {first_err}",
+            )
+
+        train_res = run_simulation_on_tape(tape_train, df_train, self.cfg)
+        g_train = gate_train_performance(train_res.metrics, self.cfg, timeframe=tf)
+        gate_results.append(g_train)
+        if not g_train.passed:
+            return CandidateEvaluationResult(
+                passed=False,
+                stopped_at="train_performance",
+                gate_results=gate_results,
+                train_result=train_res,
+                train_tape=tape_train,
+                rejection_reason=f"Train performance failed: {g_train.detail}",
+            )
+
+        # Gate 6: Delay Test on Train Tape
+        delay_res = run_delay_test_on_tape(tape_train, df_train, self.cfg, base_result=train_res)
+        g_delay = GateResult(gate="delay_test", passed=delay_res.passed, detail=delay_res.detail, data=delay_res.to_doc())
+        gate_results.append(g_delay)
+        if not delay_res.passed:
+            return CandidateEvaluationResult(
+                passed=False,
+                stopped_at="delay_test",
+                gate_results=gate_results,
+                train_result=train_res,
+                train_tape=tape_train,
+                rejection_reason=f"Delay test failed: {delay_res.detail}",
+            )
+
+        # Gate 7: Suspicion Audit
+        is_susp, reasons = check_suspicion(train_res.metrics, self.cfg)
+        manual_review = False
+        if is_susp:
+            audit_res = run_deep_audit(source, df_train, self.cfg, train_res.metrics)
+            gate_results.append(audit_res)
+            manual_review = audit_res.data.get("manual_review", True)
+            if not audit_res.passed:
+                return CandidateEvaluationResult(
+                    passed=False,
+                    stopped_at="suspected_leak",
+                    gate_results=gate_results,
+                    train_result=train_res,
+                    train_tape=tape_train,
+                    manual_review=manual_review,
+                    rejection_reason=f"Deep audit failed: {audit_res.detail}",
+                )
+
+        # Gate 8: Robustness Gates
+        pnls = [t.net_pnl for t in train_res.trades]
+        init_eq = float(self.cfg.get("sizing", {}).get("initial_equity", 100000.0))
+
+        # 8a: Monte Carlo
+        g_mc = gate_monte_carlo(pnls, self.cfg, init_eq)
+        gate_results.append(g_mc)
+        if not g_mc.passed:
+            return CandidateEvaluationResult(
+                passed=False,
+                stopped_at=g_mc.gate,
+                gate_results=gate_results,
+                train_result=train_res,
+                train_tape=tape_train,
+                manual_review=manual_review,
+                rejection_reason=f"Monte Carlo failed: {g_mc.detail}",
+            )
+
+        # 8b: Regime Concentration
+        g_regime = gate_regime_concentration(train_res.metrics, self.cfg)
+        gate_results.append(g_regime)
+        if not g_regime.passed:
+            return CandidateEvaluationResult(
+                passed=False,
+                stopped_at=g_regime.gate,
+                gate_results=gate_results,
+                train_result=train_res,
+                train_tape=tape_train,
+                manual_review=manual_review,
+                rejection_reason=f"Regime concentration failed: {g_regime.detail}",
+            )
+
+        # 8c: DSR
+        pnl_arr = np.array(pnls)
+        skew = float(sp_stats.skew(pnl_arr)) if len(pnl_arr) > 2 else 0.0
+        kurt = float(sp_stats.kurtosis(pnl_arr, fisher=False)) if len(pnl_arr) > 3 else 3.0
+        g_dsr = gate_dsr(train_res.metrics.get("sharpe", 0), len(pnls), skew, kurt, n_trials, self.cfg)
+        gate_results.append(g_dsr)
+        if not g_dsr.passed:
+            return CandidateEvaluationResult(
+                passed=False,
+                stopped_at=g_dsr.gate,
+                gate_results=gate_results,
+                train_result=train_res,
+                train_tape=tape_train,
+                manual_review=manual_review,
+                rejection_reason=f"DSR failed: {g_dsr.detail}",
+            )
+
+        # 8d: PBO
+        g_pbo = gate_pbo(pnls, self.cfg)
+        gate_results.append(g_pbo)
+        if not g_pbo.passed:
+            return CandidateEvaluationResult(
+                passed=False,
+                stopped_at=g_pbo.gate,
+                gate_results=gate_results,
+                train_result=train_res,
+                train_tape=tape_train,
+                manual_review=manual_review,
+                rejection_reason=f"PBO failed: {g_pbo.detail}",
+            )
+
+        # Gate 9: Validation Split (ONLY reached when all above have passed)
+        val_res = None
+        if df_val is not None:
+            tape_val, v_errs, v_err = generate_signal_tape(source, df_val, self.cfg)
+            if v_errs > 0:
+                g_val = GateResult(gate="validation", passed=False, detail=f"Validation tape error: {v_err}")
+                gate_results.append(g_val)
+                return CandidateEvaluationResult(
+                    passed=False,
+                    stopped_at="validation",
+                    gate_results=gate_results,
+                    train_result=train_res,
+                    train_tape=tape_train,
+                    manual_review=manual_review,
+                    rejection_reason=f"Strategy raised on validation: {v_err}",
+                )
+            val_res = run_simulation_on_tape(tape_val, df_val, self.cfg)
+            g_val = gate_validation(train_res.metrics, val_res.metrics, self.cfg)
+            gate_results.append(g_val)
+            if not g_val.passed:
+                return CandidateEvaluationResult(
+                    passed=False,
+                    stopped_at="validation",
+                    gate_results=gate_results,
+                    train_result=train_res,
+                    val_result=val_res,
+                    train_tape=tape_train,
+                    manual_review=manual_review,
+                    rejection_reason=f"Validation gate failed: {g_val.detail}",
+                )
+
+        return CandidateEvaluationResult(
+            passed=True,
+            gate_results=gate_results,
+            train_result=train_res,
+            val_result=val_res,
+            train_tape=tape_train,
+            manual_review=manual_review,
+        )

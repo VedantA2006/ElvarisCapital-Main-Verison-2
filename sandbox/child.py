@@ -175,10 +175,14 @@ def child_main(host: str, port: int, authkey: bytes):
                 if sig is None:
                     conn.send({"status": "ok", "signal": None})
                 else:
-                    # Serialize signal attributes cleanly
+                    raw_dir = getattr(sig, "direction", None)
+                    dir_val = None
+                    if raw_dir is not None:
+                        dir_val = raw_dir.value if hasattr(raw_dir, "value") else int(raw_dir)
+
                     sig_payload = {
-                        "action": sig.action.value if hasattr(sig.action, "value") else str(sig.action),
-                        "direction": sig.direction.value if hasattr(sig.direction, "value") else str(sig.direction),
+                        "action": sig.action.value if hasattr(sig.action, "value") else int(sig.action),
+                        "direction": dir_val,
                         "stop_loss": getattr(sig, "stop_loss", np.nan),
                         "take_profit": getattr(sig, "take_profit", np.nan),
                         "sl_distance": getattr(sig, "sl_distance", np.nan),

@@ -297,8 +297,15 @@ class IsolatedSandboxProcess:
             if sig_data is None:
                 last_signal = None
             else:
-                act = Action(sig_data["action"]) if "action" in sig_data else Action.OPEN
-                direction = Direction(sig_data["direction"])
+                act = Action(sig_data["action"]) if "action" in sig_data else Action.NONE
+                raw_dir = sig_data.get("direction")
+                direction = None
+                if raw_dir is not None and str(raw_dir) != "None":
+                    try:
+                        direction = Direction(int(raw_dir)) if str(raw_dir).lstrip("-").isdigit() else Direction[str(raw_dir).upper()]
+                    except Exception as ex:
+                        _log.debug("Direction parse error: %s", ex)
+                        direction = None
 
                 def _safe_f(v):
                     if v is None:

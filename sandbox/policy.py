@@ -63,6 +63,7 @@ ALLOWED_MODULES = {
     "numpy",
     "pandas",
     "math",
+    "random",
     "numba",
     "np",
     "pd",
@@ -112,7 +113,9 @@ BANNED_ATTR_NAMES = {
 
 class _ASTPolicyVisitor(ast.NodeVisitor):
     def __init__(self, allowed_imports: set[str] | None = None):
-        self.allowed = allowed_imports or ALLOWED_MODULES
+        self.allowed = set(allowed_imports or ALLOWED_MODULES) | {
+            "core.signals", "core.indicators", "core.backtester",
+        }
         self.violations: list[PolicyViolation] = []
         self.banned_imports: list[str] = []
         self._fn_depth = 0
@@ -143,19 +146,20 @@ class _ASTPolicyVisitor(ast.NodeVisitor):
     def visit_Import(self, node: ast.Import):
         for alias in node.names:
             root = alias.name.split(".")[0]
-            if root not in self.allowed:
-                self.banned_imports.append(alias.name)
-                self._add_error(
-                    node,
-                    "banned_import",
-                    f"Import of '{alias.name}' is forbidden in strategy code. Allowed: {sorted(self.allowed)}",
-                )
+            if alias.name in ("core.signals", "core.indicators", "core.backtester") or alias.name in self.allowed or root in self.allowed:
+                continue
+            self.banned_imports.append(alias.name)
+            self._add_error(
+                node,
+                "banned_import",
+                f"Import of '{alias.name}' is forbidden in strategy code. Allowed: {sorted(self.allowed)}",
+            )
         self.generic_visit(node)
 
     def visit_ImportFrom(self, node: ast.ImportFrom):
         mod = node.module or ""
         root = mod.split(".")[0]
-        if root not in self.allowed:
+        if not (mod in ("core.signals", "core.indicators", "core.backtester") or mod in self.allowed or root in self.allowed):
             self.banned_imports.append(mod)
             self._add_error(
                 node,
@@ -587,7 +591,7 @@ def make_safe_builtins(allowed_modules: set[str] | None = None) -> dict[str, Any
 
     def _safe_import(name, *args, **kwargs):
         root = name.split(".")[0]
-        if root not in allowed:
+        if root not in allowed and name not in allowed and not (root == "core" and name in {"core.signals", "core.indicators", "core.backtester"}):
             from sandbox.runner import SandboxImportError
             raise SandboxImportError(f"Import of '{name}' is forbidden in strategy code.")
         return __import__(name, *args, **kwargs)
