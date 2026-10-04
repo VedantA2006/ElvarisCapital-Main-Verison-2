@@ -51,13 +51,14 @@ class Strategy:
         self.slow = 30
 
     def on_bar(self, bars):
-        if len(bars) < self.slow:
+        if len(bars) < self.slow + 1:
             return None
-        fast_ma = bars['close'].rolling(self.fast).mean().iloc[-1]
-        slow_ma = bars['close'].rolling(self.slow).mean().iloc[-1]
-        prev_fast = bars['close'].rolling(self.fast).mean().iloc[-2]
-        prev_slow = bars['close'].rolling(self.slow).mean().iloc[-2]
-        price = bars['close'].iloc[-1]
+        closes = bars['close'].to_numpy()
+        fast_ma = float(np.mean(closes[-self.fast:]))
+        slow_ma = float(np.mean(closes[-self.slow:]))
+        prev_fast = float(np.mean(closes[-self.fast-1:-1]))
+        prev_slow = float(np.mean(closes[-self.slow-1:-1]))
+        price = float(closes[-1])
 
         if prev_fast <= prev_slow and fast_ma > slow_ma:
             return Signal(direction=Direction.LONG,
@@ -178,6 +179,19 @@ class TestPrompts:
 # ═══════════════════════════════════════════════════════════════════════════
 
 class TestOrchestrator:
+    @pytest.fixture(autouse=True)
+    def _mock_datastore(self, monkeypatch):
+        from core.splits import DataStore
+        mock_train = _make_df(500)
+        mock_train.attrs["split"] = "train"
+        mock_val = _make_df(200)
+        mock_val.attrs["split"] = "validation"
+
+        def fake_get_data(self_ds, timeframe, split):
+            return mock_train if split == "train" else mock_val
+
+        monkeypatch.setattr(DataStore, "get_data", fake_get_data)
+
     def _make_mock_orchestrator(self, base_cfg):
         """Create an Orchestrator with mocked LLM."""
         from llm.orchestrator import Orchestrator
@@ -213,7 +227,7 @@ class TestOrchestrator:
         record = orch.run_trial("1h")
         assert record.trial_id.startswith("trial-")
         assert record.strategy_name == "SMA Crossover Momentum"
-        assert record.status in ("survived", "rejected", "error")
+        assert record.status in ("candidate", "candidate (unproven)", "survived", "rejected", "error")
         assert record.wall_seconds > 0
 
     def test_trial_records_train_result(self, base_cfg):
@@ -261,7 +275,7 @@ class TestLeaderboard:
             delay_test={"sharpe_drop_pct": 20},
         )
         score = compute_robustness_score(record, base_cfg)
-        assert 0.0 <= score <= 1.0
+        assert 0.0 <= score <= 100.0
 
     def test_better_metrics_higher_score(self, base_cfg):
         from llm.orchestrator import compute_robustness_score, TrialRecord

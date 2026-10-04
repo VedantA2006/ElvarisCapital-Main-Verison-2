@@ -661,7 +661,10 @@ def run_deep_audit(
     # Extreme suspicion ceiling (result too good to be true)
     sharpe = float(metrics.get("sharpe", 0.0) or 0.0)
     wr = float(metrics.get("win_rate", 0.0) or 0.0)
-    if sharpe > 4.5 or wr > 0.95:
+    susp_cfg = cfg.get("gates", {}).get("suspicion", {})
+    extreme_sharpe = float(susp_cfg.get("extreme_sharpe_ceiling", 4.5))
+    extreme_wr = float(susp_cfg.get("extreme_win_rate_ceiling", 0.95))
+    if sharpe > extreme_sharpe or wr > extreme_wr:
         return GateResult(
             gate="deep_audit",
             passed=False,

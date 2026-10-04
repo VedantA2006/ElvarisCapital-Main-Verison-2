@@ -148,76 +148,34 @@ class Orchestrator:
             # ── Step 3: Static scan ─────────────────────────────────────
             code = self._scan_and_fix(code, record)
 
-            # ── Step 4: Sandbox load ────────────────────────────────────
-            strategy_obj = self._sandbox.load_strategy(code)
-
-            # ── Step 5: Backtest on TRAIN ───────────────────────────────
+            # ── Steps 4-8: Run Unified 19-Stage Gate Pipeline ───────────
             from core.splits import DataStore
+            from validation.gates import run_pipeline
             store = DataStore(self._cfg)
             train_df = store.get_data(timeframe, "train")
-            train_result = run_backtest(strategy_obj, train_df, self._cfg)
-            record.train_result = result_to_doc(train_result)
-
-            # ── Step 6: Train gates ─────────────────────────────────────
-            trade_pnls = [t.net_pnl for t in train_result.trades]
-            n_trials = self._get_trial_count()
-            gate_result = run_train_gates(
-                train_result.metrics, trade_pnls, self._cfg,
-                timeframe=timeframe, n_trials=max(n_trials, 1),
-            )
-            record.train_gates = gate_result.to_doc()
-
-            if not gate_result.all_passed:
-                record.status = "rejected"
-                record.rejected_at = gate_result.stopped_at
-                self._past_failures.append(
-                    f"{record.strategy_name}: failed {gate_result.stopped_at}")
-                return self._finish(record, t0)
-
-            # ── Step 7: Validation backtest + gate 8 ────────────────────
-            # Need a fresh strategy instance for validation
-            strategy_val = self._sandbox.load_strategy(code)
             val_df = store.get_data(timeframe, "validation")
-            val_result = run_backtest(strategy_val, val_df, self._cfg)
-            record.val_result = result_to_doc(val_result)
 
-            val_gate = gate_validation(
-                val_result.metrics, train_result.metrics, self._cfg)
-            record.val_gate = val_gate.to_doc()
+            pipeline_res = run_pipeline(
+                source=code,
+                df_train=train_df,
+                df_val=val_df,
+                cfg=self._cfg,
+                params=idea.get("parameters"),
+                n_trials=max(self._get_trial_count(), 1),
+            )
 
-            if not val_gate.passed:
-                record.status = "rejected"
-                record.rejected_at = "validation"
-                self._past_failures.append(
-                    f"{record.strategy_name}: failed validation")
+            record.train_result = result_to_doc(pipeline_res.train_result) if pipeline_res.train_result else None
+            record.val_result = result_to_doc(pipeline_res.val_result) if pipeline_res.val_result else None
+            record.train_gates = pipeline_res.to_doc()
+            record.status = pipeline_res.status
+            record.rejected_at = pipeline_res.stopped_at
+
+            if not pipeline_res.all_passed:
+                self._past_failures.append(f"{record.strategy_name}: failed {pipeline_res.stopped_at}")
                 return self._finish(record, t0)
 
-            # ── Step 8: Advanced tests ──────────────────────────────────
-            # Delay test
-            def strat_factory():
-                return self._sandbox.load_strategy(code)
-
-            delay = run_delay_test(strat_factory, train_df, self._cfg)
-            record.delay_test = delay.to_doc()
-            if not delay.passed:
-                record.status = "rejected"
-                record.rejected_at = "delay_test"
-                self._past_failures.append(
-                    f"{record.strategy_name}: failed delay test")
-                return self._finish(record, t0)
-
-            # Truncation test
-            trunc = run_truncation_test(strat_factory, train_df, self._cfg, num_cuts=10)
-            record.truncation_test = trunc.to_doc()
-            if not trunc.passed:
-                record.status = "rejected"
-                record.rejected_at = "truncation_test"
-                self._past_failures.append(
-                    f"{record.strategy_name}: failed truncation test")
-                return self._finish(record, t0)
-
-            # ── SURVIVED! ──────────────────────────────────────────────
-            record.status = "survived"
+            # Promoted to candidate (unproven)
+            record.status = "candidate"
             return self._finish(record, t0)
 
         except LLMRateLimitError as e:
@@ -348,63 +306,43 @@ class Orchestrator:
 # ─── Leaderboard ────────────────────────────────────────────────────────────
 
 def compute_robustness_score(record: TrialRecord, cfg: dict) -> float:
-    """Compute the weighted robustness score (Section 11)."""
-    w = cfg["robustness_weights"]
-    score = 0.0
+    """Compute the weighted robustness score on a 0 to 100 scale (GATE-7)."""
+    from validation.gates import compute_robustness_score as val_robustness
 
-    # DSR
+    components: dict[str, Any] = {}
     if record.train_gates:
-        for g in record.train_gates.get("gates", []):
-            if g["gate"] == "dsr" and g["passed"]:
-                prob = g["data"].get("probability", 0)
-                score += w["dsr"] * min(prob / 0.99, 1.0)
+        gates_list = record.train_gates.get("gates", [])
+        for g in gates_list:
+            gate_name = g.get("name") or g.get("gate")
+            g_data = g.get("details", g.get("data", {}))
+            if gate_name == "dsr":
+                components["dsr"] = float(g_data.get("probability", g_data.get("dsr_probability", 0.5)))
+            elif gate_name in ("walk_forward", "walk_forward_stable"):
+                components["walk_forward_win_pct"] = float(g_data.get("profitable_pct", g_data.get("win_pct", 0.65)))
+                components["walk_forward_efficiency"] = float(g_data.get("efficiency", 0.50))
+            elif gate_name in ("parameter_sensitivity", "parameter_plateau"):
+                components["parameter_plateau_pct"] = float(g_data.get("profitable_pct", g_data.get("prof_pct", 0.70)))
+                components["parameter_sharpe_ratio"] = float(g_data.get("sharpe_ratio_of_baseline", g_data.get("sharpe_ratio", 0.50)))
+            elif gate_name in ("monte_carlo", "monte_carlo_stable"):
+                components["monte_carlo_p95_dd"] = float(g_data.get("p95_dd", 0.20))
+            elif gate_name in ("regime_and_year", "regime_concentration"):
+                components["regime_concentration"] = float(g_data.get("max_regime_concentration", g_data.get("max_concentration", 0.40)))
 
-    # Walk-forward (from train gates if available)
-    if record.train_gates:
-        for g in record.train_gates.get("gates", []):
-            if g["gate"] == "walk_forward" and g["passed"]:
-                pct = g["data"].get("profitable_pct", 0)
-                score += w["walk_forward"] * min(pct / 0.8, 1.0)
-
-    # Monte Carlo
-    if record.train_gates:
-        for g in record.train_gates.get("gates", []):
-            if g["gate"] == "monte_carlo" and g["passed"]:
-                score += w["monte_carlo_5th"] * 1.0
-
-    # Parameter plateau
-    if record.train_gates:
-        for g in record.train_gates.get("gates", []):
-            if g["gate"] == "parameter_sensitivity" and g["passed"]:
-                score += w["parameter_plateau"] * 1.0
-
-    # Regime breadth
-    if record.train_gates:
-        for g in record.train_gates.get("gates", []):
-            if g["gate"] == "regime_concentration" and g["passed"]:
-                conc = g["data"].get("max_concentration", 1.0)
-                score += w["regime_breadth"] * (1.0 - conc)
-
-    # Cost resilience
     if record.train_result:
-        cgr = record.train_result.get("metrics", {}).get("cost_gross_ratio", 1.0)
-        score += w["cost_resilience"] * max(0, 1.0 - cgr / 0.4)
+        metrics = record.train_result.get("metrics", {})
+        cgr = float(metrics.get("cost_gross_ratio", 0.30))
+        components["cost_resilience_pf"] = 1.0 + max(0.0, 0.40 - cgr)
 
-    # Delay resilience
     if record.delay_test:
-        drop = record.delay_test.get("sharpe_drop_pct", 100)
-        score += w["delay_resilience"] * max(0, 1.0 - drop / 60.0)
+        components["delay_sharpe_drop_pct"] = float(record.delay_test.get("sharpe_drop_pct", 20.0))
 
-    # Holdout (only after holdout is run)
-    # score += w["holdout_result"] * ...
-
-    return round(min(score, 1.0), 4)
+    return val_robustness(components, cfg)
 
 
 def update_leaderboard(record: TrialRecord, cfg: dict) -> dict[str, Any]:
-    """Add a survived strategy to the leaderboard in MongoDB."""
-    if record.status != "survived":
-        return {"error": "Only survived strategies go on the leaderboard"}
+    """Add a promoted candidate strategy to the leaderboard in MongoDB."""
+    if record.status not in ("candidate", "candidate (unproven)", "survived"):
+        return {"error": "Only candidate strategies go on the leaderboard"}
 
     db = get_db(mongo_db_name(cfg))
     score = compute_robustness_score(record, cfg)
@@ -413,6 +351,7 @@ def update_leaderboard(record: TrialRecord, cfg: dict) -> dict[str, Any]:
         "trial_id": record.trial_id,
         "strategy_name": record.strategy_name,
         "timeframe": record.timeframe,
+        "status": "candidate (unproven)",
         "robustness_score": score,
         "train_sharpe": record.train_result.get("metrics", {}).get("sharpe", 0) if record.train_result else 0,
         "train_pf": record.train_result.get("metrics", {}).get("profit_factor", 0) if record.train_result else 0,

@@ -234,16 +234,16 @@ sandbox:
   wall_clock_timeout: 120     # seconds
   use_docker: false
 
-# ─── Robustness Score Weights ─────────────────────────────────────────────
+# ─── Robustness Score Weights (0 to 100, spec F8 & GATE-7) ────────────────
 robustness_weights:
-  dsr: 0.15
-  walk_forward: 0.15
-  parameter_plateau: 0.10
-  monte_carlo_5th: 0.15
-  regime_breadth: 0.10
-  cost_resilience: 0.10
-  delay_resilience: 0.10
-  holdout_result: 0.15
+  dsr: 15
+  walk_forward: 15
+  parameter_plateau: 15
+  monte_carlo: 15
+  regime_breadth: 10
+  cost_resilience: 10
+  delay_resilience: 10
+  beat_random: 10
 
 # ─── MongoDB ──────────────────────────────────────────────────────────────
 mongo:

@@ -31,6 +31,10 @@ if QF_TEST_MONGO not in ("mock", "real"):
     raise RuntimeError(f"QF_TEST_MONGO must be 'mock' or 'real', got {QF_TEST_MONGO!r}")
 
 
+def pytest_configure(config):
+    config.addinivalue_line("markers", "slow: mark test as slow to run")
+
+
 def _install_mock_client() -> None:
     """Point storage.mongo's singleton at a brand-new in-memory client."""
     import mongomock

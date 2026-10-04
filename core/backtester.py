@@ -273,10 +273,15 @@ def generate_signal_tape(
     else:
         strat_obj = strategy
 
+    tf = bars.attrs.get("timeframe", "1h")
+    default_lookback = 600 if tf == "4h" else 1500
+    max_lookback = int(cfg.get("sandbox", {}).get("max_lookback_bars", default_lookback))
+
     try:
         for i in range(first_live, n_bars):
+            start_i = max(0, i + 1 - max_lookback)
             try:
-                sig = strat_obj.on_bar(bars.iloc[: i + 1])
+                sig = strat_obj.on_bar(bars.iloc[start_i : i + 1])
             except Exception as exc:
                 # BT-12: Strategy exceptions are NOT swallowed!
                 strategy_errors += 1
