@@ -399,9 +399,13 @@ class LLMClient:
         max_repair: int | None = None,
         strategy_id: str | None = None,
         cycle_id: str | None = None,
+        temperature: float | None = None,
     ) -> T:
         """Call LLM and validate response against Pydantic schema with repair retry loop."""
+        from llm.prompts import render_repair_json_prompt
+
         repair_budget = max_repair if max_repair is not None else self._cfg.get("max_json_repair_attempts", 2)
+        repair_temp = self._cfg.get("code_fix_temperature", 0.2)
         current_messages = list(messages)
         attempt = 0
 
@@ -410,6 +414,7 @@ class LLMClient:
             resp = self.chat(
                 current_messages,
                 purpose=purpose if attempt == 1 else "repair_json",
+                temperature=temperature if attempt == 1 else repair_temp,
                 strategy_id=strategy_id,
                 cycle_id=cycle_id,
             )
@@ -430,13 +435,7 @@ class LLMClient:
 
                 # Append repair instructions
                 current_messages.append({"role": "assistant", "content": resp.content})
-                current_messages.append({
-                    "role": "user",
-                    "content": (
-                        f"Your previous response produced a validation error:\n{err_msg}\n\n"
-                        "Please correct the error and output ONLY the complete, valid JSON object matching the required schema."
-                    ),
-                })
+                current_messages.append(render_repair_json_prompt(err_msg))
 
         raise LLMValidationError("JSON repair attempts exhausted.")
 

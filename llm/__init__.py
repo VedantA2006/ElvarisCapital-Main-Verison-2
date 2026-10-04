@@ -12,13 +12,25 @@ from llm.client import (
     WaitingForQuotaError,
     clean_llm_content,
 )
-from llm.diagnostics import build_train_diagnostics
-from llm.improve_loop import StrategyImproveLoop
+from llm.diagnostics import (
+    build_train_diagnostics,
+    build_train_diagnostics_from_trades,
+)
+from llm.improve_loop import (
+    EvalOutcome,
+    ImproveLoopResult,
+    StrategyImproveLoop,
+    VersionRecord,
+)
 from llm.key_manager import AllKeysUnavailableError, KeyManager, KeyStatus
 from llm.prompts import (
     render_code_fix_prompt,
     render_ideation_prompt,
     render_improve_prompt,
+    render_lookahead_fix_prompt,
+    render_repair_json_prompt,
+    render_rethink_prompt,
+    sanitize_traceback,
 )
 from llm.schemas import (
     ParameterDef,
@@ -47,8 +59,16 @@ __all__ = [
     "StrategyResponse",
     "StrategyImproveResponse",
     "StrategyImproveLoop",
+    "EvalOutcome",
+    "VersionRecord",
+    "ImproveLoopResult",
     "build_train_diagnostics",
+    "build_train_diagnostics_from_trades",
     "render_ideation_prompt",
     "render_code_fix_prompt",
     "render_improve_prompt",
+    "render_rethink_prompt",
+    "render_lookahead_fix_prompt",
+    "render_repair_json_prompt",
+    "sanitize_traceback",
 ]
