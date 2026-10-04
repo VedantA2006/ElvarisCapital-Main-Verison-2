@@ -29,7 +29,7 @@ import pytest
 import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
-SOURCE_DIRS = ("core", "llm", "storage", "dashboard", "scripts", "sandbox", "validation", "strategy")
+SOURCE_DIRS = ("core", "llm", "storage", "dashboard", "scripts", "sandbox", "validation", "strategy", "engine")
 
 
 # ─── helpers ────────────────────────────────────────────────────────────────
@@ -314,7 +314,7 @@ _IMPORT_TO_DIST = {"yaml": "pyyaml", "dotenv": "python-dotenv", "sklearn": "scik
 
 def _third_party_imports() -> set[str]:
     stdlib = set(sys.stdlib_module_names)
-    local = {"core", "llm", "storage", "dashboard", "scripts", "main", "tests", "sandbox", "validation", "strategy"}
+    local = {"core", "llm", "storage", "dashboard", "scripts", "main", "tests", "sandbox", "validation", "strategy", "engine"}
     found = set()
     files = [ROOT / "main.py"] + [f for d in SOURCE_DIRS if (ROOT / d).exists()
                                   for f in (ROOT / d).rglob("*.py")]
