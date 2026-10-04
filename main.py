@@ -186,6 +186,26 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("dashboard", help="Launch web dashboard").set_defaults(fn=cmd_dashboard)
     sub.add_parser("forward").set_defaults(fn=lambda a: print("Phase 10"))
 
+    def cmd_refreeze(args):
+        from core.splits import refreeze
+        cfg = load_config(args.config)
+        try:
+            rep = refreeze(args.timeframe, args.confirm, cfg)
+            print(f"Refreeze successful for {args.timeframe}:")
+            print(f"  Old hash: {rep['old_hash'][:16] if rep['old_hash'] else 'None'}...")
+            print(f"  New hash: {rep['new_hash'][:16]}...")
+            print(f"  Invalidated holdouts: {rep['invalidated_holdout_accesses']}")
+            print(f"  Marked backtests: {rep['marked_backtests']}")
+            return 0
+        except Exception as exc:
+            print(f"Refreeze failed: {exc}", file=sys.stderr)
+            return 1
+
+    rf_p = sub.add_parser("refreeze", help="Re-freeze split boundaries and data lock for a timeframe")
+    rf_p.add_argument("--timeframe", "-t", required=True, help="Timeframe to refreeze (e.g. 1h)")
+    rf_p.add_argument("--confirm", required=True, help="Confirmation phrase ('REFREEZE <timeframe>')")
+    rf_p.set_defaults(fn=cmd_refreeze)
+
     args = p.parse_args(argv)
     return args.fn(args)
 

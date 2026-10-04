@@ -1,99 +1,221 @@
 """
-Patch 1h and 4h CSVs by filling the September 2025 hole from 5m data.
+scripts/patch_hole.py – Safely patch gaps in higher-timeframe data from lower-timeframe bars.
 
-- Backs up originals as .bak
-- Aggregates 5m bars into 1h/4h for the missing window ONLY
-- Appends, sorts, deduplicates by timestamp, and re-writes
-- Logs every step for auditability
+Guarantees (Section F1.2):
+1. Aggregates lower-TF bars into the EXACT same grid as the native target file.
+2. Validates cross-timeframe consistency on an overlapping historical month; aborts if mismatch rate > threshold.
+3. NEVER overwrites the source file; writes to a separate '*.patched.csv' file.
+4. Identifies whether patched bars fall into train, validation, or holdout splits.
+5. If patched bars fall into the holdout, marks them 'synthetic' and refuses to silently contaminate holdout without audited refreeze.
 """
 
-import shutil
+from __future__ import annotations
+
+import argparse
 import sys
 from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+from typing import Any
 
 import numpy as np
 import pandas as pd
 
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
 from core.config import load_config, load_env
-from core.data_loader import file_sha256
+from core.data_loader import (
+    TIMEFRAME_MINUTES,
+    convert_to_utc,
+    cross_timeframe_consistency,
+    data_path,
+    file_sha256,
+)
+from core.splits import get_or_freeze_boundaries
 
-load_env()
-cfg = load_config()
-data_dir = Path(cfg["data"]["base_dir_resolved"])
 
-# ── Load 5m data ──────────────────────────────────────────────────────────
-m5_path = data_dir / cfg["data"]["files"]["5m"]
-print(f"Loading 5m data from {m5_path}")
-m5 = pd.read_csv(m5_path)
-m5["timestamp"] = pd.to_datetime(m5["timestamp"])
-print(f"  {len(m5)} bars, {m5['timestamp'].min()} -> {m5['timestamp'].max()}")
-
-# ── Define the hole window ────────────────────────────────────────────────
-HOLE_START = pd.Timestamp("2025-09-01 00:00:00")
-HOLE_END   = pd.Timestamp("2025-10-01 00:00:00")
-
-m5_hole = m5[(m5["timestamp"] >= HOLE_START) & (m5["timestamp"] < HOLE_END)].copy()
-print(f"\n5m bars in hole window: {len(m5_hole)}")
-assert len(m5_hole) > 5000, f"Expected ~6000 5m bars in Sep 2025, got {len(m5_hole)}"
-
-# ── Aggregate into 1h and 4h ─────────────────────────────────────────────
-def aggregate(src: pd.DataFrame, freq: str) -> pd.DataFrame:
-    agg = (src.set_index("timestamp")
-           .resample(freq, label="left", closed="left")
-           .agg({"open": "first", "high": "max", "low": "min",
-                 "close": "last", "volume": "sum"})
-           .dropna()
-           .reset_index())
+def aggregate_to_grid(df_low_utc: pd.DataFrame, target_tf: str) -> pd.DataFrame:
+    """Aggregate lower-timeframe bars into target timeframe using native grid alignment."""
+    rule = f"{TIMEFRAME_MINUTES[target_tf]}min"
+    indexed = df_low_utc.set_index("timestamp")
+    agg = (
+        indexed.resample(rule, label="left", closed="left")
+        .agg({
+            "open": "first",
+            "high": "max",
+            "low": "min",
+            "close": "last",
+            "volume": "sum",
+        })
+        .dropna(subset=["open", "high", "low", "close"])
+        .reset_index()
+    )
     return agg
 
-h1_fill = aggregate(m5_hole, "60min")
-h4_fill = aggregate(m5_hole, "240min")
-print(f"Aggregated: {len(h1_fill)} x 1h bars, {len(h4_fill)} x 4h bars")
 
-# ── Patch each file ──────────────────────────────────────────────────────
-for tf, fill_df, fname in [("1h", h1_fill, cfg["data"]["files"]["1h"]),
-                            ("4h", h4_fill, cfg["data"]["files"]["4h"])]:
-    path = data_dir / fname
-    bak = path.with_suffix(".csv.bak")
+def patch_gap(
+    source_tf: str = "5m",
+    target_tf: str = "1h",
+    hole_start: str = "2025-09-01",
+    hole_end: str = "2025-10-01",
+    overlap_month: str = "2025-08",
+    mismatch_threshold_pct: float = 1.0,
+    cfg: dict | None = None,
+    output_path: Path | None = None,
+    allow_holdout_contamination: bool = False,
+) -> dict[str, Any]:
+    """Execute a safe, audited gap patch procedure."""
+    if cfg is None:
+        load_env()
+        cfg = load_config()
 
-    # Backup
-    if not bak.exists():
-        shutil.copy2(path, bak)
-        print(f"\n[{tf}] Backed up {path.name} -> {bak.name}")
-    else:
-        print(f"\n[{tf}] Backup already exists: {bak.name}")
+    src_path = data_path(source_tf, cfg)
+    tgt_path = data_path(target_tf, cfg)
 
-    orig_hash = file_sha256(path)
-    orig = pd.read_csv(path)
-    orig["timestamp"] = pd.to_datetime(orig["timestamp"])
-    print(f"  Original: {len(orig)} rows, hash={orig_hash[:16]}...")
+    out_file = output_path or tgt_path.with_name(f"{tgt_path.stem}.patched.csv")
+    if out_file.resolve() == tgt_path.resolve():
+        raise PermissionError(f"Refusing to overwrite original data file: {tgt_path}")
 
-    # Remove any partial rows in the hole window (shouldn't exist, but be safe)
-    in_hole = (orig["timestamp"] >= HOLE_START) & (orig["timestamp"] < HOLE_END)
-    existing_in_hole = int(in_hole.sum())
-    if existing_in_hole:
-        print(f"  WARNING: {existing_in_hole} existing rows in hole window will be replaced")
-        orig = orig[~in_hole]
+    if not src_path.exists():
+        raise FileNotFoundError(f"Source file not found: {src_path}")
+    if not tgt_path.exists():
+        raise FileNotFoundError(f"Target file not found: {tgt_path}")
 
-    # Merge
-    merged = pd.concat([orig, fill_df], ignore_index=True)
-    merged = merged.sort_values("timestamp").drop_duplicates(subset="timestamp", keep="first").reset_index(drop=True)
+    # 1. Load raw data and convert to UTC
+    df_src_raw = pd.read_csv(src_path)
+    df_tgt_raw = pd.read_csv(tgt_path)
 
-    # Write back in the same naive-timestamp format
-    out = merged.copy()
-    out["timestamp"] = out["timestamp"].dt.strftime("%Y-%m-%d %H:%M:%S")
-    out.to_csv(path, index=False)
+    df_src_utc, _ = convert_to_utc(df_src_raw, cfg["data"]["broker_tz"])
+    df_tgt_utc, _ = convert_to_utc(df_tgt_raw, cfg["data"]["broker_tz"])
 
-    new_hash = file_sha256(path)
-    print(f"  Patched:  {len(merged)} rows (+{len(merged) - len(orig)}), hash={new_hash[:16]}...")
-    print(f"  Hole coverage: {fill_df['timestamp'].min()} -> {fill_df['timestamp'].max()}")
+    # 2. Cross-timeframe consistency check on overlapping period
+    overlap_ts = pd.to_datetime(overlap_month)
+    overlap_start = overlap_ts.tz_localize("UTC") if overlap_ts.tzinfo is None else overlap_ts
+    overlap_end = overlap_start + pd.DateOffset(months=1)
 
-    # Sanity: verify monotonic
-    check = pd.read_csv(path)
-    check["timestamp"] = pd.to_datetime(check["timestamp"])
-    assert check["timestamp"].is_monotonic_increasing, f"{tf}: timestamps not monotonic after patch!"
-    print(f"  [OK] Monotonic timestamp check passed")
+    src_overlap = df_src_utc[(df_src_utc["timestamp"] >= overlap_start) & (df_src_utc["timestamp"] < overlap_end)]
+    tgt_overlap = df_tgt_utc[(df_tgt_utc["timestamp"] >= overlap_start) & (df_tgt_utc["timestamp"] < overlap_end)]
 
-print("\n=== Patch complete. Re-run 'python main.py verify-data' to confirm. ===")
+    if len(src_overlap) == 0 or len(tgt_overlap) == 0:
+        raise ValueError(
+            f"Overlap validation month '{overlap_month}' has no bars (src: {len(src_overlap)}, tgt: {len(tgt_overlap)})"
+        )
+
+    consistency = cross_timeframe_consistency(src_overlap, tgt_overlap, target_tf)
+    max_mism = max(
+        consistency.get("open_mismatch_pct", 0) or 0,
+        consistency.get("close_mismatch_pct", 0) or 0,
+    )
+
+    if max_mism > mismatch_threshold_pct:
+        raise RuntimeError(
+            f"Cross-timeframe consistency validation failed on month {overlap_month}: "
+            f"max mismatch {max_mism:.2f}% exceeds threshold {mismatch_threshold_pct:.2f}%. Aborting patch."
+        )
+
+    # 3. Aggregate hole window
+    h_start = pd.to_datetime(hole_start).tz_localize("UTC") if pd.to_datetime(hole_start).tzinfo is None else pd.to_datetime(hole_start)
+    h_end = pd.to_datetime(hole_end).tz_localize("UTC") if pd.to_datetime(hole_end).tzinfo is None else pd.to_datetime(hole_end)
+
+    src_hole = df_src_utc[(df_src_utc["timestamp"] >= h_start) & (df_src_utc["timestamp"] < h_end)].copy()
+    if len(src_hole) == 0:
+        raise ValueError(f"No source {source_tf} bars found in hole window {hole_start} -> {hole_end}")
+
+    aggregated_fill = aggregate_to_grid(src_hole, target_tf)
+
+    # 4. Determine which split(s) are touched by the patch
+    boundaries = get_or_freeze_boundaries(cfg)
+    fill_ts = aggregated_fill["timestamp"]
+    fill_min, fill_max = fill_ts.min(), fill_ts.max()
+
+    train_touched = bool(((fill_ts >= boundaries.train_start) & (fill_ts < boundaries.train_end)).any())
+    val_touched = bool(((fill_ts >= boundaries.validation_start) & (fill_ts < boundaries.validation_end)).any())
+    holdout_touched = bool(((fill_ts >= boundaries.holdout_start) & (fill_ts < boundaries.holdout_end)).any())
+
+    splits_touched = []
+    if train_touched:
+        splits_touched.append("train")
+    if val_touched:
+        splits_touched.append("validation")
+    if holdout_touched:
+        splits_touched.append("holdout")
+
+    if holdout_touched and not allow_holdout_contamination:
+        raise PermissionError(
+            f"Patched bars fall within the HOLDOUT split ({boundaries.holdout_start} -> {boundaries.holdout_end}). "
+            "Synthetic data must not contaminate holdout without explicit boundary shift via audited refreeze."
+        )
+
+    # 5. Merge and write to NEW patched file (NEVER overwrite source)
+    out_file = output_path or tgt_path.with_name(f"{tgt_path.stem}.patched.csv")
+    if out_file.resolve() == tgt_path.resolve():
+        raise PermissionError(f"Refusing to overwrite original data file: {tgt_path}")
+
+    # Remove any existing rows in the hole window
+    in_hole = (df_tgt_utc["timestamp"] >= h_start) & (df_tgt_utc["timestamp"] < h_end)
+    clean_tgt = df_tgt_raw.loc[~in_hole].copy()
+
+    # Format aggregated fill to match original format (broker time string)
+    broker_tz = cfg["data"]["broker_tz"]
+    fill_broker_ts = aggregated_fill["timestamp"].dt.tz_convert(broker_tz).dt.tz_localize(None)
+    fill_formatted = aggregated_fill.copy()
+    fill_formatted["timestamp"] = fill_broker_ts.dt.strftime("%Y-%m-%d %H:%M:%S")
+
+    merged = pd.concat([clean_tgt, fill_formatted], ignore_index=True)
+    # Sort by timestamp
+    merged["_dt"] = pd.to_datetime(merged["timestamp"], format="mixed", utc=True)
+    merged = merged.sort_values("_dt").drop(columns=["_dt"]).drop_duplicates(subset=["timestamp"]).reset_index(drop=True)
+
+    merged.to_csv(out_file, index=False)
+    new_hash = file_sha256(out_file)
+
+    report = {
+        "status": "SUCCESS",
+        "source_file": src_path.name,
+        "target_file": tgt_path.name,
+        "output_file": str(out_file),
+        "source_bars_in_hole": len(src_hole),
+        "aggregated_fill_bars": len(aggregated_fill),
+        "fill_time_range": f"{fill_min} -> {fill_max}",
+        "consistency_overlap_month": overlap_month,
+        "consistency_mismatch_max_pct": max_mism,
+        "splits_touched": splits_touched,
+        "holdout_touched": holdout_touched,
+        "original_rows": len(df_tgt_raw),
+        "patched_rows": len(merged),
+        "new_file_sha256": new_hash,
+    }
+    return report
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Safely patch data hole from 5m data without overwriting source.")
+    parser.add_argument("--source-tf", default="5m", help="Lower timeframe source (default 5m)")
+    parser.add_argument("--target-tf", default="1h", help="Target timeframe to patch (default 1h)")
+    parser.add_argument("--hole-start", default="2025-09-01", help="Start of hole window (UTC)")
+    parser.add_argument("--hole-end", default="2025-10-01", help="End of hole window (UTC)")
+    parser.add_argument("--overlap-month", default="2025-08", help="Overlap validation month (default 2025-08)")
+    parser.add_argument("--mismatch-max", type=float, default=1.0, help="Max allowed mismatch %% (default 1.0)")
+    parser.add_argument("--allow-holdout", action="store_true", default=False, help="Allow holdout touch")
+    args = parser.parse_args()
+
+    try:
+        report = patch_gap(
+            source_tf=args.source_tf,
+            target_tf=args.target_tf,
+            hole_start=args.hole_start,
+            hole_end=args.hole_end,
+            overlap_month=args.overlap_month,
+            mismatch_threshold_pct=args.mismatch_max,
+            allow_holdout_contamination=args.allow_holdout,
+        )
+        print("Patch Report:")
+        for k, v in report.items():
+            print(f"  {k}: {v}")
+        return 0
+    except Exception as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -27,7 +27,7 @@ Design (conservative choices, documented in docs/METHODOLOGY.md):
 
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 from datetime import datetime, timezone
 from typing import Any
 
@@ -39,6 +39,7 @@ from core.data_loader import (
     add_session_labels,
     convert_to_utc,
     data_path,
+    file_sha256,
     frame_sha256,
     load_and_validate,
 )
@@ -48,6 +49,10 @@ VALID_SPLITS = ("train", "validation", "holdout")
 
 class HoldoutLockError(PermissionError):
     """Raised on any second holdout access, or holdout access without strategy_id."""
+
+
+class DataLockError(PermissionError):
+    """Raised when data file hash or row count differs from frozen snapshot."""
 
 
 class TimeframeDisabledError(PermissionError):
@@ -71,6 +76,7 @@ class SplitBoundaries:
     validation_ratio: float
     holdout_ratio: float
     embargo_days: float
+    timeframe_locks: dict[str, dict[str, Any]] = field(default_factory=dict)
 
     def range_for(self, split: str) -> tuple[pd.Timestamp, pd.Timestamp]:
         if split == "train":
@@ -89,6 +95,11 @@ class SplitBoundaries:
     def from_doc(cls, doc: dict[str, Any]) -> "SplitBoundaries":
         kw = {}
         for f in cls.__dataclass_fields__:
+            if f == "timeframe_locks":
+                kw[f] = doc.get("timeframe_locks", {})
+                continue
+            if f not in doc:
+                continue
             v = doc[f]
             if isinstance(v, datetime):
                 v = pd.Timestamp(v)
@@ -97,7 +108,28 @@ class SplitBoundaries:
         return cls(**kw)
 
 
-def compute_boundaries(data_start: pd.Timestamp, data_end: pd.Timestamp, splits_cfg: dict) -> SplitBoundaries:
+def compute_timeframe_locks(cfg: dict) -> dict[str, dict[str, Any]]:
+    """Compute sha256 and row count for all data files present."""
+    locks = {}
+    for tf in cfg["data"]["files"]:
+        try:
+            p = data_path(tf, cfg)
+        except ValueError:
+            continue
+        if p.exists():
+            h = file_sha256(p)
+            with open(p, "rb") as f:
+                rc = sum(1 for _ in f) - 1
+            locks[tf] = {"sha256": h, "row_count": max(0, rc), "file_name": p.name}
+    return locks
+
+
+def compute_boundaries(
+    data_start: pd.Timestamp,
+    data_end: pd.Timestamp,
+    splits_cfg: dict,
+    timeframe_locks: dict[str, dict[str, Any]] | None = None,
+) -> SplitBoundaries:
     """Pure function: chronological 60/20/20 (configurable) with embargo.
 
     data_end is EXCLUSIVE (close time of the last bar). Internal boundaries are
@@ -123,6 +155,7 @@ def compute_boundaries(data_start: pd.Timestamp, data_end: pd.Timestamp, splits_
         holdout_start=holdout_start, holdout_end=data_end,
         train_ratio=tr, validation_ratio=va, holdout_ratio=splits_cfg["holdout_ratio"],
         embargo_days=float(splits_cfg["embargo_days"]),
+        timeframe_locks=timeframe_locks or {},
     )
 
 
@@ -168,7 +201,8 @@ def get_or_freeze_boundaries(cfg: dict, collection=None) -> SplitBoundaries:
     s = cfg["splits"]
     if doc is None:
         start, end = common_data_range(cfg)
-        b = compute_boundaries(start, end, s)
+        locks = compute_timeframe_locks(cfg)
+        b = compute_boundaries(start, end, s, timeframe_locks=locks)
         try:
             collection.insert_one({"_id": symbol, **b.to_doc(),
                                    "frozen_at": datetime.now(timezone.utc)})
@@ -212,12 +246,32 @@ class DataStore:
                 f"Timeframe '{timeframe}' is disabled (enabled: {self._cfg['data']['enabled_timeframes']}). "
                 "See Section 0C.")
 
+    def _verify_data_lock(self, timeframe: str) -> None:
+        """Verify on-disk file hash matches the frozen snapshot in Mongo."""
+        locks = self._boundaries.timeframe_locks
+        if timeframe in locks and "sha256" in locks[timeframe]:
+            expected = locks[timeframe]["sha256"]
+            p = data_path(timeframe, self._cfg)
+            if p.exists():
+                actual = file_sha256(p)
+                if actual != expected:
+                    raise DataLockError(
+                        f"Data lock violation for {timeframe}: file SHA256 has changed "
+                        f"from frozen {expected[:12]}... to {actual[:12]}... "
+                        f"(frozen row_count: {locks[timeframe].get('row_count')}). "
+                        f"Data is locked to preserve backtest reproducibility. "
+                        f"Run 'main.py refreeze --timeframe {timeframe} --confirm \"REFREEZE {timeframe}\"' to update."
+                    )
+
     def _frame(self, timeframe: str) -> pd.DataFrame:
         if timeframe not in self._frames:
             df, fhash, _ = load_and_validate(timeframe, self._cfg)
+            self._verify_data_lock(timeframe)
             df = add_session_labels(df, self._cfg)
             self._frames[timeframe] = df
             self._file_hashes[timeframe] = fhash
+        else:
+            self._verify_data_lock(timeframe)
         return self._frames[timeframe]
 
     def split_info(self, timeframe: str) -> dict[str, Any]:
@@ -245,6 +299,33 @@ class DataStore:
         self._check_tf(timeframe)
         if warmup_bars < 0:
             raise ValueError("warmup_bars must be >= 0")
+
+        # Vault check: if an encrypted vault exists on disk, serve validation/holdout from it
+        from core.data_vault import vault_path, load_vault_split
+        vp = vault_path(timeframe, self._cfg)
+        if vp.exists() and split in ("validation", "holdout"):
+            if split == "holdout":
+                if not strategy_id or not isinstance(strategy_id, str):
+                    raise HoldoutLockError("Holdout access requires a non-empty strategy_id.")
+                try:
+                    self._record_holdout(strategy_id, timeframe=timeframe, purpose=purpose,
+                                         file_hash=file_sha256(vp))
+                except PermissionError as exc:
+                    raise HoldoutLockError(str(exc)) from exc
+            vault_df = load_vault_split(timeframe, split, self._cfg)
+            vault_df = add_session_labels(vault_df, self._cfg)
+            lo, hi = self._boundaries.range_for(split)
+            vault_df.attrs = {
+                "timeframe": timeframe,
+                "split": split,
+                "file_hash": file_sha256(vp),
+                "slice_hash": frame_sha256(vault_df),
+                "split_start": str(lo),
+                "split_end_exclusive": str(hi),
+                "warmup_bars": 0,
+                "is_vaulted": True,
+            }
+            return vault_df.copy()
 
         if split == "holdout":
             if not strategy_id or not isinstance(strategy_id, str):
@@ -281,3 +362,92 @@ class DataStore:
             "warmup_bars": int(out["is_warmup"].sum()),
         }
         return out
+
+
+def refreeze(timeframe: str, confirm_phrase: str, cfg: dict, collection=None) -> dict[str, Any]:
+    """Auditably refreeze split boundaries and data lock for a timeframe.
+
+    Requires confirmation phrase: 'REFREEZE {timeframe}'
+    Actions:
+    1. Re-computes timeframe lock and boundaries.
+    2. Updates split_boundaries document in Mongo.
+    3. Invalidates previous holdout access for this timeframe.
+    4. Marks existing backtests as data_changed=True.
+    5. Writes an audit log entry in col_logs.
+    """
+    expected_phrase = f"REFREEZE {timeframe}"
+    if confirm_phrase.strip() != expected_phrase:
+        raise ValueError(
+            f"Confirmation phrase mismatch: expected '{expected_phrase}', got '{confirm_phrase}'"
+        )
+
+    if collection is None:
+        from storage.mongo import get_db
+        collection = get_db()["split_boundaries"]
+
+    from storage.mongo import col_holdout_access, col_backtests, col_logs
+
+    p = data_path(timeframe, cfg)
+    if not p.exists():
+        raise FileNotFoundError(f"Data file not found: {p}")
+
+    new_hash = file_sha256(p)
+    with open(p, "rb") as f:
+        new_rc = sum(1 for _ in f) - 1
+
+    symbol = cfg["data"]["symbol"]
+    doc = collection.find_one({"_id": symbol}) or {}
+    old_locks = doc.get("timeframe_locks", {})
+    old_hash = old_locks.get(timeframe, {}).get("sha256")
+
+    # Update boundaries with new common range
+    start, end = common_data_range(cfg)
+    b = compute_boundaries(start, end, cfg["splits"])
+    new_locks = compute_timeframe_locks(cfg)
+    new_locks[timeframe] = {"sha256": new_hash, "row_count": max(0, new_rc), "file_name": p.name}
+
+    collection.update_one(
+        {"_id": symbol},
+        {"$set": {
+            **b.to_doc(),
+            "timeframe_locks": new_locks,
+            "refrozen_at": datetime.now(timezone.utc),
+            "last_refrozen_timeframe": timeframe,
+        }},
+        upsert=True,
+    )
+
+    # Invalidate earlier holdout accesses
+    deleted_holdouts = col_holdout_access().delete_many({"timeframe": timeframe}).deleted_count
+
+    # Mark existing backtests
+    marked_backtests = col_backtests().update_many(
+        {"timeframe": timeframe},
+        {"$set": {"data_changed": True}}
+    ).modified_count
+
+    # Audit log
+    audit_entry = {
+        "timestamp": datetime.now(timezone.utc),
+        "level": "WARNING",
+        "action": "refreeze",
+        "timeframe": timeframe,
+        "old_hash": old_hash,
+        "new_hash": new_hash,
+        "invalidated_holdout_accesses": deleted_holdouts,
+        "marked_backtests": marked_backtests,
+    }
+    col_logs().insert_one(audit_entry)
+
+    # Clear memory cache for this timeframe
+    from core.data_loader import clear_frame_cache
+    clear_frame_cache()
+
+    return {
+        "timeframe": timeframe,
+        "old_hash": old_hash,
+        "new_hash": new_hash,
+        "invalidated_holdout_accesses": deleted_holdouts,
+        "marked_backtests": marked_backtests,
+    }
+

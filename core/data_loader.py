@@ -362,21 +362,51 @@ class DataValidationError(RuntimeError):
         super().__init__("\n".join(lines))
 
 
+import copy
+
+_FRAME_CACHE: dict[tuple[str, str], tuple[pd.DataFrame, str, dict[str, Any]]] = {}
+_CACHE_STATS = {"hits": 0, "misses": 0}
+
+
+def clear_frame_cache() -> None:
+    """Clear in-process cached DataFrames and reset stats."""
+    _FRAME_CACHE.clear()
+    _CACHE_STATS["hits"] = 0
+    _CACHE_STATS["misses"] = 0
+
+
+def get_cache_stats() -> dict[str, int]:
+    """Return cache hit/miss statistics."""
+    return dict(_CACHE_STATS)
+
+
 def load_and_validate(timeframe: str, cfg: dict) -> tuple[pd.DataFrame, str, dict[str, Any]]:
     """Load -> UTC -> validate. Returns (df, file_hash, report).
 
-    The returned frame is in FILE ORDER (never re-sorted, never de-duplicated);
-    if the file is out of order the report says so and we halt.
+    Cached by file SHA256 hash so subsequent trials on unchanged data do not re-read
+    and re-validate the raw CSV from disk.
     Raises DataValidationError on critical errors when configured to halt.
     """
-    raw, fhash = load_raw_data(timeframe, cfg)
+    path = data_path(timeframe, cfg)
+    if not path.exists():
+        raise FileNotFoundError(f"Data file not found: {path}")
+    fhash = file_sha256(path)
+    cache_key = (timeframe, fhash)
+
+    if cache_key in _FRAME_CACHE:
+        _CACHE_STATS["hits"] += 1
+        cached_df, cached_hash, cached_report = _FRAME_CACHE[cache_key]
+        return cached_df.copy(), cached_hash, copy.deepcopy(cached_report)
+
+    _CACHE_STATS["misses"] += 1
+    raw, _ = load_raw_data(timeframe, cfg)
     df, conv = convert_to_utc(raw, cfg["data"]["broker_tz"])
     for col in REQUIRED_COLUMNS[1:]:
         df[col] = pd.to_numeric(df[col], errors="coerce").astype(np.float64)
 
     report = validate_data(df, timeframe, cfg, conversion_issues=conv)
     report["file_hash"] = fhash
-    report["file_name"] = data_path(timeframe, cfg).name
+    report["file_name"] = path.name
     report["broker_tz"] = cfg["data"]["broker_tz"]
     report["created_at"] = datetime.now(timezone.utc)
 
@@ -385,4 +415,6 @@ def load_and_validate(timeframe: str, cfg: dict) -> tuple[pd.DataFrame, str, dic
     df = df.reset_index(drop=True)
     df.attrs["file_hash"] = fhash
     df.attrs["timeframe"] = timeframe
+
+    _FRAME_CACHE[cache_key] = (df.copy(), fhash, copy.deepcopy(report))
     return df, fhash, report
