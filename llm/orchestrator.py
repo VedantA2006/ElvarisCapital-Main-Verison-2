@@ -354,23 +354,30 @@ class Orchestrator:
             tf = timeframes[tf_idx % len(timeframes)]
             tf_idx += 1
 
-            print(f"\n{'='*60}")
+            cand_count = sum(1 for r in records if r.status in ('candidate', 'survived'))
+            rej_count = sum(1 for r in records if r.status == 'rejected')
+            print(f"\n{'='*60}", flush=True)
             print(f"Trial {i+1}/{max_trials} | TF={tf} | "
-                  f"Survived: {sum(1 for r in records if r.status == 'survived')} | "
-                  f"Rejected: {sum(1 for r in records if r.status == 'rejected')}")
-            print(f"{'='*60}")
+                  f"Candidates/Survived: {cand_count} | "
+                  f"Rejected: {rej_count}", flush=True)
+            print(f"{'='*60}", flush=True)
 
             record = self.run_trial(tf)
             records.append(record)
 
-            status_icon = {"survived": "[SURVIVED]", "rejected": "[REJECTED]",
-                           "error": "[ERROR]"}.get(record.status, "[???]")
+            status_icon = {
+                "survived": "[SURVIVED]",
+                "candidate": "[CANDIDATE]",
+                "candidate (unproven)": "[CANDIDATE]",
+                "rejected": "[REJECTED]",
+                "error": "[ERROR]",
+            }.get(record.status, f"[{record.status.upper()}]")
             print(f"{status_icon} {record.strategy_name} "
                   f"({record.rejected_at or record.status}) "
-                  f"[{record.wall_seconds:.1f}s]")
+                  f"[{record.wall_seconds:.1f}s]", flush=True)
 
-            if stop_on_survivor and record.status == "survived":
-                print("\nSurvivor found! Stopping loop.")
+            if stop_on_survivor and record.status in ("survived", "candidate"):
+                print("\nCandidate/Survivor found! Stopping loop.", flush=True)
                 break
 
             # Cooldown between trials
