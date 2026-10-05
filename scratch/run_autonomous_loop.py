@@ -40,11 +40,13 @@ def main():
     print("=" * 70, flush=True)
     
     # Key manager status
-    km = KeyManager.get_instance()
+    km = KeyManager(cfg, db=db)
+    key_label, key_val = km.get_active_key()
     k1 = os.getenv("LLM_API_KEY_1") or os.getenv("LLM_API_KEY", "")
     k2 = os.getenv("LLM_API_KEY_2", "")
     print(f"Primary API Key:   {k1[:10]}...{k1[-4:] if len(k1) > 14 else ''}", flush=True)
     print(f"Backup API Key:    {k2[:10]}...{k2[-4:] if len(k2) > 14 else ''}", flush=True)
+    print(f"Active Key:        {key_label} ({key_val[:10]}...)", flush=True)
     print(f"Database:          {mongo_db_name(cfg)}", flush=True)
     
     # Check current leaderboard
