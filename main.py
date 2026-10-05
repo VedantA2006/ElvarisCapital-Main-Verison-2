@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -184,14 +185,17 @@ def main(argv: list[str] | None = None) -> int:
         dash_cfg = cfg.get("dashboard", {})
         host = args.host or dash_cfg.get("host", "127.0.0.1")
         port = args.port or dash_cfg.get("port", 8000)
-        app = create_app(cfg=cfg)
+        token = args.token or os.environ.get("DASHBOARD_TOKEN") or "quantforge-admin-2026"
+        app = create_app(cfg=cfg, token=token)
         print(f"\n[QuantForge] Launching research console at http://{host}:{port}")
+        print(f"[QuantForge] Dashboard Access Token: {token}")
         uvicorn.run(app, host=host, port=port)
         return 0
 
     dash_p = sub.add_parser("dashboard", help="Launch web dashboard (FastAPI)")
     dash_p.add_argument("--host", default=None, help="Host address (default 127.0.0.1)")
     dash_p.add_argument("--port", type=int, default=None, help="Port (default 8000)")
+    dash_p.add_argument("--token", default=None, help="Dashboard access token")
     dash_p.set_defaults(fn=cmd_dashboard)
 
     def cmd_up(args):
@@ -199,6 +203,7 @@ def main(argv: list[str] | None = None) -> int:
         import uvicorn
         from dashboard.fastapi_app import create_app
         from engine.supervisor import EngineSupervisor
+        from engine.worker import EngineWorker
         from storage.mongo import get_db
         from core.config import mongo_db_name
 
@@ -207,22 +212,27 @@ def main(argv: list[str] | None = None) -> int:
         dash_cfg = cfg.get("dashboard", {})
         host = args.host or dash_cfg.get("host", "127.0.0.1")
         port = args.port or dash_cfg.get("port", 8000)
+        token = args.token or os.environ.get("DASHBOARD_TOKEN") or "quantforge-admin-2026"
 
         supervisor = EngineSupervisor(db=db, cfg=cfg)
         if args.autostart:
             supervisor.set_desired_state("running", requested_by="cli_autostart")
 
-        sup_thread = threading.Thread(target=supervisor.run_supervision_loop, daemon=True)
-        sup_thread.start()
+        worker = EngineWorker(db=db, cfg=cfg, supervisor=supervisor)
+        worker_thread = threading.Thread(target=worker.run_until_stopped, daemon=True)
+        if args.autostart or supervisor.get_desired_state() == "running":
+            worker_thread.start()
 
-        app = create_app(db=db, cfg=cfg)
+        app = create_app(db=db, cfg=cfg, token=token)
         print(f"\n[QuantForge] Engine supervisor active. Research console at http://{host}:{port}")
+        print(f"[QuantForge] Dashboard Access Token: {token}")
         uvicorn.run(app, host=host, port=port)
         return 0
 
     up_p = sub.add_parser("up", help="Launch dashboard and engine supervisor")
     up_p.add_argument("--host", default=None, help="Host address (default 127.0.0.1)")
     up_p.add_argument("--port", type=int, default=None, help="Port (default 8000)")
+    up_p.add_argument("--token", default=None, help="Dashboard access token")
     up_p.add_argument("--autostart", action="store_true", help="Automatically set desired_state to running")
     up_p.set_defaults(fn=cmd_up)
 
