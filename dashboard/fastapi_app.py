@@ -123,6 +123,11 @@ def create_app(db: Any = None, cfg: dict | None = None, token: str | None = None
         )
         return {"status": "authenticated", "csrf_token": csrf_token}
 
+    @app.get("/api/auth/csrf")
+    async def get_csrf_token(_auth: str = Depends(_verify_auth)) -> dict[str, str]:
+        csrf_token = hashlib.sha256(f"{_auth}_{csrf_secret}".encode()).hexdigest()
+        return {"csrf_token": csrf_token}
+
     @app.post("/api/auth/logout")
     async def logout(response: Response) -> dict[str, str]:
         response.delete_cookie("qf_token")

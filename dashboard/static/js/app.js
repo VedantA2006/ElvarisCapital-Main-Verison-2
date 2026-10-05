@@ -15,6 +15,26 @@ let state = {
 
 // ─── API Client with CSRF ──────────────────────────────────────────────────
 async function api(path, options = {}) {
+    const method = (options.method || 'GET').toUpperCase();
+    if (['POST', 'PATCH', 'PUT', 'DELETE'].includes(method) && !state.csrfToken) {
+        state.csrfToken = sessionStorage.getItem('qf_csrf_token') || localStorage.getItem('qf_csrf_token') || '';
+        if (!state.csrfToken && path !== '/api/auth/login') {
+            try {
+                const cResp = await fetch('/api/auth/csrf');
+                if (cResp.ok) {
+                    const cData = await cResp.json();
+                    state.csrfToken = cData.csrf_token || '';
+                    if (state.csrfToken) {
+                        sessionStorage.setItem('qf_csrf_token', state.csrfToken);
+                        localStorage.setItem('qf_csrf_token', state.csrfToken);
+                    }
+                }
+            } catch (err) {
+                console.warn('Unable to auto-fetch CSRF token:', err);
+            }
+        }
+    }
+
     const headers = options.headers || {};
     if (state.csrfToken) {
         headers['X-CSRF-Token'] = state.csrfToken;
@@ -196,6 +216,15 @@ function setupControls() {
     document.getElementById('btn-start')?.addEventListener('click', async () => {
         try {
             await api('/api/engine/start', { method: 'POST' });
+            const badge = document.getElementById('engine-state-badge');
+            if (badge) {
+                badge.innerText = 'RUNNING';
+                badge.className = 'status-badge badge-success';
+            }
+            const btnStart = document.getElementById('btn-start');
+            if (btnStart) btnStart.disabled = true;
+            const btnStop = document.getElementById('btn-stop');
+            if (btnStop) btnStop.disabled = false;
         } catch (e) { alert(e.message); }
     });
 
@@ -730,7 +759,9 @@ function showLoginModal() {
     if (token) {
         api('/api/auth/login', { method: 'POST', body: { token } })
             .then(res => {
-                state.csrfToken = res.csrf_token;
+                state.csrfToken = res.csrf_token || '';
+                sessionStorage.setItem('qf_csrf_token', state.csrfToken);
+                localStorage.setItem('qf_csrf_token', state.csrfToken);
                 window.location.reload();
             })
             .catch(err => alert('Authentication failed: ' + err.message));
@@ -743,6 +774,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         const savedTheme = localStorage.getItem('qf_theme');
         if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
     } catch (e) {}
+
+    // Restore CSRF token from storage or fetch from server
+    state.csrfToken = sessionStorage.getItem('qf_csrf_token') || localStorage.getItem('qf_csrf_token') || '';
+    if (!state.csrfToken) {
+        try {
+            const cResp = await fetch('/api/auth/csrf');
+            if (cResp.ok) {
+                const cData = await cResp.json();
+                state.csrfToken = cData.csrf_token || '';
+                if (state.csrfToken) {
+                    sessionStorage.setItem('qf_csrf_token', state.csrfToken);
+                    localStorage.setItem('qf_csrf_token', state.csrfToken);
+                }
+            }
+        } catch (e) {}
+    }
 
     setupNavigation();
     setupControls();
