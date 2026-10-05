@@ -95,6 +95,14 @@ def child_main(host: str, port: int, authkey: bytes):
             }
 
             try:
+                import core.indicators as indicators_module
+                for attr in dir(indicators_module):
+                    if not attr.startswith("_"):
+                        ns[attr] = getattr(indicators_module, attr)
+            except Exception:
+                pass
+
+            try:
                 code_obj = compile(code_src, "<strategy>", "exec")
                 exec(code_obj, ns)
 
@@ -108,18 +116,38 @@ def child_main(host: str, port: int, authkey: bytes):
                 if strategy_cls is None:
                     raise RuntimeError("No strategy class with an 'on_bar' method found (no class).")
 
+                # Merge defaults from class PARAMS (F3, SBX-5)
+                defaults = {}
+                raw_params_decl = getattr(strategy_cls, "PARAMS", None) or ns.get("PARAMS", {})
+                if isinstance(raw_params_decl, dict):
+                    for pk, pv in raw_params_decl.items():
+                        if isinstance(pv, dict) and "default" in pv:
+                            defaults[pk] = pv["default"]
+                        else:
+                            defaults[pk] = pv
+
+                effective_params = {}
+                for k, v in {**defaults, **(params or {})}.items():
+                    if isinstance(v, dict) and "default" in v:
+                        effective_params[k] = v["default"]
+                    else:
+                        effective_params[k] = v
+
                 # Instantiate with parameters if supported (SBX-5)
                 try:
-                    if params:
+                    if effective_params:
                         try:
-                            strategy_instance = strategy_cls(params)
+                            strategy_instance = strategy_cls(effective_params)
                         except TypeError:
                             try:
-                                strategy_instance = strategy_cls(**params)
+                                strategy_instance = strategy_cls(**effective_params)
                             except TypeError:
                                 strategy_instance = strategy_cls()
                     else:
-                        strategy_instance = strategy_cls()
+                        try:
+                            strategy_instance = strategy_cls()
+                        except TypeError:
+                            strategy_instance = strategy_cls({})
                 except Exception as e:
                     raise RuntimeError(f"Error instantiating strategy {strategy_cls.__name__}: {e}") from e
 

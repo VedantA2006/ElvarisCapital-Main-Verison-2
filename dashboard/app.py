@@ -96,12 +96,15 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         errors = self.db["runs"].count_documents({"status": "error"})
 
         # Rejection breakdown
-        pipeline = [
-            {"$match": {"status": "rejected"}},
-            {"$group": {"_id": "$rejected_at", "count": {"$sum": 1}}},
-            {"$sort": {"count": -1}},
+        rej_counts: dict[str, int] = {}
+        for r_doc in self.db["runs"].find({"status": "rejected"}, {"rejected_at": 1}):
+            gate = r_doc.get("rejected_at")
+            if gate:
+                rej_counts[gate] = rej_counts.get(gate, 0) + 1
+        rejection_breakdown = [
+            {"_id": k, "count": v}
+            for k, v in sorted(rej_counts.items(), key=lambda x: x[1], reverse=True)
         ]
-        rejection_breakdown = list(self.db["runs"].aggregate(pipeline))
 
         return {
             "total_trials": total,

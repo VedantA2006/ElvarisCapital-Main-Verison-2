@@ -139,7 +139,8 @@ class Orchestrator:
             # ── Step 1: Ideate ──────────────────────────────────────────
             idea = self._ideate(timeframe)
             record.idea = idea
-            record.strategy_name = idea.get("name", "unnamed")
+            spec = idea.get("spec", idea) if isinstance(idea, dict) else {}
+            record.strategy_name = spec.get("name") or idea.get("name") or f"Strategy_{trial_id[:8]}"
             self._past_ideas.append(record.strategy_name)
 
             # Diversity Gate: Logic Fingerprint check before backtest
@@ -153,7 +154,9 @@ class Orchestrator:
                 return self._finish(record, t0)
 
             # ── Step 2: Generate code ───────────────────────────────────
-            code = self._generate_code(idea, timeframe)
+            code = idea.get("code") if (isinstance(idea, dict) and idea.get("code")) else None
+            if not code or "class Strategy" not in code:
+                code = self._generate_code(idea, timeframe)
             record.source_code = code
             record.source_hash = hashlib.sha256(code.encode()).hexdigest()[:16]
 
@@ -185,12 +188,13 @@ class Orchestrator:
             train_df = store.get_data(timeframe, "train")
             val_df = store.get_data(timeframe, "validation")
 
+            params = spec.get("parameters") or idea.get("parameters")
             pipeline_res = run_pipeline(
                 source=code,
                 df_train=train_df,
                 df_val=val_df,
                 cfg=self._cfg,
-                params=idea.get("parameters"),
+                params=params,
                 n_trials=max(self._get_trial_count(), 1),
             )
 
@@ -200,10 +204,11 @@ class Orchestrator:
             record.status = pipeline_res.status
             record.rejected_at = pipeline_res.stopped_at
 
+            concept_family = spec.get("concept_family", idea.get("concept_family", "momentum"))
             cell = (
-                str(idea.get("concept_family", "momentum")).lower(),
+                str(concept_family).lower(),
                 timeframe,
-                str(idea.get("session", "all")).lower(),
+                str(spec.get("session_filter", idea.get("session", "all"))).lower(),
                 str(idea.get("regime", "all")).lower(),
             )
 
@@ -352,9 +357,18 @@ class Orchestrator:
 
         # Persist to MongoDB — errors MUST surface (ORCH-3).
         from storage.mongo import increment_trial_counter
+        doc = record.to_doc()
         col = self._db["runs"]
-        col.insert_one(record.to_doc())
+        col.insert_one(doc)
+        # Mirror to 'trials' collection for backward compatibility with dashboard counters
+        try:
+            self._db["trials"].insert_one(record.to_doc())
+        except Exception as exc:
+            _log.warning("could not mirror trial to trials collection: %s", exc)
         increment_trial_counter()
+
+        if record.status in ("candidate", "candidate (unproven)", "survived"):
+            update_leaderboard(record, self._cfg)
 
         self._trial_count += 1
         return record
@@ -406,27 +420,51 @@ def compute_robustness_score(record: TrialRecord, cfg: dict) -> float:
 
 
 def update_leaderboard(record: TrialRecord, cfg: dict) -> dict[str, Any]:
-    """Add a promoted candidate strategy to the leaderboard in MongoDB."""
+    """Add a promoted candidate strategy to the leaderboard and candidates in MongoDB."""
     if record.status not in ("candidate", "candidate (unproven)", "survived"):
         return {"error": "Only candidate strategies go on the leaderboard"}
 
     db = get_db(mongo_db_name(cfg))
     score = compute_robustness_score(record, cfg)
 
+    train_metrics = {}
+    if record.train_result and isinstance(record.train_result, dict):
+        train_metrics = record.train_result.get("metrics", {})
+    elif hasattr(record.train_result, "metrics"):
+        train_metrics = record.train_result.metrics
+
+    spec = record.idea.get("spec", record.idea) if isinstance(record.idea, dict) else {}
+    concept_family = spec.get("concept_family", record.idea.get("concept_family", "trend"))
+
     entry = {
+        "strategy_id": record.strategy_name or record.trial_id,
         "trial_id": record.trial_id,
+        "name": record.strategy_name,
         "strategy_name": record.strategy_name,
         "timeframe": record.timeframe,
+        "concept_family": concept_family,
         "status": "candidate (unproven)",
         "robustness_score": score,
-        "train_sharpe": record.train_result.get("metrics", {}).get("sharpe", 0) if record.train_result else 0,
-        "train_pf": record.train_result.get("metrics", {}).get("profit_factor", 0) if record.train_result else 0,
-        "val_sharpe": record.val_result.get("metrics", {}).get("sharpe", 0) if record.val_result else 0,
-        "train_trades": record.train_result.get("metrics", {}).get("total_trades", 0) if record.train_result else 0,
+        "train_metrics": train_metrics,
+        "train_sharpe": float(train_metrics.get("sharpe", 0)),
+        "train_pf": float(train_metrics.get("profit_factor", 0)),
+        "val_sharpe": float(record.val_result.get("metrics", {}).get("sharpe", 0)) if record.val_result else 0.0,
+        "train_trades": int(train_metrics.get("total_trades", 0)),
+        "source_code": record.source_code,
         "source_hash": record.source_hash,
+        "idea": record.idea,
+        "train_result": record.train_result,
+        "val_result": record.val_result,
+        "train_gates": record.train_gates,
         "created_at": datetime.now(timezone.utc),
     }
 
+    # Upsert into both 'candidates' (for web UI) and 'leaderboard' (for CLI & DB)
+    db["candidates"].update_one(
+        {"strategy_id": entry["strategy_id"]},
+        {"$set": entry},
+        upsert=True,
+    )
     db["leaderboard"].update_one(
         {"trial_id": record.trial_id},
         {"$set": entry},

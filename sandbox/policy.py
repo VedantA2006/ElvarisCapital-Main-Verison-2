@@ -67,6 +67,7 @@ ALLOWED_MODULES = {
     "numba",
     "np",
     "pd",
+    "core",
     "core.indicators",
     "core.signals",
     "core.backtester",
@@ -508,7 +509,7 @@ def audit_hook(event: str, args: tuple):
         mod_name = args[0] if len(args) > 0 else ""
         root = mod_name.split(".")[0]
         # Allow internal python bootstrap and allowed modules
-        if root and root not in ALLOWED_MODULES:
+        if mod_name not in ALLOWED_MODULES and root not in ALLOWED_MODULES:
             # Check if internal standard python submodule required by interpreter
             _allowed_internals = {
                 "sys", "builtins", "encodings", "codecs", "io", "abc", "site",

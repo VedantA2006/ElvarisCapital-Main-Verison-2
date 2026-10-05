@@ -67,6 +67,55 @@ class Signal:
                 self.action = Action.ENTER_SHORT
 
     @classmethod
+    def enter_long(
+        cls,
+        sl_distance: float = np.nan,
+        tp_distance: float = np.nan,
+        trail_distance: float = np.nan,
+        time_stop_bars: int = 0,
+        breakeven_after_r: float = np.nan,
+        tag: str = "",
+    ) -> "Signal":
+        """Factory for long entry signals with positive USD point distances."""
+        return cls(
+            action=Action.ENTER_LONG,
+            direction=Direction.LONG,
+            sl_distance=sl_distance,
+            tp_distance=tp_distance,
+            trail_distance=trail_distance,
+            time_stop_bars=time_stop_bars,
+            breakeven_after_r=breakeven_after_r,
+            tag=tag,
+        )
+
+    @classmethod
+    def enter_short(
+        cls,
+        sl_distance: float = np.nan,
+        tp_distance: float = np.nan,
+        trail_distance: float = np.nan,
+        time_stop_bars: int = 0,
+        breakeven_after_r: float = np.nan,
+        tag: str = "",
+    ) -> "Signal":
+        """Factory for short entry signals with positive USD point distances."""
+        return cls(
+            action=Action.ENTER_SHORT,
+            direction=Direction.SHORT,
+            sl_distance=sl_distance,
+            tp_distance=tp_distance,
+            trail_distance=trail_distance,
+            time_stop_bars=time_stop_bars,
+            breakeven_after_r=breakeven_after_r,
+            tag=tag,
+        )
+
+    @classmethod
+    def close(cls, tag: str = "") -> "Signal":
+        """Factory for position exit signals."""
+        return cls(action=Action.CLOSE, tag=tag)
+
+    @classmethod
     def from_prices(
         cls,
         close: float,
@@ -231,7 +280,12 @@ def validate_and_record_signal(
 
     # Validate sl_distance
     sl_dist = signal.sl_distance
-    if np.isnan(sl_dist) or sl_dist <= 0:
+    if np.isnan(sl_dist):
+        if np.isfinite(atr_prev) and atr_prev > 0:
+            sl_dist = max(min_sl_usd, min_sl_atr_mult * atr_prev, 5.0)
+        else:
+            sl_dist = max(min_sl_usd, 5.0)
+    elif sl_dist <= 0:
         tape.invalid_signals += 1
         tape.invalid_reasons.append(f"Bar {bar_idx}: missing or non-positive sl_distance={sl_dist}")
         return

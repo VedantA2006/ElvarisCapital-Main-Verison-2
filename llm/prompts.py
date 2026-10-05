@@ -29,18 +29,32 @@ CORE ARCHITECTURE & CONTRACT RULES:
 7. `__init__(self, params)`: Strategies must accept the `params` dictionary in `__init__`.
 8. REUSABLE HELPERS: Use tested leak-safe indicators from `core.indicators` (e.g. `sma`, `ema`, `atr`, `supertrend`, `session_range`, `htf`, `swing_high`, `fvg`, `bos`, etc.).
 9. NO LOOKAHEAD: Never use negative shifts, forward indexing, or unconfirmed pivots. All swings require right-side confirmation.
+10. WARMUP & STOP LOSS SAFETY:
+    - At start of `on_bar(self, bars)`: ALWAYS include `if len(bars) < 60: return None`.
+    - Indicators (ATR, SMA, etc.) will have NaN values during early bars. Before taking a trade, ALWAYS check: `if np.isnan(atr_val) or atr_val <= 0: return None`.
+    - `sl_distance` must be a POSITIVE point distance (e.g., `sl_dist = max(5.0, float(atr_val * self.params["sl_mult"]))`). Never pass NaN or <= 0!
+    - If `tp_distance` is used, ensure it is >= 1.50 USD points (or leave as None).
+11. TRADE FREQUENCY & SAMPLE SIZE:
+    - Institutional validation strictly enforces Gate 7 (Minimum Sample): total trades >= 150 (at least 30-50 trades per year).
+    - Ensure your entry criteria are not excessively restrictive. The strategy must actively participate during valid market conditions to generate sufficient trade observations for Monte Carlo and Walk-Forward statistical significance.
 """
 
 INDICATOR_LIBRARY_CATALOG = """
 Available Verified Leak-Free Helpers (`from core.indicators import ...`):
-- Trend/Momentum: sma(series, n), ema(series, n), wma(series, n), macd(series, fast, slow, signal), adx(h, l, c, n), supertrend(h, l, c, n, mult), donchian(h, l, n), keltner(h, l, c, ema_n, atr_n, mult), roc(series, n)
-- Volatility/Reversion: rsi(series, n), stoch(h, l, c, k, d, slowing), bollinger(series, n, std), zscore(series, n), atr(h, l, c, n), true_range(h, l, c), realized_vol(c, n), vol_percentile(h, l, c, atr_n, lookback), squeeze(h, l, c, bb_n, bb_std, kc_n, kc_mult)
-- Volume/Location: session_vwap(df, start_utc), anchored_vwap(df, mask), previous_day_hl(df), previous_week_hl(df), session_range(df, name), opening_range(df, duration_bars)
-- Time Features: hour_utc(df), dow(df), is_session(df, name), minutes_since_session_open(df, name), month_end_flag(df, days_before)
-- Closed-Bar HTF: htf(df, "4h", func) - resamples lower timeframe using strictly closed 4h candles
-- Confirmed Swings: swing_high(h, n), swing_low(l, n) - known strictly n bars after occurrence
-- Market Structure: bos(h, l, swing_n), choch(h, l, swing_n), order_block(df, swing_n), fvg(df, min_gap_usd), liquidity_sweep(df, swing_n), premium_discount(df, swing_n)
-- Regimes: trend_range_regime(h, l, c, adx_n, adx_thresh), vol_regime(h, l, c, atr_n, lookback), session_regime(df)
+All indicators accept `bars` (the DataFrame) as their first argument!
+- Trend/Momentum: sma(bars, n), ema(bars, n), wma(bars, n), macd(bars, fast, slow, signal), adx(bars, n), supertrend(bars, n, mult), donchian(bars, n), keltner(bars, ema_n, atr_n, mult), roc(bars, n)
+- Volatility/Reversion: rsi(bars, n), stoch(bars, k, d, slowing), bollinger(bars, n, std), zscore(bars, n), atr(bars, n), true_range(bars), realized_vol(bars, n), vol_percentile(bars, atr_n, lookback), squeeze(bars, bb_n, bb_std, kc_n, kc_mult)
+- Volume/Location: session_vwap(bars, start_utc), anchored_vwap(bars, mask), previous_day_hl(bars), previous_week_hl(bars), session_range(bars, name), opening_range(bars, duration_bars)
+- Time Features: hour_utc(bars), dow(bars), is_session(bars, "london"|"ny"|"asia"), minutes_since_session_open(bars, name), month_end_flag(bars, days_before)
+- Closed-Bar HTF: htf(bars, "4h", func) - resamples lower timeframe using strictly closed 4h candles
+- Confirmed Swings: swing_high(bars, n), swing_low(bars, n) - known strictly n bars after occurrence (has .pivot_value)
+- Market Structure:
+  * bos(bars, swing_n) -> returns (bull_bos: Series[bool], bear_bos: Series[bool])
+  * choch(bars, swing_n) -> returns (bull_choch: Series[bool], bear_choch: Series[bool])
+  * fvg(bars, min_gap_usd=0.0) -> returns (bull_fvg: Series[bool], bear_fvg: Series[bool])
+  * liquidity_sweep(bars, swing_n=2) -> returns (high_sweep: Series[bool], low_sweep: Series[bool]). high_sweep is True when price swept above swing high; low_sweep is True when price swept below swing low.
+  * premium_discount(bars, swing_n=5) -> returns Series[float] in [0.0, 1.0] where <0.5 is discount (buy zone) and >0.5 is premium (sell zone).
+- Regimes: trend_range_regime(bars, adx_n, adx_thresh), vol_regime(bars, atr_n, lookback), session_regime(bars)
 """
 
 _IDEATE_USER_TEMPLATE = Template("""
@@ -52,6 +66,11 @@ TARGET RESEARCH FOCUS (Coverage Map Target):
 - Target Session: {{ target_cell.get('session', 'any') }}
 - Regime Bias: {{ target_cell.get('regime_bias', 'any') }}
 {% endif %}
+
+CRITICAL VALIDATION CRITERIA (GATE 7 - MINIMUM SAMPLE SIZE):
+- The strategy MUST generate at least 40-80 trades per year (total trades >= 150-200 across the 3-year train dataset).
+- Avoid ultra-rare confluence setups (like requiring 4 simultaneous indicators or strict 1-hour windows) that generate fewer than 30 trades per year.
+- Use clean, frequent entry triggers (e.g., EMA crossovers, Donchian channel breakouts, RSI momentum pullbacks, or Session range breakouts) with reasonable cooldown (e.g., 2 to 6 bars).
 
 {{ indicator_catalog }}
 

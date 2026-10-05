@@ -198,15 +198,18 @@ def create_app(db: Any = None, cfg: dict | None = None, token: str | None = None
     # ── Funnel & Statistics ─────────────────────────────────────────────────
     @app.get("/api/stats/funnel")
     async def get_funnel_stats(_auth: str = Depends(_verify_auth)) -> dict[str, Any]:
-        trials_col = database["trials"]
+        trials_col = database["runs"] if database["runs"].count_documents({}) >= database["trials"].count_documents({}) else database["trials"]
         total = trials_col.count_documents({})
-        rejections = list(trials_col.aggregate([
-            {"$match": {"status": "rejected"}},
-            {"$group": {"_id": "$rejected_at", "count": {"$sum": 1}}},
-        ]))
-
-        rejection_map = {r["_id"]: r["count"] for r in rejections if r["_id"]}
-        candidates_count = trials_col.count_documents({"status": {"$in": ["candidate", "survived"]}})
+        rejection_map: dict[str, int] = {}
+        candidates_count = 0
+        for doc in trials_col.find({}, {"status": 1, "rejected_at": 1}):
+            st = doc.get("status")
+            if st in ("candidate", "survived"):
+                candidates_count += 1
+            elif st == "rejected":
+                rej = doc.get("rejected_at")
+                if rej:
+                    rejection_map[rej] = rejection_map.get(rej, 0) + 1
 
         # Funnel counts in order of stages
         funnel_stages = [
@@ -241,6 +244,8 @@ def create_app(db: Any = None, cfg: dict | None = None, token: str | None = None
         _auth: str = Depends(_verify_auth),
     ) -> dict[str, Any]:
         col = database["candidates"]
+        if col.count_documents({}) == 0 and database["leaderboard"].count_documents({}) > 0:
+            col = database["leaderboard"]
         query: dict[str, Any] = {}
         if timeframe:
             query["timeframe"] = timeframe
@@ -272,7 +277,9 @@ def create_app(db: Any = None, cfg: dict | None = None, token: str | None = None
     async def get_strategy_detail(strat_id: str, _auth: str = Depends(_verify_auth)) -> dict[str, Any]:
         doc = database["candidates"].find_one({"strategy_id": strat_id}, projection={"_id": 0})
         if not doc:
-            doc = database["trials"].find_one({"strategy_name": strat_id}, projection={"_id": 0})
+            doc = database["leaderboard"].find_one({"strategy_name": strat_id}, projection={"_id": 0}) or database["leaderboard"].find_one({"trial_id": strat_id}, projection={"_id": 0})
+        if not doc:
+            doc = database["trials"].find_one({"strategy_name": strat_id}, projection={"_id": 0}) or database["runs"].find_one({"strategy_name": strat_id}, projection={"_id": 0})
         if not doc:
             raise HTTPException(status_code=404, detail="Strategy not found.")
 

@@ -108,6 +108,8 @@ class EngineWorker:
 
         self.consecutive_internal_errors = 0
         self.current_cycle: CycleRecord | None = None
+        self.orchestrator: Any | None = None
+        self._stop_requested: bool = False
 
     def get_unfinished_cycle(self) -> CycleRecord | None:
         """Find an in-progress cycle that was interrupted by a crash or reboot."""
@@ -134,7 +136,9 @@ class EngineWorker:
             )
 
     def run_until_stopped(self) -> None:
-        """Continuous execution loop obeying the engine state contract."""
+        """Continuous execution loop obeying the engine state contract.
+        Stops when desired_state becomes 'stopped' (used by single-run commands & tests).
+        """
         self.state_mgr.set_state(EngineState.RUNNING)
 
         while True:
@@ -168,19 +172,74 @@ class EngineWorker:
             # Minimal interval between cycles
             time.sleep(0.01)
 
+    def run_forever(self) -> None:
+        """Daemon execution loop for main.py up.
+        Never breaks on 'stopped' or 'paused'; sleeps and resumes when 'running'.
+        """
+        while not self._stop_requested:
+            self.state_mgr.heartbeat()
+            self.state_mgr.renew_lock()
+            desired = self.supervisor.get_desired_state()
+
+            if desired == "stopped":
+                self.state_mgr.set_state(EngineState.STOPPED, reason="Clean stop requested by supervisor/user.")
+                time.sleep(1.0)
+                continue
+
+            if desired == "paused":
+                self.state_mgr.set_state(EngineState.PAUSED, reason="Paused by user.")
+                time.sleep(1.0)
+                continue
+
+            self.state_mgr.set_state(EngineState.RUNNING)
+            try:
+                if self.run_loop_step_fn:
+                    self.run_loop_step_fn()
+                else:
+                    self._execute_cycle_step()
+                self.consecutive_internal_errors = 0
+            except Exception as e:
+                self.handle_internal_cycle_error(e)
+                time.sleep(2.0)
+
+            time.sleep(1.0)
+
     def _execute_cycle_step(self) -> None:
-        """Execute a single atomic cycle."""
+        """Execute a single atomic discovery cycle."""
+        if self.orchestrator is None:
+            from llm.orchestrator import Orchestrator
+            self.orchestrator = Orchestrator(cfg=self.cfg)
+
+        timeframes = self.cfg.get("data", {}).get("enabled_timeframes", ["1h", "4h"])
+        tf = timeframes[int(time.time()) % len(timeframes)]
+
         # Check if resuming unfinished cycle
         cycle = self.get_unfinished_cycle()
         if not cycle:
             cycle = CycleRecord(
                 cycle_id=f"cycle_{int(time.time()*1000)}",
-                stage="pick_target",
+                stage="ideate",
+                timeframe=tf,
             )
             cycle.save(self.db)
 
         self.current_cycle = cycle
-        # Complete cycle
-        cycle.status = "completed"
-        cycle.save(self.db)
-        self.current_cycle = None
+
+        try:
+            record = self.orchestrator.run_trial(timeframe=tf)
+            cycle.strategy_name = record.strategy_name
+            cycle.stage = "promote" if record.status in ("candidate", "candidate (unproven)", "survived") else "completed"
+            cycle.status = "completed"
+            cycle.artefacts = {
+                "trial_id": record.trial_id,
+                "status": record.status,
+                "rejected_at": record.rejected_at,
+            }
+            cycle.save(self.db)
+        except Exception as e:
+            cycle.status = "failed"
+            cycle.artefacts = {"error": str(e)}
+            cycle.save(self.db)
+            raise
+        finally:
+            self.current_cycle = None

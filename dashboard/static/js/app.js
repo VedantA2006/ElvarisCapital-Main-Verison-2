@@ -252,12 +252,30 @@ function setupControls() {
 async function loadFunnel() {
     try {
         const data = await api('/api/stats/funnel');
+
+        // Always update metric counters first
+        const rejMap = data.rejections_by_stage || {};
+        const lookaheadRej = (rejMap['determinism'] || 0) + (rejMap['truncation'] || 0) + (rejMap['delay'] || 0);
+        const robustRej = (rejMap['monte_carlo'] || 0) + (rejMap['walk_forward'] || 0) + (rejMap['regime_and_year'] || 0);
+
+        const totalEl = document.getElementById('counter-total-trials');
+        if (totalEl) totalEl.innerText = (data.total_trials || 0).toLocaleString();
+        const candEl = document.getElementById('counter-candidates');
+        if (candEl) candEl.innerText = (data.candidates || 0).toLocaleString();
+        const lEl = document.getElementById('counter-lookahead-rej');
+        if (lEl) lEl.innerText = lookaheadRej.toLocaleString();
+        const rEl = document.getElementById('counter-robustness-rej');
+        if (rEl) rEl.innerText = robustRej.toLocaleString();
+
         const stages = (data.funnel || []).map(f => f.stage.replace(/_/g, ' '));
         const counts = (data.funnel || []).map(f => f.count);
 
         const canvas = document.getElementById('funnel-chart');
         if (canvas && window.Chart) {
-            new window.Chart(canvas, {
+            if (window._funnelChart) {
+                window._funnelChart.destroy();
+            }
+            window._funnelChart = new window.Chart(canvas, {
                 type: 'bar',
                 data: {
                     labels: stages,
@@ -275,15 +293,6 @@ async function loadFunnel() {
                 }
             });
         }
-
-        const rejMap = data.rejections_by_stage || {};
-        const lookaheadRej = (rejMap['determinism'] || 0) + (rejMap['truncation'] || 0) + (rejMap['delay'] || 0);
-        const robustRej = (rejMap['monte_carlo'] || 0) + (rejMap['walk_forward'] || 0) + (rejMap['regime_and_year'] || 0);
-
-        const lEl = document.getElementById('counter-lookahead-rej');
-        if (lEl) lEl.innerText = lookaheadRej.toLocaleString();
-        const rEl = document.getElementById('counter-robustness-rej');
-        if (rEl) rEl.innerText = robustRej.toLocaleString();
     } catch (e) {
         console.error('Failed loading funnel', e);
     }
@@ -295,10 +304,13 @@ async function loadActivityOverview() {
         const items = data.items || [];
         const canvas = document.getElementById('activity-chart');
         if (canvas && window.Chart && items.length) {
+            if (window._activityChart) {
+                window._activityChart.destroy();
+            }
             const labels = items.map(it => (it.strategy_id || it.name || '').slice(0, 16));
             const scores = items.map(it => it.robustness_score || 0);
 
-            new window.Chart(canvas, {
+            window._activityChart = new window.Chart(canvas, {
                 type: 'line',
                 data: {
                     labels: labels,

@@ -791,6 +791,15 @@ def run_pipeline(
     from core.sandbox import Sandbox
 
     cfg = cfg or {}
+    if params:
+        clean_params = {}
+        for pk, pv in params.items():
+            if isinstance(pv, dict) and "default" in pv:
+                clean_params[pk] = pv["default"]
+            else:
+                clean_params[pk] = pv
+        params = clean_params
+
     results: list[GateResult] = []
     tape_train = precomputed_train_tape
     train_res = precomputed_train_result

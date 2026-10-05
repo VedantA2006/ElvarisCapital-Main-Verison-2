@@ -219,9 +219,8 @@ def main(argv: list[str] | None = None) -> int:
             supervisor.set_desired_state("running", requested_by="cli_autostart")
 
         worker = EngineWorker(db=db, cfg=cfg, supervisor=supervisor)
-        worker_thread = threading.Thread(target=worker.run_until_stopped, daemon=True)
-        if args.autostart or supervisor.get_desired_state() == "running":
-            worker_thread.start()
+        worker_thread = threading.Thread(target=worker.run_forever, daemon=True)
+        worker_thread.start()
 
         app = create_app(db=db, cfg=cfg, token=token)
         print(f"\n[QuantForge] Engine supervisor active. Research console at http://{host}:{port}")
