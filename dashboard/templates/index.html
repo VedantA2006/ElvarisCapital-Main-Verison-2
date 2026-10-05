@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuantForge Trading Research Console</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="/static/vendor/chart.umd.js"></script>
+</head>
+<body>
+    <!-- Top Bar Navigation -->
+    <header class="app-header">
+        <div class="brand">
+            <div class="brand-icon">QF</div>
+            <div>
+                <span class="brand-title">QuantForge Console</span>
+                <span class="brand-subtitle">v2.0 XAUUSD Autonomous Quantitative Engine</span>
+            </div>
+        </div>
+
+        <nav class="nav-tabs" role="tablist">
+            <button class="nav-tab active" data-page="overview" id="tab-overview">Overview</button>
+            <button class="nav-tab" data-page="leaderboard" id="tab-leaderboard">Leaderboard</button>
+            <button class="nav-tab" data-page="strategy" id="tab-strategy">Strategy Detail</button>
+            <button class="nav-tab" data-page="llm" id="tab-llm">LLM & Tokens</button>
+            <button class="nav-tab" data-page="logs" id="tab-logs">Live Log</button>
+            <button class="nav-tab" data-page="coverage" id="tab-coverage">Coverage Map</button>
+            <button class="nav-tab" data-page="data" id="tab-data">Data & Integrity</button>
+            <button class="nav-tab" data-page="settings" id="tab-settings">Settings</button>
+        </nav>
+
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <button id="theme-toggle" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">Toggle Theme</button>
+            <button id="auth-status-btn" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">Session Token</button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="main-container">
+
+        <!-- Alert Strip -->
+        <div id="alert-strip" style="display: none; padding: 10px 16px; margin-bottom: 20px; border-radius: var(--radius-md); font-weight: 600; font-size: 13px;">
+            <span id="alert-strip-text"></span>
+        </div>
+
+        <!-- ════════════════ PAGE: OVERVIEW ════════════════ -->
+        <section id="page-overview" class="page-view active">
+            <!-- Engine Hero Card -->
+            <div class="engine-hero">
+                <div class="engine-status-area">
+                    <div>
+                        <div class="card-title" style="margin-bottom: 4px;">Engine Execution State</div>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <span id="engine-state-pill" class="state-pill STOPPED">
+                                <span class="pulse-dot"></span> STOPPED
+                            </span>
+                            <span id="engine-reason-text" class="card-meta" style="font-weight: 500;">Idle / Awaiting Start</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 32px;">
+                    <div>
+                        <div class="card-title">Cycle ID</div>
+                        <div id="engine-cycle-id" class="card-value mono" style="font-size: 18px;">—</div>
+                    </div>
+                    <div>
+                        <div class="card-title">Heartbeat Age</div>
+                        <div class="card-value mono" style="font-size: 18px;"><span id="engine-heartbeat-age">0.0</span>s</div>
+                    </div>
+                    <div>
+                        <div class="card-title">Worker</div>
+                        <div id="engine-worker-id" class="card-value mono" style="font-size: 18px;">none</div>
+                    </div>
+                </div>
+
+                <div class="engine-controls">
+                    <button id="btn-start" class="btn btn-success">▶ Start</button>
+                    <button id="btn-pause" class="btn btn-warning" disabled>⏸ Pause</button>
+                    <button id="btn-stop" class="btn btn-secondary" disabled>⏹ Graceful Stop</button>
+                    <button id="btn-force-stop" class="btn btn-danger" disabled>⚡ Force Stop</button>
+                </div>
+            </div>
+
+            <!-- Loop Note -->
+            <div style="margin: -14px 0 20px 4px; font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
+                <span style="color: var(--color-blue);">ℹ</span>
+                <span><strong>Autonomous Loop:</strong> Runs indefinitely until you press Stop. Transient LLM or backtest failures never halt execution.</span>
+            </div>
+
+            <!-- Metric Counters Grid -->
+            <div class="grid-cols-4">
+                <div class="card">
+                    <div class="card-title">Total Ideated</div>
+                    <div id="counter-total-trials" class="card-value mono">0</div>
+                    <div class="card-meta">Autonomous generations</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Promoted Candidates</div>
+                    <div id="counter-candidates" class="card-value mono" style="color: var(--color-green);">0</div>
+                    <div class="card-meta">Passed all 19 gate stages</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Lookahead Rejections</div>
+                    <div id="counter-lookahead-rej" class="card-value mono" style="color: var(--color-amber);">0</div>
+                    <div class="card-meta">Delay, determinism, truncation</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Robustness Rejections</div>
+                    <div id="counter-robustness-rej" class="card-value mono" style="color: var(--color-red);">0</div>
+                    <div class="card-meta">Monte Carlo, WF, regime stress</div>
+                </div>
+            </div>
+
+            <!-- Charts: Funnel & Trials/Hour -->
+            <div class="grid-cols-2">
+                <div class="card">
+                    <div class="card-title">19-Stage Gate Funnel (Survivors by Stage)</div>
+                    <div class="chart-box">
+                        <canvas id="funnel-chart"></canvas>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Candidate Performance Overview</div>
+                    <div class="chart-box">
+                        <canvas id="activity-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ════════════════ PAGE: LEADERBOARD ════════════════ -->
+        <section id="page-leaderboard" class="page-view">
+            <div class="card" style="margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                    <div style="display: flex; align-items: center; gap: 16px;">
+                        <label style="font-weight: 600; font-size: 13px;">Split:</label>
+                        <select id="split-select" class="btn btn-secondary" style="padding: 6px 12px;">
+                            <option value="train" selected>Train (In-Sample)</option>
+                            <option value="validation">Validation</option>
+                            <option value="holdout">Holdout (Strict 1-Time)</option>
+                            <option value="forward">Forward (Paper Test)</option>
+                            <option value="overall">Overall In-Sample</option>
+                        </select>
+
+                        <label style="font-weight: 600; font-size: 13px; margin-left: 8px;">Timeframe:</label>
+                        <select id="filter-timeframe" class="btn btn-secondary" style="padding: 6px 12px;">
+                            <option value="">All Timeframes</option>
+                            <option value="15m">15m</option>
+                            <option value="1h">1h</option>
+                            <option value="4h">4h</option>
+                        </select>
+                    </div>
+
+                    <div style="display: flex; gap: 8px;">
+                        <input id="leaderboard-search" type="text" placeholder="Search strategy..." class="btn btn-secondary" style="width: 220px; text-align: left; cursor: text;">
+                        <button id="btn-export-csv" class="btn btn-secondary">Export CSV</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Strategy Name</th>
+                            <th>Status</th>
+                            <th>Timeframe</th>
+                            <th>Family</th>
+                            <th>Score (0-100)</th>
+                            <th>Sharpe</th>
+                            <th>Profit Factor</th>
+                            <th>Max Drawdown</th>
+                            <th>Trades</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaderboard-tbody">
+                        <tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 32px;">Loading leaderboard...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ════════════════ PAGE: STRATEGY DETAIL ════════════════ -->
+        <section id="page-strategy" class="page-view">
+            <div class="card" style="margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div class="card-title">Inspecting Strategy</div>
+                        <h2 id="strat-detail-title" style="font-size: 20px; font-weight: 700; color: var(--text-primary);">Select a Strategy from Leaderboard</h2>
+                        <div id="strat-detail-subtitle" class="card-meta">No strategy loaded</div>
+                    </div>
+                    <span id="strat-detail-badge" class="badge badge-amber">CANDIDATE (unproven)</span>
+                </div>
+            </div>
+
+            <!-- Strategy Subtabs -->
+            <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+                <button class="strat-subtab btn btn-secondary active" data-subtab="equity">Equity & Drawdown</button>
+                <button class="strat-subtab btn btn-secondary" data-subtab="trades">Trades</button>
+                <button class="strat-subtab btn btn-secondary" data-subtab="gates">Gate Evaluation</button>
+                <button class="strat-subtab btn btn-secondary" data-subtab="code">Source Code</button>
+                <button class="strat-subtab btn btn-secondary" data-subtab="llm">LLM Reasoning</button>
+            </div>
+
+            <div id="subtab-equity-view" class="card">
+                <div class="card-title">Downsampled Equity Curves (Train / Val / Holdout)</div>
+                <div class="chart-box" style="height: 380px;">
+                    <canvas id="strat-equity-chart"></canvas>
+                </div>
+            </div>
+
+            <div id="subtab-trades-view" class="table-container" style="display: none;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Entry Time</th>
+                            <th>Exit Time</th>
+                            <th>Direction</th>
+                            <th>P&L ($)</th>
+                            <th>Return (%)</th>
+                            <th>Exit Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody id="strat-trades-tbody">
+                        <tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 24px;">No trades recorded.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="subtab-gates-view" class="card" style="display: none;">
+                <div class="card-title">19-Stage Gate Verifications</div>
+                <div id="strat-gates-content" style="padding: 12px 0;">Loading gate results...</div>
+            </div>
+
+            <div id="subtab-code-view" class="card" style="display: none;">
+                <div class="card-title">Source Code (Deterministic Sandbox Execution)</div>
+                <pre id="strat-code-content" style="background: var(--bg-base); padding: 16px; border-radius: var(--radius-md); font-family: var(--font-mono); font-size: 13px; overflow-x: auto; color: var(--text-secondary); max-height: 480px;"></pre>
+            </div>
+
+            <div id="subtab-llm-view" class="card" style="display: none;">
+                <div class="card-title">Generation Prompts & Failover History</div>
+                <div id="strat-llm-content" style="padding: 12px 0;">No LLM call records available.</div>
+            </div>
+        </section>
+
+        <!-- ════════════════ PAGE: LLM & TOKENS ════════════════ -->
+        <section id="page-llm" class="page-view">
+            <div class="grid-cols-4">
+                <div class="card">
+                    <div class="card-title">Total Tokens Consumed</div>
+                    <div id="llm-total-tokens" class="card-value mono">0</div>
+                    <div class="card-meta">Across all discovery cycles</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Total LLM Calls</div>
+                    <div id="llm-total-calls" class="card-value mono">0</div>
+                    <div class="card-meta">Prompt & Completion requests</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Failed / Retried Calls</div>
+                    <div id="llm-failed-calls" class="card-value mono" style="color: var(--color-amber);">0</div>
+                    <div class="card-meta">Handled by key failover</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Active Key Label</div>
+                    <div id="llm-active-key" class="card-value mono" style="color: var(--color-blue); font-size: 20px;">key_1</div>
+                    <div class="card-meta">Secrets never exposed to UI</div>
+                </div>
+            </div>
+
+            <div class="card" style="margin-top: 20px;">
+                <div class="card-title">Recent 100 LLM Invocations</div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Key Label</th>
+                                <th>Model</th>
+                                <th>Purpose</th>
+                                <th>Strategy ID</th>
+                                <th>Tokens</th>
+                                <th>Latency (ms)</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="llm-calls-tbody">
+                            <tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 24px;">No LLM calls logged yet.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ════════════════ PAGE: LIVE LOG ════════════════ -->
+        <section id="page-logs" class="page-view">
+            <div class="card" style="margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        <label style="font-weight: 600; font-size: 13px;">Filter Level:</label>
+                        <select id="log-filter-level" class="btn btn-secondary">
+                            <option value="ALL">ALL</option>
+                            <option value="INFO">INFO</option>
+                            <option value="WARNING">WARNING</option>
+                            <option value="ERROR">ERROR</option>
+                            <option value="CRITICAL">CRITICAL</option>
+                        </select>
+                        <button id="btn-pause-log" class="btn btn-secondary">Pause Auto-Scroll</button>
+                    </div>
+                    <button id="btn-clear-logs" class="btn btn-secondary">Clear View</button>
+                </div>
+            </div>
+
+            <div class="card" style="padding: 12px;">
+                <div id="log-stream-window" style="background: var(--bg-base); height: 500px; overflow-y: auto; padding: 16px; font-family: var(--font-mono); font-size: 12px; line-height: 1.6; border-radius: var(--radius-md);">
+                    <div style="color: var(--text-muted);">Connecting to engine log stream...</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ════════════════ PAGE: COVERAGE MAP ════════════════ -->
+        <section id="page-coverage" class="page-view">
+            <div class="card" style="margin-bottom: 20px;">
+                <div class="card-title">Concept & Feature Coverage Matrix</div>
+                <p style="color: var(--text-secondary); margin-bottom: 16px;">
+                    Multi-dimensional coverage across Concept Families × Timeframes × Session Biases × Regimes. Strategies prioritize under-explored cells.
+                </p>
+                <div id="coverage-matrix-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px;">
+                    <!-- Dynamically populated -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ════════════════ PAGE: DATA & INTEGRITY ════════════════ -->
+        <section id="page-data" class="page-view">
+            <div class="grid-cols-2">
+                <div class="card">
+                    <div class="card-title">Frozen Data Splits & Hashes</div>
+                    <div id="data-boundaries-content" style="padding: 8px 0;">Loading split boundaries...</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Canary Suite Verification</div>
+                    <div id="data-canary-content" style="padding: 8px 0;">Loading canary verification status...</div>
+                </div>
+            </div>
+
+            <div class="card" style="margin-top: 20px;">
+                <div class="card-title">Holdout Access Audit Log (Immutable Record)</div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Strategy ID</th>
+                                <th>Triggered By</th>
+                                <th>Verification Result</th>
+                            </tr>
+                        </thead>
+                        <tbody id="holdout-audit-tbody">
+                            <tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 24px;">No holdout evaluations requested yet.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ════════════════ PAGE: SETTINGS ════════════════ -->
+        <section id="page-settings" class="page-view">
+            <div class="card" style="margin-bottom: 24px;">
+                <div class="card-title">Immutable Locked Gate Thresholds</div>
+                <p style="color: var(--text-muted); margin-bottom: 16px;">
+                    Per QuantForge protocol (UI-5), core rejection gates cannot be loosened after viewing backtest results to prevent p-hacking and overfitting.
+                </p>
+                <div id="locked-thresholds-grid" class="grid-cols-4">
+                    <!-- Loaded dynamically -->
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Safe Runtime Overrides</div>
+                <form id="settings-form" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 16px;">
+                    <div>
+                        <label style="display: block; font-weight: 600; margin-bottom: 6px;">Daily Token Budget</label>
+                        <input id="setting-token-budget" type="number" class="btn btn-secondary" style="width: 100%; text-align: left; cursor: text;" placeholder="e.g. 2000000">
+                    </div>
+                    <div>
+                        <label style="display: block; font-weight: 600; margin-bottom: 6px;">Max Parallel Backtests</label>
+                        <input id="setting-parallelism" type="number" class="btn btn-secondary" style="width: 100%; text-align: left; cursor: text;" placeholder="e.g. 4">
+                    </div>
+                    <div style="grid-column: span 2; display: flex; justify-content: flex-end;">
+                        <button type="submit" class="btn btn-primary">Save Overrides</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ════════════════ CONFIRMATION MODAL ════════════════ -->
+    <div id="confirm-modal" class="modal-backdrop">
+        <div class="modal">
+            <div id="confirm-modal-title" class="modal-title">Confirm Action</div>
+            <div id="confirm-modal-body" style="color: var(--text-secondary); line-height: 1.5; margin-top: 8px;">
+                Are you sure you wish to proceed?
+            </div>
+            <div class="modal-actions">
+                <button id="confirm-modal-cancel" class="btn btn-secondary">Cancel</button>
+                <button id="confirm-modal-ok" class="btn btn-danger">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Script -->
+    <script type="module" src="/static/js/app.js"></script>
+</body>
+</html>

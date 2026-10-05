@@ -178,13 +178,61 @@ def main(argv: list[str] | None = None) -> int:
     lb_p.set_defaults(fn=cmd_leaderboard)
 
     def cmd_dashboard(args):
-        from dashboard.app import run_dashboard
+        import uvicorn
+        from dashboard.fastapi_app import create_app
         cfg = load_config(args.config)
-        run_dashboard(cfg)
+        dash_cfg = cfg.get("dashboard", {})
+        host = args.host or dash_cfg.get("host", "127.0.0.1")
+        port = args.port or dash_cfg.get("port", 8000)
+        app = create_app(cfg=cfg)
+        print(f"\n[QuantForge] Launching research console at http://{host}:{port}")
+        uvicorn.run(app, host=host, port=port)
         return 0
 
-    sub.add_parser("dashboard", help="Launch web dashboard").set_defaults(fn=cmd_dashboard)
-    sub.add_parser("forward").set_defaults(fn=lambda a: print("Phase 10"))
+    dash_p = sub.add_parser("dashboard", help="Launch web dashboard (FastAPI)")
+    dash_p.add_argument("--host", default=None, help="Host address (default 127.0.0.1)")
+    dash_p.add_argument("--port", type=int, default=None, help="Port (default 8000)")
+    dash_p.set_defaults(fn=cmd_dashboard)
+
+    def cmd_up(args):
+        import threading
+        import uvicorn
+        from dashboard.fastapi_app import create_app
+        from engine.supervisor import EngineSupervisor
+        from storage.mongo import get_db
+        from core.config import mongo_db_name
+
+        cfg = load_config(args.config)
+        db = get_db(mongo_db_name(cfg))
+        dash_cfg = cfg.get("dashboard", {})
+        host = args.host or dash_cfg.get("host", "127.0.0.1")
+        port = args.port or dash_cfg.get("port", 8000)
+
+        supervisor = EngineSupervisor(db=db, cfg=cfg)
+        if args.autostart:
+            supervisor.set_desired_state("running", requested_by="cli_autostart")
+
+        sup_thread = threading.Thread(target=supervisor.run_supervision_loop, daemon=True)
+        sup_thread.start()
+
+        app = create_app(db=db, cfg=cfg)
+        print(f"\n[QuantForge] Engine supervisor active. Research console at http://{host}:{port}")
+        uvicorn.run(app, host=host, port=port)
+        return 0
+
+    up_p = sub.add_parser("up", help="Launch dashboard and engine supervisor")
+    up_p.add_argument("--host", default=None, help="Host address (default 127.0.0.1)")
+    up_p.add_argument("--port", type=int, default=None, help="Port (default 8000)")
+    up_p.add_argument("--autostart", action="store_true", help="Automatically set desired_state to running")
+    up_p.set_defaults(fn=cmd_up)
+
+    def cmd_tui(args):
+        from dashboard.tui import run_tui
+        cfg = load_config(args.config)
+        return run_tui(cfg)
+
+    sub.add_parser("tui", help="Launch terminal dashboard (Rich)").set_defaults(fn=cmd_tui)
+    sub.add_parser("forward").set_defaults(fn=lambda a: print("Phase 12: Holdout and forward testing"))
 
     def cmd_refreeze(args):
         from core.splits import refreeze
