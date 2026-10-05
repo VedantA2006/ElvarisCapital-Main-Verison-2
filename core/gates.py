@@ -333,13 +333,15 @@ def gate_monte_carlo(trades_pnl: list[float], cfg: dict,
     max_dds = np.empty(n_runs)
 
     for i in range(n_runs):
-        # Shuffle trade order
-        shuffled = rng.permutation(pnl)
-        # Drop worst n_drop trades (stress test)
+        # 1. Bootstrap WITH replacement
+        resampled_idx = rng.integers(0, n_trades, size=n_trades)
+        shuffled = pnl[resampled_idx].copy()
+        # 2. Randomly drop n_drop trades in half of the runs
         if i % 2 == 0:
-            idx = np.argsort(shuffled)
-            keep = idx[n_drop:]  # drop the n_drop worst
-            shuffled = shuffled[keep]
+            keep_mask = np.ones(n_trades, dtype=bool)
+            drop_indices = rng.choice(n_trades, size=n_drop, replace=False)
+            keep_mask[drop_indices] = False
+            shuffled = shuffled[keep_mask]
         eq = initial_equity + np.cumsum(shuffled)
         peak = np.maximum.accumulate(eq)
         dd = (peak - eq) / np.where(peak > 0, peak, 1.0)
@@ -445,44 +447,34 @@ def gate_dsr(sharpe: float, n_trades: int, skew: float, kurtosis: float,
              n_trials: int, cfg: dict) -> GateResult:
     """Deflated Sharpe Ratio: adjusts for multiple testing, non-normality.
 
-    Based on Bailey & Lopez de Prado (2014). A DSR probability < 95% means
-    the observed Sharpe is likely due to luck given how many strategies
-    were tried.
+    Based on Bailey & Lopez de Prado (2014). Uses validation.overfit.compute_deflated_sharpe_ratio.
     """
-    g = cfg["gates"]["dsr"]
-    min_prob = g["min_probability"]
+    from validation.overfit import compute_deflated_sharpe_ratio
+    g = cfg.get("gates", {}).get("dsr", {})
+    min_prob = g.get("min_probability", 0.95)
 
     if n_trades < 10 or n_trials < 1:
         return GateResult(gate="dsr", passed=False,
                           detail=f"Insufficient data (trades={n_trades}, trials={n_trials}).")
 
-    # Expected maximum Sharpe under null (Euler-Mascheroni approximation)
-    if n_trials > 1:
-        gamma = 0.5772156649
-        e_max_sr = np.sqrt(2 * np.log(n_trials)) - (np.log(np.pi) + gamma) / (2 * np.sqrt(2 * np.log(n_trials)))
-    else:
-        e_max_sr = 0.0
+    res = compute_deflated_sharpe_ratio(
+        sr_daily=sharpe,
+        t_observations=n_trades,
+        skew=skew,
+        kurtosis=kurtosis,
+        n_trials=n_trials,
+        cfg=cfg,
+        dsr_threshold=min_prob,
+    )
 
-    # DSR statistic
-    sr = sharpe
-    se_sr = np.sqrt((1 - skew * sr + (kurtosis - 1) / 4 * sr ** 2) / max(n_trades - 1, 1))
+    detail = (f"DSR: prob={res.dsr_probability:.4f} (min={min_prob}), "
+              f"SR={res.sr_daily:.3f}, E[max_SR]={res.expected_max_sr:.3f}, "
+              f"trials={n_trials}. {'PASS' if res.passed else 'FAIL: likely luck'}")
 
-    if se_sr < 1e-12:
-        return GateResult(gate="dsr", passed=False,
-                          detail="SE of Sharpe is zero.")
-
-    dsr_stat = (sr - e_max_sr) / se_sr
-    prob = float(sp_stats.norm.cdf(dsr_stat))
-
-    passed = prob >= min_prob
-    detail = (f"DSR: prob={prob:.4f} (min={min_prob}), "
-              f"SR={sr:.3f}, E[max_SR]={e_max_sr:.3f}, "
-              f"trials={n_trials}. {'PASS' if passed else 'FAIL: likely luck'}")
-
-    return GateResult(gate="dsr", passed=passed, detail=detail,
-                      data={"probability": round(prob, 6),
-                            "dsr_statistic": round(dsr_stat, 4),
-                            "expected_max_sr": round(e_max_sr, 4),
+    return GateResult(gate="dsr", passed=res.passed, detail=detail,
+                      data={"probability": round(res.dsr_probability, 6),
+                            "dsr_statistic": round(res.z_stat, 4),
+                            "expected_max_sr": round(res.expected_max_sr, 6),
                             "n_trials": n_trials})
 
 
