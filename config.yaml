@@ -107,7 +107,7 @@ sizing:
 # ─── Strategy Constraints ────────────────────────────────────────────────
 strategy:
   max_tunable_parameters: 6
-  max_code_length: 5000       # characters
+  max_code_length: 15000      # characters
   allowed_imports:
     - numpy
     - pandas

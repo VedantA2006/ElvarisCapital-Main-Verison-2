@@ -161,47 +161,142 @@ class MacdResult(IndicatorTuple):
         return self.macd[item]
 
 
+class AdxRow:
+    """Row returned by .iloc on AdxResult: allows .adx, .adx_line, .plus_di, .minus_di, float()."""
+    def __init__(self, adx: float, plus_di: float, minus_di: float):
+        self.adx = float(adx)
+        self.adx_line = float(adx)
+        self.plus_di = float(plus_di)
+        self.di_plus = float(plus_di)
+        self.minus_di = float(minus_di)
+        self.di_minus = float(minus_di)
+
+    def __getitem__(self, item):
+        if item in ("adx", "adx_line", 0):
+            return self.adx
+        if item in ("plus_di", "di_plus", 1):
+            return self.plus_di
+        if item in ("minus_di", "di_minus", 2):
+            return self.minus_di
+        return self.adx
+
+    def __float__(self):
+        return self.adx
+
+
+class _AdxIlocAccessor:
+    def __init__(self, adx: pd.Series, plus_di: pd.Series, minus_di: pd.Series):
+        self._a, self._p, self._m = adx, plus_di, minus_di
+
+    def __getitem__(self, item):
+        return AdxRow(self._a.iloc[item], self._p.iloc[item], self._m.iloc[item])
+
+
 class AdxResult(IndicatorTuple):
-    """Result of ADX: (adx_line, plus_di, minus_di). Unpacks as 3 or 1, has .adx, .plus_di, .minus_di."""
+    """Result of ADX: (adx_line, plus_di, minus_di). Unpacks as 3 or 1, has .adx, .adx_line, .plus_di, .minus_di, .iloc."""
     def __new__(cls, adx_line: pd.Series, plus_di: pd.Series, minus_di: pd.Series):
         return super().__new__(cls, (adx_line, plus_di, minus_di))
 
-    def __init__(self, adx_line: pd.Series, plus_di: pd.Series, minus_di: pd.Series):
-        self.adx = adx_line
-        self.plus_di = plus_di
-        self.minus_di = minus_di
+    @property
+    def adx(self):
+        return self[0]
+
+    @property
+    def adx_line(self):
+        return self[0]
+
+    @property
+    def plus_di(self):
+        return self[1]
+
+    @property
+    def di_plus(self):
+        return self[1]
+
+    @property
+    def minus_di(self):
+        return self[2]
+
+    @property
+    def di_minus(self):
+        return self[2]
+
+    @property
+    def iloc(self):
+        return _AdxIlocAccessor(self[0], self[1], self[2])
 
     def __getitem__(self, item):
         if isinstance(item, (int, slice)):
             return super().__getitem__(item)
         if item in ("adx", "adx_line"):
-            return self.adx
+            return self[0]
         if item in ("plus_di", "di_plus"):
-            return self.plus_di
+            return self[1]
         if item in ("minus_di", "di_minus"):
-            return self.minus_di
-        return self.adx[item]
+            return self[2]
+        return self[0][item]
+
+
+class StochRow:
+    """Row returned by .iloc on StochResult: allows .k, .d, .slow_k, .slow_d, float()."""
+    def __init__(self, k: float, d: float):
+        self.k = float(k)
+        self.slow_k = float(k)
+        self.d = float(d)
+        self.slow_d = float(d)
+
+    def __getitem__(self, item):
+        if item in ("k", "slow_k", 0):
+            return self.k
+        if item in ("d", "slow_d", 1):
+            return self.d
+        return self.k
+
+    def __float__(self):
+        return self.k
+
+
+class _StochIlocAccessor:
+    def __init__(self, k: pd.Series, d: pd.Series):
+        self._k, self._d = k, d
+
+    def __getitem__(self, item):
+        return StochRow(self._k.iloc[item], self._d.iloc[item])
 
 
 class StochResult(IndicatorTuple):
-    """Result of Stochastic: (slow_k, slow_d). Unpacks as 2, has .k, .d, .slow_k, .slow_d."""
+    """Result of Stochastic: (slow_k, slow_d). Unpacks as 2, has .k, .d, .slow_k, .slow_d, .iloc."""
     def __new__(cls, slow_k: pd.Series, slow_d: pd.Series):
         return super().__new__(cls, (slow_k, slow_d))
 
-    def __init__(self, slow_k: pd.Series, slow_d: pd.Series):
-        self.k = slow_k
-        self.d = slow_d
-        self.slow_k = slow_k
-        self.slow_d = slow_d
+    @property
+    def k(self):
+        return self[0]
+
+    @property
+    def slow_k(self):
+        return self[0]
+
+    @property
+    def d(self):
+        return self[1]
+
+    @property
+    def slow_d(self):
+        return self[1]
+
+    @property
+    def iloc(self):
+        return _StochIlocAccessor(self[0], self[1])
 
     def __getitem__(self, item):
         if isinstance(item, (int, slice)):
             return super().__getitem__(item)
         if item in ("k", "slow_k"):
-            return self.k
+            return self[0]
         if item in ("d", "slow_d"):
-            return self.d
-        return self.k[item]
+            return self[1]
+        return self[0][item]
 
 
 class BandRow:
