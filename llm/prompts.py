@@ -41,21 +41,107 @@ CORE ARCHITECTURE & CONTRACT RULES:
 
 INDICATOR_LIBRARY_CATALOG = """
 Available Verified Leak-Free Helpers (`from core.indicators import ...`):
-All indicators accept `bars` (the DataFrame) as their first argument!
-- Trend/Momentum: sma(bars, n), ema(bars, n), wma(bars, n), macd(bars, fast, slow, signal), adx(bars, n), supertrend(bars, n, mult), donchian(bars, n), keltner(bars, ema_n, atr_n, mult), roc(bars, n)
-- Volatility/Reversion: rsi(bars, n), stoch(bars, k, d, slowing), bollinger(bars, n, std), zscore(bars, n), atr(bars, n), true_range(bars), realized_vol(bars, n), vol_percentile(bars, atr_n, lookback), squeeze(bars, bb_n, bb_std, kc_n, kc_mult)
-- Volume/Location: session_vwap(bars, start_utc), anchored_vwap(bars, mask), previous_day_hl(bars), previous_week_hl(bars), session_range(bars, name), opening_range(bars, duration_bars)
-- Time Features: hour_utc(bars), dow(bars), is_session(bars, "london"|"ny"|"asia"), minutes_since_session_open(bars, name), month_end_flag(bars, days_before)
-- Closed-Bar HTF: htf(bars, "4h", func) - resamples lower timeframe using strictly closed 4h candles
-- Confirmed Swings: swing_high(bars, n), swing_low(bars, n) - known strictly n bars after occurrence (has .pivot_value)
-- Market Structure:
-  * bos(bars, swing_n) -> returns (bull_bos: Series[bool], bear_bos: Series[bool])
-  * choch(bars, swing_n) -> returns (bull_choch: Series[bool], bear_choch: Series[bool])
-  * fvg(bars, min_gap_usd=0.0) -> returns (bull_fvg: Series[bool], bear_fvg: Series[bool])
-  * liquidity_sweep(bars, swing_n=2) -> returns (high_sweep: Series[bool], low_sweep: Series[bool]). high_sweep is True when price swept above swing high; low_sweep is True when price swept below swing low.
-  * premium_discount(bars, swing_n=5) -> returns Series[float] in [0.0, 1.0] where <0.5 is discount (buy zone) and >0.5 is premium (sell zone).
-- Regimes: trend_range_regime(bars, adx_n, adx_thresh), vol_regime(bars, atr_n, lookback), session_regime(bars)
+All indicators accept `bars` (the DataFrame) as their FIRST argument (positional).
+Named parameters use 'period' or 'n' interchangeably. Return types are shown precisely.
+
+CRITICAL API RULES:
+1. Pass `bars` (the full DataFrame) as the first argument to ALL indicators.
+2. Use the EXACT parameter names shown below. Do NOT guess parameter names.
+3. Named tuple / dataclass results must be accessed via ATTRIBUTES (e.g., `result.upper`), NOT index unpacking.
+4. Tuple results (bos, choch, fvg, liquidity_sweep) use standard unpacking: `bull, bear = bos(bars)`.
+
+TREND/MOMENTUM:
+  sma(bars, period=20) -> pd.Series
+  ema(bars, period=20) -> pd.Series
+  wma(bars, period=20) -> pd.Series
+  roc(bars, period=10) -> pd.Series
+  macd(bars, fast_period=12, slow_period=26, signal_period=9) -> MacdResult(macd_line, signal_line, hist)
+  adx(bars, period=14) -> AdxResult(adx_line, plus_di, minus_di)
+  supertrend(bars, period=10, multiplier=3.0) -> SupertrendResult(st, direction, upper, lower)
+  donchian(bars, period=20) -> BandResult(upper, middle, lower)
+  keltner(bars, ema_period=20, atr_period=10, multiplier=2.0) -> BandResult(upper, middle, lower)
+
+VOLATILITY/REVERSION:
+  rsi(bars, period=14) -> pd.Series
+  stoch(bars, k_period=14, d_period=3, slowing=3) -> StochResult(slow_k, slow_d)
+  bollinger(bars, period=20, num_std=2.0) -> BollingerResult(upper, middle, lower, bandwidth, pct_b)
+  zscore(bars, period=20) -> pd.Series
+  atr(bars, period=14) -> pd.Series
+  true_range(bars) -> pd.Series
+  realized_vol(bars, period=20) -> pd.Series
+  vol_percentile(bars, lookback=100) -> pd.Series  (0-100 percentile of ATR)
+  squeeze(bars, bb_period=20, bb_std=2.0, kc_period=20, kc_mult=1.5) -> pd.Series  (1=squeeze on, 0=squeeze off)
+
+VOLUME/LOCATION:
+  session_vwap(bars) -> pd.Series
+  anchored_vwap(bars, anchor_mask) -> pd.Series
+  previous_day_hl(bars) -> tuple[pd.Series, pd.Series]  (prev_high, prev_low)
+  previous_week_hl(bars) -> tuple[pd.Series, pd.Series]  (prev_high, prev_low)
+  session_range(bars, session_name) -> SessionRangeResult(high: pd.Series, low: pd.Series)
+  opening_range(bars, duration_bars=1) -> tuple[pd.Series, pd.Series]  (or_high, or_low)
+
+TIME FEATURES:
+  hour_utc(bars) -> pd.Series
+  dow(bars) -> pd.Series
+  is_session(bars, "london"|"ny"|"asia") -> pd.Series[bool]
+  minutes_since_session_open(bars) -> pd.Series
+  month_end_flag(bars, days_before=2) -> pd.Series[bool]
+
+CLOSED-BAR HTF:
+  htf(bars, target_tf="4h", func=lambda df: df["close"]) -> pd.Series
+
+CONFIRMED SWINGS:
+  swing_high(bars, n=2) -> SwingResult  (access .pivot_value: pd.Series)
+  swing_low(bars, n=2) -> SwingResult  (access .pivot_value: pd.Series)
+
+MARKET STRUCTURE (return plain tuples – use tuple unpacking):
+  bos(bars, swing_n=2) -> tuple[pd.Series, pd.Series]  # (bull_bos: bool, bear_bos: bool)
+  choch(bars, swing_n=2) -> tuple[pd.Series, pd.Series]  # (bull_choch: bool, bear_choch: bool)
+  fvg(bars, min_gap_usd=0.0) -> tuple[pd.Series, pd.Series]  # (bull_fvg: bool, bear_fvg: bool)
+  liquidity_sweep(bars, swing_n=2) -> tuple[pd.Series, pd.Series]  # (high_sweep: bool, low_sweep: bool)
+  premium_discount(bars, swing_n=5) -> pd.Series[float]  # 0.0-1.0 (<0.5 = discount, >0.5 = premium)
+  order_block(bars, swing_n=2) -> tuple[pd.Series, pd.Series]  # (bull_ob, bear_ob)
+
+REGIMES:
+  trend_range_regime(high, low, close, adx_period=14, er_period=10) -> pd.Series  # "trend" or "range"
+  vol_regime(high, low, close, atr_period=14, lookback=100) -> pd.Series  # "high_vol" or "low_vol"
+  session_regime(bars) -> pd.Series
+
+WORKING EXAMPLE (follow this pattern exactly):
+```python
+class Strategy:
+    PARAMS = {
+        "ema_fast": {"default": 21, "min": 10, "max": 50},
+        "ema_slow": {"default": 55, "min": 30, "max": 100},
+        "atr_period": {"default": 14, "min": 7, "max": 21},
+        "sl_mult": {"default": 1.5, "min": 1.0, "max": 3.0},
+        "tp_mult": {"default": 2.5, "min": 1.5, "max": 4.0},
+    }
+    def __init__(self, params):
+        self.params = params
+    def on_bar(self, bars):
+        if len(bars) < 60:
+            return None
+        from core.indicators import ema, atr, rsi, is_session
+        fast = ema(bars, period=self.params["ema_fast"])
+        slow = ema(bars, period=self.params["ema_slow"])
+        atr_val = float(atr(bars, period=self.params["atr_period"]).iloc[-1])
+        rsi_val = float(rsi(bars, period=14).iloc[-1])
+        if np.isnan(atr_val) or atr_val <= 0:
+            return None
+        in_session = bool(is_session(bars, "london").iloc[-1] or is_session(bars, "ny").iloc[-1])
+        if not in_session:
+            return None
+        sl_dist = max(5.0, atr_val * self.params["sl_mult"])
+        tp_dist = max(7.5, atr_val * self.params["tp_mult"])
+        if float(fast.iloc[-1]) > float(slow.iloc[-1]) and float(fast.iloc[-2]) <= float(slow.iloc[-2]) and rsi_val < 70:
+            return Signal.enter_long(sl_distance=sl_dist, tp_distance=tp_dist)
+        if float(fast.iloc[-1]) < float(slow.iloc[-1]) and float(fast.iloc[-2]) >= float(slow.iloc[-2]) and rsi_val > 30:
+            return Signal.enter_short(sl_distance=sl_dist, tp_distance=tp_dist)
+        return None
+```
 """
+
 
 _IDEATE_USER_TEMPLATE = Template("""
 Invent a NEW, institutional-grade trading strategy for XAUUSD on the {{ timeframe }} timeframe.
@@ -129,11 +215,16 @@ SOURCE CODE (with line numbers):
 {{ numbered_code }}
 ```
 
+{{ indicator_catalog }}
+
 FIX REQUIREMENTS:
 1. Fix the error while maintaining the same economic hypothesis and strategy concept.
 2. Return a class `Strategy` with `PARAMS`, `__init__(self, params)`, and `on_bar(self, bars)`.
 3. Use only numpy, pandas, math, and core.indicators helpers.
 4. Keep the parameter cap <= 6.
+5. Use the EXACT parameter names from the indicator catalog above. Do NOT guess.
+6. Named tuple/dataclass results (AdxResult, MacdResult, etc.) must be accessed via attributes (e.g., `result.adx_line`), NOT tuple unpacking.
+7. Tuple results (bos, choch, fvg, liquidity_sweep) use standard unpacking: `bull, bear = bos(bars)`.
 
 Return the complete revised strategy JSON:
 {
@@ -326,6 +417,7 @@ def render_code_fix_prompt(
         sanitized_error=sanitized,
         numbered_code=numbered,
         spec_json=spec_str,
+        indicator_catalog=INDICATOR_LIBRARY_CATALOG,
     )
     return [
         {"role": "system", "content": SYSTEM_PROMPT},

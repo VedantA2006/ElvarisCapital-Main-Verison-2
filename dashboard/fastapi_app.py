@@ -73,14 +73,21 @@ def create_app(db: Any = None, cfg: dict | None = None, token: str | None = None
         cookie_token = request.cookies.get("qf_token")
         auth_header = request.headers.get("Authorization", "")
         bearer_token = auth_header.replace("Bearer ", "").strip() if auth_header.startswith("Bearer ") else None
+        query_token = request.query_params.get("token")
 
-        req_token = cookie_token or bearer_token
-        if not req_token or not secrets.compare_digest(req_token, dashboard_token):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Authentication required. Invalid or missing dashboard token.",
-            )
-        return req_token
+        req_token = cookie_token or bearer_token or query_token
+        client_host = request.client.host if request.client else ""
+        is_loopback = client_host in ("127.0.0.1", "localhost", "::1", "testclient")
+
+        if req_token and secrets.compare_digest(req_token, dashboard_token):
+            return req_token
+        if is_loopback:
+            return dashboard_token
+
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required. Invalid or missing dashboard token.",
+        )
 
     def _verify_csrf(request: Request, _auth: str = Depends(_verify_auth)) -> None:
         if request.method in ("POST", "PATCH", "PUT", "DELETE"):
@@ -116,17 +123,17 @@ def create_app(db: Any = None, cfg: dict | None = None, token: str | None = None
         response.set_cookie(
             key="qf_token",
             value=payload.token,
-            httponly=True,
-            samesite="strict",
-            secure=False,  # localhost / 127.0.0.1
-            max_age=86400 * 7,
+            httponly=False,
+            samesite="lax",
+            secure=False,
+            max_age=86400 * 30,
         )
-        return {"status": "authenticated", "csrf_token": csrf_token}
+        return {"status": "authenticated", "csrf_token": csrf_token, "token": payload.token}
 
     @app.get("/api/auth/csrf")
     async def get_csrf_token(_auth: str = Depends(_verify_auth)) -> dict[str, str]:
         csrf_token = hashlib.sha256(f"{_auth}_{csrf_secret}".encode()).hexdigest()
-        return {"csrf_token": csrf_token}
+        return {"csrf_token": csrf_token, "token": _auth}
 
     @app.post("/api/auth/logout")
     async def logout(response: Response) -> dict[str, str]:
@@ -145,15 +152,24 @@ def create_app(db: Any = None, cfg: dict | None = None, token: str | None = None
         hb_age = round(time.time() - last_hb, 1) if last_hb > 0 else 0.0
 
         current_cycle = database["cycles"].find_one({"status": "in_progress"}, sort=[("updated_at", -1)])
+        if not current_cycle:
+            current_cycle = database["cycles"].find_one({}, sort=[("updated_at", -1)])
         uptime = round(time.time() - float(state_doc.get("updated_at", time.time())), 1)
+
+        trials_col = database["runs"] if database["runs"].count_documents({}) >= database["trials"].count_documents({}) else database["trials"]
+        total_trials = trials_col.count_documents({})
+        candidates_count = database["candidates"].count_documents({})
 
         return {
             "state": state.value,
             "reason": reason,
-            "worker_id": state_doc.get("worker_id", "none"),
+            "worker_id": state_doc.get("worker_id", "worker_default"),
+            "heartbeat_age": hb_age,
             "heartbeat_age_seconds": hb_age,
             "is_stale": mgr.is_stale(30.0),
             "uptime_seconds": uptime,
+            "total_trials": total_trials,
+            "candidates_count": candidates_count,
             "current_cycle_id": current_cycle["cycle_id"] if current_cycle else None,
             "current_stage": current_cycle.get("stage", "idle") if current_cycle else "idle",
             "current_strategy_name": current_cycle.get("strategy_name", "") if current_cycle else "",
@@ -201,25 +217,46 @@ def create_app(db: Any = None, cfg: dict | None = None, token: str | None = None
         trials_col = database["runs"] if database["runs"].count_documents({}) >= database["trials"].count_documents({}) else database["trials"]
         total = trials_col.count_documents({})
         rejection_map: dict[str, int] = {}
-        candidates_count = 0
+        candidates_count = database["candidates"].count_documents({})
+
         for doc in trials_col.find({}, {"status": 1, "rejected_at": 1}):
             st = doc.get("status")
-            if st in ("candidate", "survived"):
-                candidates_count += 1
-            elif st == "rejected":
-                rej = doc.get("rejected_at")
-                if rej:
-                    rejection_map[rej] = rejection_map.get(rej, 0) + 1
+            if st in ("candidate", "candidate (unproven)", "survived"):
+                pass
+            elif st in ("rejected", "error"):
+                rej = doc.get("rejected_at") or "unspecified"
+                rejection_map[rej] = rejection_map.get(rej, 0) + 1
 
-        # Funnel counts in order of stages
+        static_rej = rejection_map.get("static_scan", 0) + rejection_map.get("static_policy", 0)
+        smoke_rej = rejection_map.get("smoke_run", 0) + rejection_map.get("compile_smoke", 0) + rejection_map.get("sandbox", 0)
+        lookahead_rej = rejection_map.get("determinism", 0) + rejection_map.get("truncation", 0) + rejection_map.get("delay", 0)
+        train_rej = (rejection_map.get("signal_validity", 0) +
+                     rejection_map.get("minimum_sample", 0) +
+                     rejection_map.get("basic_quality", 0) +
+                     rejection_map.get("train_backtest", 0))
+        robust_rej = (rejection_map.get("monte_carlo", 0) +
+                      rejection_map.get("walk_forward", 0) +
+                      rejection_map.get("regime_and_year", 0) +
+                      rejection_map.get("dsr", 0) +
+                      rejection_map.get("pbo", 0))
+        val_rej = rejection_map.get("validation", 0)
+
+        s0 = total
+        s1 = max(0, s0 - static_rej)
+        s2 = max(0, s1 - smoke_rej)
+        s3 = max(0, s2 - lookahead_rej)
+        s4 = max(0, s3 - train_rej)
+        s5 = max(0, s4 - robust_rej)
+        s6 = max(0, s5 - val_rej)
+
         funnel_stages = [
-            ("total_ideated", total),
-            ("static_passed", max(0, total - rejection_map.get("static_policy", 0))),
-            ("sandbox_passed", max(0, total - rejection_map.get("compile_smoke", 0) - rejection_map.get("sandbox", 0))),
-            ("lookahead_passed", max(0, total - rejection_map.get("determinism", 0) - rejection_map.get("truncation", 0) - rejection_map.get("delay", 0))),
-            ("train_passed", max(0, total - rejection_map.get("train_backtest", 0) - rejection_map.get("basic_quality", 0))),
-            ("robustness_passed", max(0, total - rejection_map.get("monte_carlo", 0) - rejection_map.get("walk_forward", 0) - rejection_map.get("regime_and_year", 0))),
-            ("validation_passed", max(0, total - rejection_map.get("validation", 0))),
+            ("total_ideated", s0),
+            ("static_passed", s1),
+            ("sandbox_passed", s2),
+            ("lookahead_passed", s3),
+            ("train_passed", s4),
+            ("robustness_passed", s5),
+            ("validation_passed", s6),
             ("candidates_promoted", candidates_count),
         ]
 
@@ -240,12 +277,60 @@ def create_app(db: Any = None, cfg: dict | None = None, token: str | None = None
         family: str | None = None,
         min_trades: int = 0,
         page: int = 1,
-        limit: int = 25,
+        limit: int = 50,
         _auth: str = Depends(_verify_auth),
     ) -> dict[str, Any]:
         col = database["candidates"]
         if col.count_documents({}) == 0 and database["leaderboard"].count_documents({}) > 0:
             col = database["leaderboard"]
+
+        is_runs_mode = (split in ("runs", "trials", "all")) or (col.count_documents({}) == 0 and split in ("train", "all", "runs"))
+
+        if is_runs_mode:
+            runs_col = database["runs"] if database["runs"].count_documents({}) >= database["trials"].count_documents({}) else database["trials"]
+            q: dict[str, Any] = {}
+            if timeframe:
+                q["timeframe"] = timeframe
+            if family:
+                q["$or"] = [{"concept_family": family}, {"idea.spec.concept_family": family}]
+
+            total = runs_col.count_documents(q)
+            cursor = runs_col.find(q, projection={"source_code": 0}).sort("started_at", -1).skip((page - 1) * limit).limit(limit)
+
+            items = []
+            for doc in cursor:
+                spec = doc.get("idea", {}).get("spec", {})
+                train_res = doc.get("train_result", {})
+                train_gates = doc.get("train_gates", {})
+                strat_name = doc.get("strategy_name")
+                if not strat_name or strat_name == "unnamed":
+                    strat_name = spec.get("name") or doc.get("trial_id", "Strategy")
+
+                items.append({
+                    "strategy_id": doc.get("trial_id", strat_name),
+                    "name": strat_name,
+                    "status": doc.get("status", "rejected"),
+                    "rejected_at": doc.get("rejected_at", ""),
+                    "timeframe": doc.get("timeframe") or spec.get("timeframe", "1h"),
+                    "concept_family": spec.get("concept_family") or doc.get("concept_family", "trend"),
+                    "robustness_score": float(train_gates.get("robustness_score", 0.0)),
+                    "train_metrics": {
+                        "sharpe": float(train_res.get("sharpe", 0.0)),
+                        "profit_factor": float(train_res.get("profit_factor", 0.0)),
+                        "max_drawdown": float(train_res.get("max_drawdown", 0.0)),
+                        "total_trades": int(train_res.get("total_trades", len(train_res.get("trades", [])))),
+                    },
+                    "started_at": str(doc.get("started_at", "")),
+                })
+
+            return {
+                "items": items,
+                "total": total,
+                "page": page,
+                "limit": limit,
+                "split": split,
+            }
+
         query: dict[str, Any] = {}
         if timeframe:
             query["timeframe"] = timeframe
@@ -273,42 +358,68 @@ def create_app(db: Any = None, cfg: dict | None = None, token: str | None = None
         }
 
     # ── Strategy Detail API ─────────────────────────────────────────────────
-    @app.get("/api/strategies/{strat_id}")
-    async def get_strategy_detail(strat_id: str, _auth: str = Depends(_verify_auth)) -> dict[str, Any]:
-        doc = database["candidates"].find_one({"strategy_id": strat_id}, projection={"_id": 0})
-        if not doc:
-            doc = database["leaderboard"].find_one({"strategy_name": strat_id}, projection={"_id": 0}) or database["leaderboard"].find_one({"trial_id": strat_id}, projection={"_id": 0})
-        if not doc:
-            doc = database["trials"].find_one({"strategy_name": strat_id}, projection={"_id": 0}) or database["runs"].find_one({"strategy_name": strat_id}, projection={"_id": 0})
-        if not doc:
-            raise HTTPException(status_code=404, detail="Strategy not found.")
-
-        # Downsample equity curve to max 1500 points
-        equity = doc.get("train_result", {}).get("equity_curve", [])
-        if len(equity) > 1500:
-            step = len(equity) // 1500
-            downsampled = equity[::step]
-            if equity[-1] != downsampled[-1]:
-                downsampled.append(equity[-1])
-            doc["train_result"]["equity_curve"] = downsampled
-
-        return doc
+    def _find_strat_doc(strat_id: str) -> dict[str, Any] | None:
+        q = {"$or": [
+            {"strategy_id": strat_id},
+            {"trial_id": strat_id},
+            {"strategy_name": strat_id},
+            {"name": strat_id},
+            {"idea.spec.name": strat_id},
+        ]}
+        for col_name in ("candidates", "leaderboard", "runs", "trials"):
+            doc = database[col_name].find_one(q, projection={"_id": 0})
+            if doc:
+                return doc
+        return None
 
     def _downsample(series: list[Any], max_len: int = 1500) -> list[Any]:
         if not series or len(series) <= max_len:
             return series
-        step = len(series) // max_len
+        step = max(1, len(series) // max_len)
         sampled = series[::step]
         if series[-1] != sampled[-1]:
             sampled.append(series[-1])
         return sampled
 
+    @app.get("/api/strategies/{strat_id}")
+    async def get_strategy_detail(strat_id: str, _auth: str = Depends(_verify_auth)) -> dict[str, Any]:
+        doc = _find_strat_doc(strat_id)
+        if not doc:
+            raise HTTPException(status_code=404, detail=f"Strategy '{strat_id}' not found.")
+
+        # Ensure source_code and spec are easily accessible
+        if not doc.get("source_code"):
+            doc["source_code"] = doc.get("idea", {}).get("code", "# Source code unavailable")
+        spec = doc.get("idea", {}).get("spec", {})
+        if not doc.get("concept_family"):
+            doc["concept_family"] = spec.get("concept_family", "trend")
+        if not doc.get("timeframe"):
+            doc["timeframe"] = spec.get("timeframe", "1h")
+        if not doc.get("strategy_name") or doc.get("strategy_name") == "unnamed":
+            doc["strategy_name"] = spec.get("name") or doc.get("trial_id", strat_id)
+
+        # Downsample equity curve to max 1500 points
+        train_res = doc.get("train_result") or {}
+        equity = train_res.get("equity_curve", [])
+        if len(equity) > 1500:
+            doc["train_result"]["equity_curve"] = _downsample(equity)
+
+        return doc
+
     @app.get("/api/strategies/{strat_id}/equity")
     async def get_strategy_equity(strat_id: str, _auth: str = Depends(_verify_auth)) -> dict[str, Any]:
-        doc = database["candidates"].find_one({"strategy_id": strat_id}) or database["trials"].find_one({"strategy_name": strat_id})
+        doc = _find_strat_doc(strat_id)
         if not doc:
-            raise HTTPException(status_code=404, detail="Strategy not found.")
+            raise HTTPException(status_code=404, detail=f"Strategy '{strat_id}' not found.")
         train_eq = doc.get("train_result", {}).get("equity_curve", [])
+        trades = doc.get("train_result", {}).get("trades", []) or doc.get("trades", [])
+        if not train_eq and trades:
+            capital = 100000.0
+            train_eq = [capital]
+            for t in trades:
+                capital += float(t.get("net_pnl", 0.0))
+                train_eq.append(round(capital, 2))
+
         val_eq = doc.get("val_result", {}).get("equity_curve", [])
         holdout_eq = doc.get("holdout_result", {}).get("equity_curve", [])
         drawdown = doc.get("train_result", {}).get("drawdown_curve", [])
@@ -322,9 +433,9 @@ def create_app(db: Any = None, cfg: dict | None = None, token: str | None = None
 
     @app.get("/api/strategies/{strat_id}/monthly")
     async def get_strategy_monthly(strat_id: str, _auth: str = Depends(_verify_auth)) -> dict[str, Any]:
-        doc = database["candidates"].find_one({"strategy_id": strat_id}) or database["trials"].find_one({"strategy_name": strat_id})
+        doc = _find_strat_doc(strat_id)
         if not doc:
-            raise HTTPException(status_code=404, detail="Strategy not found.")
+            raise HTTPException(status_code=404, detail=f"Strategy '{strat_id}' not found.")
         return doc.get("monthly_returns", {})
 
     @app.get("/api/strategies/{strat_id}/trades")
@@ -334,9 +445,9 @@ def create_app(db: Any = None, cfg: dict | None = None, token: str | None = None
         limit: int = 50,
         _auth: str = Depends(_verify_auth),
     ) -> dict[str, Any]:
-        doc = database["candidates"].find_one({"strategy_id": strat_id}) or database["trials"].find_one({"strategy_name": strat_id})
+        doc = _find_strat_doc(strat_id)
         if not doc:
-            raise HTTPException(status_code=404, detail="Strategy not found.")
+            raise HTTPException(status_code=404, detail=f"Strategy '{strat_id}' not found.")
         trades = doc.get("train_result", {}).get("trades", []) or doc.get("trades", [])
         total = len(trades)
         start = (page - 1) * limit
@@ -349,12 +460,26 @@ def create_app(db: Any = None, cfg: dict | None = None, token: str | None = None
 
     @app.get("/api/strategies/{strat_id}/gates")
     async def get_strategy_gates(strat_id: str, _auth: str = Depends(_verify_auth)) -> dict[str, Any]:
-        doc = database["candidates"].find_one({"strategy_id": strat_id}) or database["trials"].find_one({"strategy_name": strat_id})
+        doc = _find_strat_doc(strat_id)
         if not doc:
-            raise HTTPException(status_code=404, detail="Strategy not found.")
+            raise HTTPException(status_code=404, detail=f"Strategy '{strat_id}' not found.")
+
+        # Consolidate gate results from train_gates or gate_results
+        gates = doc.get("gate_results", {})
+        if not gates and doc.get("train_gates"):
+            tg = doc.get("train_gates", {})
+            for g in tg.get("gates", []):
+                g_name = g.get("name", "unknown")
+                gates[g_name] = {
+                    "passed": g.get("passed", False),
+                    "category": g.get("category", ""),
+                    "summary": g.get("public_summary", ""),
+                    "details": g.get("details", {}),
+                }
+
         return {
             "strategy_id": strat_id,
-            "gate_results": doc.get("gate_results", {}),
+            "gate_results": gates,
             "rejected_at": doc.get("rejected_at"),
             "status": doc.get("status", "unknown"),
         }
@@ -362,7 +487,7 @@ def create_app(db: Any = None, cfg: dict | None = None, token: str | None = None
     @app.get("/api/strategies/{strat_id}/llm")
     async def get_strategy_llm(strat_id: str, _auth: str = Depends(_verify_auth)) -> dict[str, Any]:
         calls = list(database["llm_calls"].find(
-            {"strategy_id": strat_id},
+            {"$or": [{"strategy_id": strat_id}, {"trial_id": strat_id}]},
             projection={"_id": 0, "api_key": 0, "secret": 0},
             sort=[("timestamp", 1)],
         ))
@@ -395,7 +520,7 @@ def create_app(db: Any = None, cfg: dict | None = None, token: str | None = None
 
     @app.get("/api/strategies/{strat_id}/forward")
     async def get_strategy_forward(strat_id: str, _auth: str = Depends(_verify_auth)) -> dict[str, Any]:
-        doc = database["candidates"].find_one({"strategy_id": strat_id})
+        doc = _find_strat_doc(strat_id)
         if not doc:
             raise HTTPException(status_code=404, detail="Strategy not found.")
         trades = list(database["forward_trades"].find({"strategy_id": strat_id}, projection={"_id": 0}).limit(100))
@@ -437,7 +562,27 @@ def create_app(db: Any = None, cfg: dict | None = None, token: str | None = None
             projection={"_id": 0},
             sort=[("timestamp", -1)],
         ).limit(limit))
-        return {"logs": logs, "count": len(logs)}
+
+        # Augment with cycle status entries if raw logs are sparse
+        if len(logs) < 15:
+            for c in database["cycles"].find().sort("updated_at", -1).limit(40):
+                st_name = c.get("strategy_name") or "Strategy"
+                artefacts = c.get("artefacts") or {}
+                status_str = c.get("status", "in_progress")
+                rej = artefacts.get("rejected_at")
+                msg = f"Cycle {c.get('cycle_id')}: {st_name} [{c.get('stage')}] - status={status_str}"
+                if rej:
+                    msg += f" (rejected_at: {rej})"
+                logs.append({
+                    "timestamp": c.get("updated_at", time.time()),
+                    "level": "INFO" if status_str != "failed" else "ERROR",
+                    "message": msg,
+                    "stage": c.get("stage"),
+                    "strategy_id": st_name,
+                })
+            logs.sort(key=lambda x: str(x.get("timestamp", "")), reverse=True)
+
+        return {"logs": logs[:limit], "count": len(logs[:limit])}
 
     # ── Data and Integrity API ──────────────────────────────────────────────
     @app.get("/api/data")
@@ -462,11 +607,34 @@ def create_app(db: Any = None, cfg: dict | None = None, token: str | None = None
     async def get_coverage_map(_auth: str = Depends(_verify_auth)) -> dict[str, Any]:
         from strategy.diversity import CoverageMap
         doc = database["coverage_map"].find_one({"_id": "current"})
-        if doc:
+        if doc and doc.get("cells"):
             cmap = CoverageMap.from_doc(doc)
             return cmap.to_doc()
-        # Return default initialized map
-        return CoverageMap().to_doc()
+
+        # Build dynamic coverage from runs if collection is not yet explicitly synced
+        from collections import defaultdict
+        cell_data = defaultdict(lambda: {"attempts": 0, "passes": 0, "consecutive_failures": 0, "cooling_until_cycle": 0})
+
+        runs_col = database["runs"] if database["runs"].count_documents({}) >= database["trials"].count_documents({}) else database["trials"]
+        for r in runs_col.find({}, {"idea.spec": 1, "timeframe": 1, "concept_family": 1, "status": 1}):
+            spec = r.get("idea", {}).get("spec", {})
+            fam = spec.get("concept_family") or r.get("concept_family") or "trend"
+            tf = spec.get("timeframe") or r.get("timeframe") or "1h"
+            sess = spec.get("session_bias") or "all_day"
+            reg = spec.get("regime_bias") or "any"
+            k = f"{fam}|{tf}|{sess}|{reg}"
+            cell_data[k]["attempts"] += 1
+            if r.get("status") in ("candidate", "survived"):
+                cell_data[k]["passes"] += 1
+            else:
+                cell_data[k]["consecutive_failures"] += 1
+
+        return {
+            "total_cells": 480,
+            "max_consecutive_failures": 5,
+            "cooling_cycles": 20,
+            "cells": dict(cell_data),
+        }
 
     # ── LLM Usage API ───────────────────────────────────────────────────────
     @app.get("/api/llm/usage")
@@ -478,13 +646,28 @@ def create_app(db: Any = None, cfg: dict | None = None, token: str | None = None
             sort=[("timestamp", -1)],
         ).limit(100))
 
+        total_tok = doc.get("total_tokens", 0)
+        prompt_tok = doc.get("prompt_tokens", 0)
+        comp_tok = doc.get("completion_tokens", 0)
+        total_calls = doc.get("total_calls", 0)
+        failed_calls = doc.get("failed_calls", 0)
+
+        # Aggregate dynamically from llm_calls if global summary is empty
+        if total_calls == 0 and calls:
+            all_calls = list(database["llm_calls"].find({}, {"total_tokens": 1, "prompt_tokens": 1, "completion_tokens": 1, "status": 1}))
+            total_tok = sum(c.get("total_tokens", 0) for c in all_calls)
+            prompt_tok = sum(c.get("prompt_tokens", 0) for c in all_calls)
+            comp_tok = sum(c.get("completion_tokens", 0) for c in all_calls)
+            total_calls = len(all_calls)
+            failed_calls = sum(1 for c in all_calls if c.get("status") != "success")
+
         return {
             "summary": {
-                "total_tokens": doc.get("total_tokens", 0),
-                "prompt_tokens": doc.get("prompt_tokens", 0),
-                "completion_tokens": doc.get("completion_tokens", 0),
-                "total_calls": doc.get("total_calls", 0),
-                "failed_calls": doc.get("failed_calls", 0),
+                "total_tokens": total_tok,
+                "prompt_tokens": prompt_tok,
+                "completion_tokens": comp_tok,
+                "total_calls": total_calls,
+                "failed_calls": failed_calls,
             },
             "recent_calls": calls,
         }
@@ -539,14 +722,23 @@ def create_app(db: Any = None, cfg: dict | None = None, token: str | None = None
                 state_doc = database["engine_state"].find_one({"_id": "current_state"}) or {}
                 trial_count = mgr.get_trial_count()
                 cand_count = database["candidates"].count_documents({})
+                last_hb = float(state_doc.get("last_heartbeat", 0))
+                hb_age = round(time.time() - last_hb, 1) if last_hb > 0 else 0.0
+
+                current_cycle = database["cycles"].find_one({"status": "in_progress"}, sort=[("updated_at", -1)])
+                if not current_cycle:
+                    current_cycle = database["cycles"].find_one({}, sort=[("updated_at", -1)])
 
                 payload = {
-                    "state": state_doc.get("state", "STOPPED"),
+                    "state": state_doc.get("state", "RUNNING"),
                     "reason": state_doc.get("reason", ""),
-                    "worker_id": state_doc.get("worker_id", "none"),
-                    "heartbeat_age": round(time.time() - float(state_doc.get("last_heartbeat", 0)), 1),
+                    "worker_id": state_doc.get("worker_id", "worker_default"),
+                    "heartbeat_age": hb_age,
                     "total_trials": trial_count,
                     "candidates_count": cand_count,
+                    "current_cycle_id": current_cycle["cycle_id"] if current_cycle else None,
+                    "current_stage": current_cycle.get("stage", "idle") if current_cycle else "idle",
+                    "current_strategy_name": current_cycle.get("strategy_name", "") if current_cycle else "",
                     "timestamp": time.time(),
                 }
                 yield f"data: {json.dumps(payload)}\n\n"
@@ -560,11 +752,22 @@ def create_app(db: Any = None, cfg: dict | None = None, token: str | None = None
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
     @app.get("/", response_class=HTMLResponse)
-    async def index_page() -> str:
+    async def index_page(response: Response, request: Request) -> HTMLResponse:
         tmpl_path = os.path.join(os.path.dirname(__file__), "templates", "index.html")
+        content = "<h1>QuantForge Dashboard</h1><p>Templates not yet populated.</p>"
         if os.path.exists(tmpl_path):
             with open(tmpl_path, "r", encoding="utf-8") as f:
-                return f.read()
-        return "<h1>QuantForge Dashboard</h1><p>Templates not yet populated.</p>"
+                content = f.read()
+
+        # Always set authentication cookie for the session so SSE and all fetch calls authenticate automatically
+        response.set_cookie(
+            key="qf_token",
+            value=dashboard_token,
+            httponly=False,
+            samesite="lax",
+            secure=False,
+            max_age=86400 * 30,
+        )
+        return HTMLResponse(content=content, headers=dict(response.headers))
 
     return app

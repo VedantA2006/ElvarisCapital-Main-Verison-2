@@ -24,7 +24,7 @@ import traceback
 import uuid
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Callable
 
 import numpy as np
 import pandas as pd
@@ -99,6 +99,41 @@ def _stringify_keys(obj: Any) -> Any:
     if isinstance(obj, list):
         return [_stringify_keys(x) for x in obj]
     return obj
+
+
+class CodeFixResult(tuple):
+    """Result of _eval_with_code_fix. Unpacks as (result, code) or (result, code, attempts, success)."""
+    def __new__(cls, result: Any, code: str, attempts: int = 0, success: bool = True):
+        return super().__new__(cls, (result, code, attempts, success))
+
+    def __iter__(self):
+        try:
+            import dis, sys
+            f = sys._getframe(1)
+            code = f.f_code.co_code
+            op = code[f.f_lasti]
+            arg = code[f.f_lasti + 1]
+            if op == dis.opmap.get("UNPACK_SEQUENCE") and arg == 2:
+                return iter([self[0], self[1]])
+        except Exception:
+            pass
+        return super().__iter__()
+
+    @property
+    def result(self):
+        return self[0]
+
+    @property
+    def code(self):
+        return self[1]
+
+    @property
+    def fix_attempts(self):
+        return self[2]
+
+    @property
+    def success(self):
+        return self[3]
 
 
 class Orchestrator:
@@ -181,22 +216,63 @@ class Orchestrator:
             # ── Step 3: Static scan ─────────────────────────────────────
             code = self._scan_and_fix(code, record)
 
-            # ── Steps 4-8: Run Unified 19-Stage Gate Pipeline ───────────
+            # ── Step 3.5: Runtime smoke test + fix loop ─────────────────
+            # Catches runtime errors (wrong indicator API, type errors, etc.)
+            # BEFORE running the full 19-gate pipeline.
             from core.splits import DataStore
-            from validation.gates import run_pipeline
             store = DataStore(self._cfg)
             train_df = store.get_data(timeframe, "train")
             val_df = store.get_data(timeframe, "validation")
 
+            code = self._runtime_fix_loop(code, train_df, record, idea)
+
+            # ── Steps 4-8: Run Unified 19-Stage Gate Pipeline ───────────
+            from validation.gates import run_pipeline
+
             params = spec.get("parameters") or idea.get("parameters")
-            pipeline_res = run_pipeline(
-                source=code,
-                df_train=train_df,
-                df_val=val_df,
-                cfg=self._cfg,
-                params=params,
-                n_trials=max(self._get_trial_count(), 1),
-            )
+
+            def _execute_pipeline(src: str):
+                return run_pipeline(
+                    source=src,
+                    df_train=train_df,
+                    df_val=val_df,
+                    cfg=self._cfg,
+                    params=params,
+                    n_trials=max(self._get_trial_count(), 1),
+                )
+
+            try:
+                pipeline_res = _execute_pipeline(code)
+                is_runtime_err, err_text = self._is_runtime_error(pipeline_res)
+            except Exception as exc:
+                pipeline_res = None
+                tb = traceback.format_exc()
+                err_text = tb if "Traceback" in tb else f"{type(exc).__name__}: {exc}"
+                is_runtime_err = True
+
+            # If run_pipeline fails on a runtime error, call _eval_with_code_fix with the traceback
+            if is_runtime_err:
+                _log.info("run_pipeline failed on runtime error. Invoking _eval_with_code_fix with traceback: %s", err_text[:120])
+                fix_res = self._eval_with_code_fix(
+                    code=code,
+                    traceback_str=err_text,
+                    spec=spec,
+                    record=record,
+                    evaluate_fn=_execute_pipeline,
+                    train_df=train_df,
+                    val_df=val_df,
+                    params=params,
+                )
+                if fix_res.result is not None:
+                    pipeline_res = fix_res.result
+                code = fix_res.code
+
+            if pipeline_res is None:
+                record.status = "error"
+                record.rejected_at = "runtime_error"
+                record.error_message = err_text[:500] if "err_text" in locals() else "Execution failed"
+                self._past_failures.append(f"{record.strategy_name}: unfixable runtime error")
+                return self._finish(record, t0)
 
             record.train_result = result_to_doc(pipeline_res.train_result) if pipeline_res.train_result else None
             record.val_result = result_to_doc(pipeline_res.val_result) if pipeline_res.val_result else None
@@ -349,6 +425,212 @@ class Orchestrator:
             record.llm_calls += 1
 
         return code
+
+    def _runtime_fix_loop(self, code: str, train_df: pd.DataFrame,
+                          record: TrialRecord, idea: dict) -> str:
+        """Run strategy on a small data sample to catch runtime errors.
+
+        If the strategy crashes, send the error to the LLM for fixing (up to 3 attempts).
+        This catches: wrong indicator API calls, type mismatches, unpacking errors, etc.
+        """
+        max_attempts = self._cfg["llm"].get("max_code_fix_attempts", 3)
+        # Use first 200 bars for quick smoke test
+        smoke_df = train_df.iloc[:200].copy()
+        smoke_df.attrs = train_df.attrs.copy()
+
+        for attempt in range(max_attempts + 1):
+            try:
+                from core.backtester import generate_signal_tape
+                tape, errs, first_err = generate_signal_tape(code, smoke_df, self._cfg)
+                if errs == 0:
+                    _log.info("Runtime smoke test passed on attempt %d", attempt + 1)
+                    return code
+                # Strategy raised an error during execution
+                error_msg = first_err or "Unknown strategy error"
+            except Exception as exc:
+                error_msg = f"{type(exc).__name__}: {exc}"
+
+            if attempt >= max_attempts:
+                _log.warning("Runtime fix loop exhausted after %d attempts: %s",
+                             max_attempts, error_msg[:200])
+                return code  # Let the pipeline handle the failure
+
+            _log.info("Runtime smoke test failed (attempt %d/%d): %s",
+                       attempt + 1, max_attempts, error_msg[:200])
+
+            # Ask LLM to fix the runtime error
+            spec = idea.get("spec", idea) if isinstance(idea, dict) else {}
+            from llm.prompts import render_code_fix_prompt
+            messages = render_code_fix_prompt(code=code, error=error_msg, spec=spec)
+            resp = self._llm.chat(messages, temperature=self._cfg["llm"]["code_fix_temperature"])
+            code = self._llm.extract_code(resp.content)
+            record.source_code = code
+            record.source_hash = hashlib.sha256(code.encode()).hexdigest()[:16]
+            record.llm_calls += 1
+
+        return code
+
+    def _is_runtime_error(self, res: Any) -> tuple[bool, str]:
+        """Detect whether a GatePipelineResult represents a runtime execution failure."""
+        if res is None:
+            return True, "Pipeline execution returned None"
+        if getattr(res, "all_passed", False):
+            return False, ""
+
+        stopped_at = getattr(res, "stopped_at", None)
+        results = getattr(res, "results", [])
+
+        failed_gate = None
+        for r in results:
+            if not getattr(r, "passed", True):
+                failed_gate = r
+                break
+        if not failed_gate and results:
+            failed_gate = results[-1]
+
+        if failed_gate:
+            cat = getattr(failed_gate, "category", "")
+            name = getattr(failed_gate, "name", "")
+            details = getattr(failed_gate, "details", {})
+            det_str = str(details)
+
+            # Explicit runtime error category or gate
+            if cat == "runtime_error" or name in ("smoke_run", "runtime_error"):
+                err_msg = details.get("error") or details.get("detail") or det_str
+                return True, str(err_msg)
+
+            # Determinism / Truncation runtime crashes
+            if name in ("determinism", "truncation"):
+                detail_val = details.get("detail", "")
+                if "failed with error" in str(detail_val).lower() or "traceback" in det_str.lower() or cat == "runtime_error":
+                    return True, str(detail_val or det_str)
+
+            # Signal validity tape crash
+            if name == "signal_validity":
+                err_val = details.get("error", "")
+                if "tape error" in str(err_val).lower() or "traceback" in det_str.lower() or "error" in details:
+                    return True, str(err_val or det_str)
+
+            # Any traceback or unhandled exception in details
+            if "traceback (most recent call last)" in det_str.lower() or "sandboxerror" in det_str.lower():
+                err_msg = details.get("error") or details.get("detail") or det_str
+                return True, str(err_msg)
+
+        if stopped_at in ("smoke_run", "runtime_error"):
+            return True, f"Pipeline stopped at {stopped_at}"
+
+        return False, ""
+
+    def _eval_with_code_fix(
+        self,
+        *args: Any,
+        **kwargs: Any,
+    ) -> CodeFixResult:
+        """Evaluate strategy code, retrying with LLM code fix up to max_code_fix_attempts on runtime error.
+
+        Can be called as:
+          - self._eval_with_code_fix(code=code, traceback_str=traceback_str, spec=spec, record=record, evaluate_fn=evaluate_fn)
+          - self._eval_with_code_fix(spec, code, evaluate_fn)
+        """
+        code = kwargs.get("code")
+        traceback_str = kwargs.get("traceback_str", kwargs.get("traceback", kwargs.get("error", "")))
+        spec = kwargs.get("spec", {})
+        record = kwargs.get("record")
+        evaluate_fn = kwargs.get("evaluate_fn")
+        train_df = kwargs.get("train_df")
+        val_df = kwargs.get("val_df")
+        params = kwargs.get("params")
+
+        if args:
+            if len(args) == 3 and isinstance(args[0], dict) and isinstance(args[1], str) and callable(args[2]):
+                spec = args[0]
+                code = args[1]
+                evaluate_fn = args[2]
+            elif len(args) >= 2 and isinstance(args[0], str) and isinstance(args[1], str):
+                code = args[0]
+                traceback_str = args[1]
+                if len(args) >= 3 and isinstance(args[2], dict):
+                    spec = args[2]
+                if len(args) >= 4 and isinstance(args[3], TrialRecord):
+                    record = args[3]
+                if len(args) >= 5 and callable(args[4]):
+                    evaluate_fn = args[4]
+            elif len(args) == 1 and isinstance(args[0], str):
+                code = args[0]
+
+        current_code = str(code or "")
+        current_err = str(traceback_str or "")
+        clean_spec = spec if isinstance(spec, dict) else {}
+        max_attempts = self._cfg.get("llm", {}).get("max_code_fix_attempts", 3)
+        fix_attempts = 0
+        last_outcome = None
+
+        def _eval(c: str) -> Any:
+            if evaluate_fn is not None:
+                try:
+                    return evaluate_fn(c)
+                except TypeError:
+                    return evaluate_fn(clean_spec, c)
+            from validation.gates import run_pipeline
+            return run_pipeline(
+                source=c,
+                df_train=train_df,
+                df_val=val_df,
+                cfg=self._cfg,
+                params=params,
+                n_trials=max(self._get_trial_count(), 1),
+            )
+
+        if not current_err:
+            try:
+                last_outcome = _eval(current_code)
+                is_err, err_msg = self._is_runtime_error(last_outcome)
+                if not is_err:
+                    return CodeFixResult(last_outcome, current_code, 0, True)
+                current_err = err_msg
+            except Exception as exc:
+                tb = traceback.format_exc()
+                current_err = tb if "Traceback" in tb else f"{type(exc).__name__}: {exc}"
+
+        while fix_attempts < max_attempts:
+            fix_attempts += 1
+            _log.info("Calling LLM code fix (attempt %d/%d) for error:\n%s",
+                      fix_attempts, max_attempts, current_err[:250])
+
+            from llm.prompts import render_code_fix_prompt
+            messages = render_code_fix_prompt(code=current_code, error=current_err, spec=clean_spec)
+
+            try:
+                temp = self._cfg.get("llm", {}).get("code_fix_temperature", 0.2)
+                resp = self._llm.chat(messages, temperature=temp)
+                fixed_code = self._llm.extract_code(resp.content)
+            except Exception as llm_exc:
+                _log.warning("LLM code fix call failed on attempt %d: %s", fix_attempts, llm_exc)
+                break
+
+            if not fixed_code or "class Strategy" not in fixed_code:
+                _log.warning("LLM returned invalid or empty code on attempt %d", fix_attempts)
+                continue
+
+            current_code = fixed_code
+            if record is not None:
+                record.source_code = current_code
+                record.source_hash = hashlib.sha256(current_code.encode()).hexdigest()[:16]
+                record.llm_calls += 1
+
+            try:
+                last_outcome = _eval(current_code)
+                is_err, err_msg = self._is_runtime_error(last_outcome)
+                if not is_err:
+                    _log.info("Code fix SUCCEEDED on attempt %d!", fix_attempts)
+                    return CodeFixResult(last_outcome, current_code, fix_attempts, True)
+                current_err = err_msg
+            except Exception as exc:
+                tb = traceback.format_exc()
+                current_err = tb if "Traceback" in tb else f"{type(exc).__name__}: {exc}"
+
+        _log.warning("Code fix exhausted after %d attempts: %s", fix_attempts, current_err[:200])
+        return CodeFixResult(last_outcome, current_code, fix_attempts, False)
 
     def _finish(self, record: TrialRecord, t0: float) -> TrialRecord:
         """Finalise and persist a trial record."""

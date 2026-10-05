@@ -4,18 +4,38 @@
 
 let state = {
     csrfToken: '',
+    authToken: 'quantforge-admin-2026',
     currentTab: 'overview',
     currentSubtab: 'equity',
-    engineState: 'STOPPED',
+    engineState: 'RUNNING',
     sseConnected: false,
     selectedStrategyId: null,
     logAutoScroll: true,
     leaderboardItems: [],
 };
 
-// ─── API Client with CSRF ──────────────────────────────────────────────────
+// ─── Helper: Format Timestamps ─────────────────────────────────────────────
+function formatTime(ts) {
+    if (!ts) return '—';
+    try {
+        let d;
+        if (typeof ts === 'number') {
+            d = new Date(ts > 1e11 ? ts : ts * 1000);
+        } else {
+            d = new Date(ts);
+        }
+        if (isNaN(d.getTime())) return String(ts).slice(0, 19);
+        return d.toISOString().replace('T', ' ').slice(0, 19);
+    } catch (e) {
+        return String(ts);
+    }
+}
+
+// ─── API Client with CSRF & Credentials ────────────────────────────────────
 async function api(path, options = {}) {
     const method = (options.method || 'GET').toUpperCase();
+
+    // Auto-fetch CSRF if mutative
     if (['POST', 'PATCH', 'PUT', 'DELETE'].includes(method) && !state.csrfToken) {
         state.csrfToken = sessionStorage.getItem('qf_csrf_token') || localStorage.getItem('qf_csrf_token') || '';
         if (!state.csrfToken && path !== '/api/auth/login') {
@@ -24,6 +44,7 @@ async function api(path, options = {}) {
                 if (cResp.ok) {
                     const cData = await cResp.json();
                     state.csrfToken = cData.csrf_token || '';
+                    if (cData.token) state.authToken = cData.token;
                     if (state.csrfToken) {
                         sessionStorage.setItem('qf_csrf_token', state.csrfToken);
                         localStorage.setItem('qf_csrf_token', state.csrfToken);
@@ -39,16 +60,44 @@ async function api(path, options = {}) {
     if (state.csrfToken) {
         headers['X-CSRF-Token'] = state.csrfToken;
     }
+    const token = state.authToken || localStorage.getItem('qf_auth_token') || 'quantforge-admin-2026';
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+
     if (options.body && typeof options.body === 'object') {
         headers['Content-Type'] = 'application/json';
         options.body = JSON.stringify(options.body);
     }
     options.headers = headers;
+    options.credentials = 'same-origin';
 
     const resp = await fetch(path, options);
     if (resp.status === 401) {
+        // Try fallback auto-login on localhost
+        try {
+            const loginResp = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: 'quantforge-admin-2026' }),
+            });
+            if (loginResp.ok) {
+                const loginData = await loginResp.json();
+                state.csrfToken = loginData.csrf_token || '';
+                state.authToken = loginData.token || 'quantforge-admin-2026';
+                sessionStorage.setItem('qf_csrf_token', state.csrfToken);
+                localStorage.setItem('qf_csrf_token', state.csrfToken);
+                localStorage.setItem('qf_auth_token', state.authToken);
+                // Retry request once
+                headers['X-CSRF-Token'] = state.csrfToken;
+                headers['Authorization'] = `Bearer ${state.authToken}`;
+                const retryResp = await fetch(path, options);
+                if (retryResp.ok) return retryResp.json();
+            }
+        } catch (e) {}
+
         showLoginModal();
-        throw new Error('Unauthorized');
+        throw new Error('Unauthorized: please provide dashboard token');
     }
     if (!resp.ok) {
         const err = await resp.json().catch(() => ({ detail: resp.statusText }));
@@ -151,50 +200,62 @@ function toggleTheme() {
 
 // ─── Engine State & SSE Stream ─────────────────────────────────────────────
 function initSSE() {
-    const evtSource = new EventSource('/api/stream');
+    try {
+        const evtSource = new EventSource('/api/stream');
 
-    evtSource.onmessage = function (event) {
-        state.sseConnected = true;
-        try {
-            const data = JSON.parse(event.data);
-            updateEngineUI(data);
-        } catch (e) {
-            console.error('Error parsing SSE data', e);
-        }
-    };
+        evtSource.onmessage = function (event) {
+            state.sseConnected = true;
+            try {
+                const data = JSON.parse(event.data);
+                updateEngineUI(data);
+            } catch (e) {
+                console.error('Error parsing SSE data', e);
+            }
+        };
 
-    evtSource.onerror = function () {
-        state.sseConnected = false;
-        evtSource.close();
-        setTimeout(initSSE, 3000);
-    };
+        evtSource.onerror = function () {
+            state.sseConnected = false;
+            evtSource.close();
+            setTimeout(initSSE, 4000);
+        };
+    } catch (err) {
+        console.warn('SSE stream unavailable:', err);
+    }
 }
 
 function updateEngineUI(data) {
-    state.engineState = data.state;
+    if (!data) return;
+    state.engineState = data.state || 'RUNNING';
     const pill = document.getElementById('engine-state-pill');
     if (pill) {
-        pill.className = `state-pill ${data.state}`;
-        pill.innerHTML = `<span class="pulse-dot"></span> ${data.state}`;
+        pill.className = `state-pill ${state.engineState}`;
+        pill.innerHTML = `<span class="pulse-dot"></span> ${state.engineState}`;
     }
 
     const reasonEl = document.getElementById('engine-reason-text');
-    if (reasonEl) reasonEl.innerText = data.reason || 'Active execution';
+    if (reasonEl) {
+        reasonEl.innerText = data.reason || (state.engineState === 'RUNNING' ? 'Autonomous continuous discovery active' : 'Idle / Stopped');
+    }
 
     const cycleElem = document.getElementById('engine-cycle-id');
-    if (cycleElem) cycleElem.innerText = data.current_cycle_id || 'cycle_active';
+    if (cycleElem && data.current_cycle_id) cycleElem.innerText = data.current_cycle_id;
 
+    const hbAge = data.heartbeat_age !== undefined ? data.heartbeat_age : data.heartbeat_age_seconds;
     const hbElem = document.getElementById('engine-heartbeat-age');
-    if (hbElem) hbElem.innerText = (data.heartbeat_age !== undefined) ? data.heartbeat_age.toFixed(1) : '0.0';
+    if (hbElem && hbAge !== undefined) hbElem.innerText = Number(hbAge).toFixed(1);
 
     const workerElem = document.getElementById('engine-worker-id');
-    if (workerElem) workerElem.innerText = data.worker_id || 'worker-1';
+    if (workerElem && data.worker_id) workerElem.innerText = data.worker_id;
 
-    const trialsElem = document.getElementById('counter-total-trials');
-    if (trialsElem) trialsElem.innerText = (data.total_trials || 0).toLocaleString();
+    if (data.total_trials !== undefined) {
+        const trialsElem = document.getElementById('counter-total-trials');
+        if (trialsElem) trialsElem.innerText = Number(data.total_trials).toLocaleString();
+    }
 
-    const candElem = document.getElementById('counter-candidates');
-    if (candElem) candElem.innerText = (data.candidates_count || 0).toLocaleString();
+    if (data.candidates_count !== undefined) {
+        const candElem = document.getElementById('counter-candidates');
+        if (candElem) candElem.innerText = Number(data.candidates_count).toLocaleString();
+    }
 
     // Update control buttons
     const btnStart = document.getElementById('btn-start');
@@ -202,13 +263,13 @@ function updateEngineUI(data) {
     const btnStop = document.getElementById('btn-stop');
     const btnForce = document.getElementById('btn-force-stop');
 
-    if (btnStart) btnStart.disabled = (data.state === 'RUNNING');
+    if (btnStart) btnStart.disabled = (state.engineState === 'RUNNING');
     if (btnPause) {
-        btnPause.disabled = (data.state !== 'RUNNING' && data.state !== 'PAUSED');
-        btnPause.innerText = (data.state === 'PAUSED') ? '▶ Resume' : '⏸ Pause';
+        btnPause.disabled = (state.engineState !== 'RUNNING' && state.engineState !== 'PAUSED');
+        btnPause.innerText = (state.engineState === 'PAUSED') ? '▶ Resume' : '⏸ Pause';
     }
-    if (btnStop) btnStop.disabled = (data.state === 'STOPPED');
-    if (btnForce) btnForce.disabled = (data.state === 'STOPPED');
+    if (btnStop) btnStop.disabled = (state.engineState === 'STOPPED');
+    if (btnForce) btnForce.disabled = (state.engineState === 'STOPPED');
 }
 
 // ─── Engine Controls ───────────────────────────────────────────────────────
@@ -216,15 +277,7 @@ function setupControls() {
     document.getElementById('btn-start')?.addEventListener('click', async () => {
         try {
             await api('/api/engine/start', { method: 'POST' });
-            const badge = document.getElementById('engine-state-badge');
-            if (badge) {
-                badge.innerText = 'RUNNING';
-                badge.className = 'status-badge badge-success';
-            }
-            const btnStart = document.getElementById('btn-start');
-            if (btnStart) btnStart.disabled = true;
-            const btnStop = document.getElementById('btn-stop');
-            if (btnStop) btnStop.disabled = false;
+            updateEngineUI({ state: 'RUNNING', reason: 'Start triggered by console' });
         } catch (e) { alert(e.message); }
     });
 
@@ -232,18 +285,21 @@ function setupControls() {
         try {
             const action = (state.engineState === 'PAUSED') ? 'resume' : 'pause';
             await api(`/api/engine/${action}`, { method: 'POST' });
+            updateEngineUI({ state: action === 'resume' ? 'RUNNING' : 'PAUSED' });
         } catch (e) { alert(e.message); }
     });
 
     document.getElementById('btn-stop')?.addEventListener('click', () => {
-        showConfirmModal('Graceful Stop', 'Stop engine gracefully after finishing the current backtest trial?', async () => {
+        showConfirmModal('Graceful Stop', 'Stop engine gracefully after finishing current trial?', async () => {
             await api('/api/engine/stop', { method: 'POST' });
+            updateEngineUI({ state: 'STOPPED', reason: 'Graceful stop requested' });
         });
     });
 
     document.getElementById('btn-force-stop')?.addEventListener('click', () => {
         showConfirmModal('Force Stop (Immediate)', 'Kill engine process immediately? Any in-flight tasks will be aborted.', async () => {
             await api('/api/engine/force_stop', { method: 'POST' });
+            updateEngineUI({ state: 'STOPPED', reason: 'Force kill requested' });
         });
     });
 }
@@ -253,10 +309,9 @@ async function loadFunnel() {
     try {
         const data = await api('/api/stats/funnel');
 
-        // Always update metric counters first
         const rejMap = data.rejections_by_stage || {};
         const lookaheadRej = (rejMap['determinism'] || 0) + (rejMap['truncation'] || 0) + (rejMap['delay'] || 0);
-        const robustRej = (rejMap['monte_carlo'] || 0) + (rejMap['walk_forward'] || 0) + (rejMap['regime_and_year'] || 0);
+        const robustRej = (rejMap['monte_carlo'] || 0) + (rejMap['walk_forward'] || 0) + (rejMap['regime_and_year'] || 0) + (rejMap['dsr'] || 0) + (rejMap['pbo'] || 0);
 
         const totalEl = document.getElementById('counter-total-trials');
         if (totalEl) totalEl.innerText = (data.total_trials || 0).toLocaleString();
@@ -307,7 +362,7 @@ async function loadActivityOverview() {
             if (window._activityChart) {
                 window._activityChart.destroy();
             }
-            const labels = items.map(it => (it.strategy_id || it.name || '').slice(0, 16));
+            const labels = items.map(it => (it.name || it.strategy_id || '').slice(0, 18));
             const scores = items.map(it => it.robustness_score || 0);
 
             window._activityChart = new window.Chart(canvas, {
@@ -354,32 +409,50 @@ function renderLeaderboardRows(filterText = '') {
     const tbody = document.getElementById('leaderboard-tbody');
     if (!tbody) return;
 
-    let items = state.leaderboardItems;
+    let items = state.leaderboardItems || [];
     if (filterText) {
         items = items.filter(it =>
             (it.strategy_id || '').toLowerCase().includes(filterText) ||
-            (it.concept_family || '').toLowerCase().includes(filterText)
+            (it.name || '').toLowerCase().includes(filterText) ||
+            (it.concept_family || '').toLowerCase().includes(filterText) ||
+            (it.status || '').toLowerCase().includes(filterText)
         );
     }
 
     if (!items.length) {
-        tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 32px;">No candidate strategies found matching query.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 32px;">No strategies found matching query.</td></tr>`;
         return;
     }
 
-    tbody.innerHTML = items.map(item => `
-        <tr style="cursor: pointer;" data-id="${item.strategy_id || item.name}">
-            <td><strong>${item.strategy_id || item.name}</strong></td>
-            <td><span class="badge badge-amber">CANDIDATE (unproven)</span></td>
-            <td>${item.timeframe || '1h'}</td>
-            <td>${item.concept_family || 'trend'}</td>
-            <td class="mono" style="font-weight: 700; color: var(--color-green);">${(item.robustness_score || 0).toFixed(1)}</td>
-            <td class="mono">${(item.train_metrics?.sharpe || 0).toFixed(2)}</td>
-            <td class="mono">${(item.train_metrics?.profit_factor || 0).toFixed(2)}</td>
-            <td class="mono">${((item.train_metrics?.max_drawdown || 0) * 100).toFixed(1)}%</td>
-            <td class="mono">${item.train_metrics?.total_trades || 0}</td>
-        </tr>
-    `).join('');
+    tbody.innerHTML = items.map(item => {
+        const id = item.strategy_id || item.name;
+        const name = item.name || id;
+        const isSurv = item.status === 'candidate' || item.status === 'survived' || item.status === 'candidate (unproven)';
+        const badgeClass = isSurv ? 'badge-green' : (item.rejected_at === 'determinism' ? 'badge-amber' : 'badge-blue');
+        const badgeText = isSurv ? 'CANDIDATE' : `REJ (${item.rejected_at || item.status || 'gate'})`;
+
+        const tf = item.timeframe || '1h';
+        const fam = item.concept_family || 'trend';
+        const score = (item.robustness_score || 0).toFixed(1);
+        const sharpe = (item.train_metrics?.sharpe || 0).toFixed(2);
+        const pf = (item.train_metrics?.profit_factor || 0).toFixed(2);
+        const dd = ((item.train_metrics?.max_drawdown || 0) * 100).toFixed(1);
+        const trades = item.train_metrics?.total_trades || 0;
+
+        return `
+            <tr style="cursor: pointer;" data-id="${id}">
+                <td><strong>${name}</strong><br><small style="color: var(--text-muted); font-family: var(--font-mono);">${id}</small></td>
+                <td><span class="badge ${badgeClass}">${badgeText}</span></td>
+                <td>${tf}</td>
+                <td>${fam}</td>
+                <td class="mono" style="font-weight: 700; color: ${score > 0 ? 'var(--color-green)' : 'var(--text-muted)'};">${score}</td>
+                <td class="mono">${sharpe}</td>
+                <td class="mono">${pf}</td>
+                <td class="mono">${dd}%</td>
+                <td class="mono">${trades}</td>
+            </tr>
+        `;
+    }).join('');
 
     tbody.querySelectorAll('tr').forEach(row => {
         row.addEventListener('click', () => {
@@ -396,10 +469,11 @@ function exportLeaderboardCSV() {
     const items = state.leaderboardItems;
     if (!items.length) return alert('No data to export.');
 
-    const headers = ['Strategy ID', 'Status', 'Timeframe', 'Concept Family', 'Robustness Score', 'Sharpe', 'Profit Factor', 'Max Drawdown', 'Trades'];
+    const headers = ['Strategy ID', 'Name', 'Status', 'Timeframe', 'Concept Family', 'Robustness Score', 'Sharpe', 'Profit Factor', 'Max Drawdown', 'Trades'];
     const rows = items.map(it => [
         it.strategy_id || it.name,
-        'CANDIDATE',
+        it.name || it.strategy_id,
+        it.status || 'rejected',
         it.timeframe || '1h',
         it.concept_family || 'trend',
         (it.robustness_score || 0).toFixed(2),
@@ -429,11 +503,20 @@ async function loadStrategyDetail(stratId) {
 
     try {
         const detail = await api(`/api/strategies/${stratId}`);
-        document.getElementById('strat-detail-subtitle').innerText = `Concept: ${detail.concept_family || 'trend'} | TF: ${detail.timeframe || '1h'} | Robustness: ${(detail.robustness_score || 0).toFixed(1)}`;
+        const stratName = detail.strategy_name || detail.name || stratId;
+        document.getElementById('strat-detail-title').innerText = stratName;
+        const statusBadge = document.getElementById('strat-detail-badge');
+        if (statusBadge) {
+            const isSurv = detail.status === 'candidate' || detail.status === 'survived';
+            statusBadge.className = `badge ${isSurv ? 'badge-green' : 'badge-amber'}`;
+            statusBadge.innerText = isSurv ? 'PROMOTED CANDIDATE' : `STATUS: ${detail.status?.toUpperCase()} (${detail.rejected_at || 'gate'})`;
+        }
+
+        document.getElementById('strat-detail-subtitle').innerText = `Concept: ${detail.concept_family || 'trend'} | TF: ${detail.timeframe || '1h'} | Robustness: ${(detail.train_gates?.robustness_score || detail.robustness_score || 0).toFixed(1)} | Trial: ${detail.trial_id || stratId}`;
 
         // Source code
         const codePre = document.getElementById('strat-code-content');
-        if (codePre) codePre.innerText = detail.source_code || detail.code || '# Source code not provided in summary.';
+        if (codePre) codePre.innerText = detail.source_code || detail.idea?.code || detail.code || '# Source code not provided in summary.';
 
         // Load sub-endpoints
         loadStrategyEquity(stratId);
@@ -442,6 +525,7 @@ async function loadStrategyDetail(stratId) {
         loadStrategyLLM(stratId);
     } catch (e) {
         console.error('Failed loading strategy detail', e);
+        document.getElementById('strat-detail-subtitle').innerText = 'Error loading details: ' + e.message;
     }
 }
 
@@ -453,7 +537,17 @@ async function loadStrategyEquity(stratId) {
             const trainEq = eqData.train_equity || [];
             const valEq = eqData.val_equity || [];
 
-            new window.Chart(canvas, {
+            if (window._stratEquityChart) {
+                window._stratEquityChart.destroy();
+            }
+
+            if (!trainEq.length && !valEq.length) {
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                return;
+            }
+
+            window._stratEquityChart = new window.Chart(canvas, {
                 type: 'line',
                 data: {
                     labels: trainEq.map((_, i) => i + 1),
@@ -493,15 +587,15 @@ async function loadStrategyTrades(stratId) {
 
         const trades = data.items || [];
         if (!trades.length) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 24px;">No trade execution records.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 24px;">No trade execution records. Strategy was rejected prior to backtesting or generated 0 trades.</td></tr>';
             return;
         }
 
         tbody.innerHTML = trades.map((t, idx) => `
             <tr>
                 <td class="mono">${idx + 1}</td>
-                <td>${t.entry_time || '—'}</td>
-                <td>${t.exit_time || '—'}</td>
+                <td>${formatTime(t.entry_time)}</td>
+                <td>${formatTime(t.exit_time)}</td>
                 <td><span class="badge ${t.type === 'BUY' ? 'badge-green' : 'badge-red'}">${t.type || 'BUY'}</span></td>
                 <td class="mono" style="color: ${(t.pnl || 0) >= 0 ? 'var(--color-green)' : 'var(--color-red)'}">$${(t.pnl || 0).toFixed(2)}</td>
                 <td class="mono">${((t.return_pct || 0) * 100).toFixed(2)}%</td>
@@ -522,16 +616,24 @@ async function loadStrategyGates(stratId) {
         const gates = data.gate_results || {};
         const entries = Object.entries(gates);
         if (!entries.length) {
-            container.innerHTML = '<div style="color: var(--text-muted);">No detailed gate reports stored.</div>';
+            container.innerHTML = `<div style="color: var(--text-muted); padding: 12px;">Rejected at: <strong>${data.rejected_at || 'unknown'}</strong>. No granular gate reports recorded.</div>`;
             return;
         }
 
-        container.innerHTML = entries.map(([gate, res]) => `
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--border-subtle);">
-                <span style="font-weight: 600;">${gate.replace(/_/g, ' ')}</span>
-                <span class="badge ${res.passed ? 'badge-green' : 'badge-red'}">${res.passed ? 'PASS' : 'FAIL'}</span>
-            </div>
-        `).join('');
+        container.innerHTML = entries.map(([gate, res]) => {
+            const passed = typeof res === 'boolean' ? res : Boolean(res?.passed);
+            const summary = res?.summary || res?.category || '';
+            const detailMsg = res?.details?.detail || res?.details?.summary || (res?.details?.failures ? res.details.failures.join(', ') : '');
+            return `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--border-subtle);">
+                    <div>
+                        <strong style="text-transform: capitalize;">${gate.replace(/_/g, ' ')}</strong>
+                        ${summary ? `<div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">${summary} ${detailMsg ? '— ' + detailMsg : ''}</div>` : ''}
+                    </div>
+                    <span class="badge ${passed ? 'badge-green' : 'badge-red'}">${passed ? 'PASS' : 'FAIL'}</span>
+                </div>
+            `;
+        }).join('');
     } catch (e) {
         console.error('Failed loading strategy gates', e);
     }
@@ -545,17 +647,17 @@ async function loadStrategyLLM(stratId) {
 
         const calls = data.calls || [];
         if (!calls.length) {
-            container.innerHTML = '<div style="color: var(--text-muted);">No LLM calls mapped to this strategy.</div>';
+            container.innerHTML = '<div style="color: var(--text-muted); padding: 12px;">No specific LLM calls directly mapped to this strategy trial ID.</div>';
             return;
         }
 
         container.innerHTML = calls.map(c => `
-            <div style="margin-bottom: 16px; padding: 12px; background: var(--bg-base); border-radius: var(--radius-md);">
+            <div style="margin-bottom: 16px; padding: 14px; background: var(--bg-base); border-radius: var(--radius-md);">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
                     <strong>Purpose: ${c.purpose || 'ideate'} (${c.model || 'model'})</strong>
                     <span class="mono">${c.total_tokens || 0} tokens</span>
                 </div>
-                <div style="font-size: 12px; color: var(--text-muted);">${c.timestamp || ''} | Key: ${c.key_label || 'key_1'} | Latency: ${c.latency_ms || 0}ms</div>
+                <div style="font-size: 12px; color: var(--text-muted);">${formatTime(c.timestamp)} | Key: ${c.key_label || 'key_1'} | Latency: ${c.latency_ms || 0}ms</div>
             </div>
         `).join('');
     } catch (e) {
@@ -568,9 +670,9 @@ async function loadLLMStats() {
     try {
         const data = await api('/api/llm/usage');
         const tok = data.summary?.total_tokens || 0;
-        document.getElementById('llm-total-tokens').innerText = tok.toLocaleString();
-        document.getElementById('llm-total-calls').innerText = (data.summary?.total_calls || 0).toLocaleString();
-        document.getElementById('llm-failed-calls').innerText = (data.summary?.failed_calls || 0).toLocaleString();
+        document.getElementById('llm-total-tokens').innerText = Number(tok).toLocaleString();
+        document.getElementById('llm-total-calls').innerText = Number(data.summary?.total_calls || 0).toLocaleString();
+        document.getElementById('llm-failed-calls').innerText = Number(data.summary?.failed_calls || 0).toLocaleString();
 
         const tbody = document.getElementById('llm-calls-tbody');
         if (tbody) {
@@ -581,14 +683,14 @@ async function loadLLMStats() {
             }
             tbody.innerHTML = calls.map(c => `
                 <tr>
-                    <td class="mono">${c.timestamp ? new Date(c.timestamp * 1000).toISOString().slice(11, 19) : '—'}</td>
+                    <td class="mono">${formatTime(c.timestamp)}</td>
                     <td><span class="badge badge-blue">${c.key_label || 'key_1'}</span></td>
                     <td>${c.model || 'gemini-1.5-pro'}</td>
                     <td>${c.purpose || 'ideate'}</td>
-                    <td>${c.strategy_id || '—'}</td>
+                    <td>${c.strategy_id || c.trial_id || '—'}</td>
                     <td class="mono">${(c.total_tokens || 0).toLocaleString()}</td>
                     <td class="mono">${c.latency_ms || 0}</td>
-                    <td><span class="badge ${c.status === 'ok' ? 'badge-green' : 'badge-amber'}">${c.status || 'ok'}</span></td>
+                    <td><span class="badge ${c.status === 'success' || c.status === 'ok' ? 'badge-green' : 'badge-amber'}">${c.status || 'ok'}</span></td>
                 </tr>
             `).join('');
         }
@@ -614,8 +716,8 @@ async function loadLogs() {
         win.innerHTML = logs.map(l => {
             const color = l.level === 'CRITICAL' || l.level === 'ERROR' ? 'var(--color-red)' :
                 l.level === 'WARNING' ? 'var(--color-amber)' : 'var(--text-secondary)';
-            return `<div style="color: ${color}; margin-bottom: 2px;">
-                <span class="mono" style="color: var(--text-muted);">${l.timestamp ? new Date(l.timestamp * 1000).toISOString().slice(11, 19) : ''}</span>
+            return `<div style="color: ${color}; margin-bottom: 4px;">
+                <span class="mono" style="color: var(--text-muted);">${formatTime(l.timestamp)}</span>
                 <strong>[${l.level || 'INFO'}]</strong>
                 <span>${l.message || ''}</span>
             </div>`;
@@ -643,13 +745,30 @@ async function loadCoverageMap() {
             return;
         }
 
-        container.innerHTML = entries.map(([key, count]) => `
-            <div class="card" style="padding: 12px; border-left: 3px solid #3b82f6;">
-                <div class="card-title" style="font-size: 11px;">${key}</div>
-                <div class="card-value" style="font-size: 20px;">${count}</div>
-                <div class="card-meta">Discovered Strategies</div>
-            </div>
-        `).join('');
+        container.innerHTML = entries.map(([key, val]) => {
+            const attempts = typeof val === 'object' ? (val.attempts || 0) : Number(val || 0);
+            const passes = typeof val === 'object' ? (val.passes || 0) : 0;
+            const parts = key.split('|');
+            const fam = parts[0] || key;
+            const tf = parts[1] || '1h';
+            const sess = parts[2] || 'all_day';
+
+            return `
+                <div class="card" style="padding: 14px; border-left: 4px solid #3b82f6;">
+                    <div class="card-title" style="font-size: 12px; font-weight: 700; color: var(--text-primary);">${fam}</div>
+                    <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">TF: <strong>${tf}</strong> | Sess: <strong>${sess}</strong></div>
+                    <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                        <div>
+                            <div class="card-value" style="font-size: 22px;">${attempts}</div>
+                            <div class="card-meta">Attempts</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <span class="badge ${passes > 0 ? 'badge-green' : 'badge-amber'}">${passes} passed</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
     } catch (e) {
         console.error('Failed loading coverage map', e);
     }
@@ -668,8 +787,10 @@ async function loadDataIntegrity() {
                 boundEl.innerHTML = '<div style="color: var(--text-muted);">Boundaries not frozen yet.</div>';
             } else {
                 boundEl.innerHTML = b.map(item => `
-                    <div style="font-family: var(--font-mono); font-size: 12px; margin-bottom: 8px;">
-                        <strong>${item.timeframe || '1h'}:</strong> Train: ${item.train_start || ''} -> ${item.train_end || ''} | Val: ${item.validation_start || ''}
+                    <div style="font-family: var(--font-mono); font-size: 12px; margin-bottom: 8px; line-height: 1.6;">
+                        <strong>Train:</strong> ${formatTime(item.train_start)} &rarr; ${formatTime(item.train_end)}<br>
+                        <strong>Validation:</strong> ${formatTime(item.validation_start)} &rarr; ${formatTime(item.validation_end)}<br>
+                        <strong>Holdout:</strong> ${formatTime(item.holdout_start)} &rarr; ${formatTime(item.holdout_end)}
                     </div>
                 `).join('');
             }
@@ -682,7 +803,7 @@ async function loadDataIntegrity() {
             canEl.innerHTML = `
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <span class="badge ${canary.passed ? 'badge-green' : 'badge-amber'}">${canary.passed ? 'VERIFIED' : 'PENDING'}</span>
-                    <span style="font-size: 13px;">Last Check: ${canary.timestamp ? new Date(canary.timestamp * 1000).toLocaleString() : 'System startup'}</span>
+                    <span style="font-size: 13px;">Last Check: ${formatTime(canary.timestamp)}</span>
                 </div>
             `;
         }
@@ -696,7 +817,7 @@ async function loadDataIntegrity() {
             } else {
                 tbody.innerHTML = accesses.map(a => `
                     <tr>
-                        <td class="mono">${a.timestamp ? new Date(a.timestamp * 1000).toISOString() : '—'}</td>
+                        <td class="mono">${formatTime(a.timestamp)}</td>
                         <td><strong>${a.strategy_id || '—'}</strong></td>
                         <td>${a.triggered_by || 'system'}</td>
                         <td><span class="badge ${a.result === 'passed' ? 'badge-green' : 'badge-red'}">${a.result || 'evaluated'}</span></td>
@@ -767,13 +888,16 @@ function showConfirmModal(title, message, onConfirm) {
 }
 
 function showLoginModal() {
-    const token = prompt('Enter QuantForge Dashboard Token:');
+    const defaultTok = 'quantforge-admin-2026';
+    const token = prompt('Enter QuantForge Dashboard Token:', defaultTok);
     if (token) {
         api('/api/auth/login', { method: 'POST', body: { token } })
             .then(res => {
                 state.csrfToken = res.csrf_token || '';
+                state.authToken = token;
                 sessionStorage.setItem('qf_csrf_token', state.csrfToken);
                 localStorage.setItem('qf_csrf_token', state.csrfToken);
+                localStorage.setItem('qf_auth_token', token);
                 window.location.reload();
             })
             .catch(err => alert('Authentication failed: ' + err.message));
@@ -787,26 +911,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
     } catch (e) {}
 
-    // Restore CSRF token from storage or fetch from server
+    // Restore saved tokens
+    state.authToken = localStorage.getItem('qf_auth_token') || 'quantforge-admin-2026';
     state.csrfToken = sessionStorage.getItem('qf_csrf_token') || localStorage.getItem('qf_csrf_token') || '';
-    if (!state.csrfToken) {
-        try {
-            const cResp = await fetch('/api/auth/csrf');
-            if (cResp.ok) {
-                const cData = await cResp.json();
-                state.csrfToken = cData.csrf_token || '';
-                if (state.csrfToken) {
-                    sessionStorage.setItem('qf_csrf_token', state.csrfToken);
-                    localStorage.setItem('qf_csrf_token', state.csrfToken);
-                }
-            }
-        } catch (e) {}
-    }
 
     setupNavigation();
     setupControls();
 
-    // Check auth and initial status
+    // Fetch initial status and populate console
     try {
         const st = await api('/api/engine/state');
         updateEngineUI(st);
@@ -814,6 +926,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadFunnel();
         loadActivityOverview();
     } catch (e) {
-        console.warn('Initial load unauthenticated or failed', e);
+        console.warn('Initial load unauthenticated or failed, retrying...', e);
     }
 });

@@ -303,3 +303,156 @@ class TestLeaderboard:
             delay_test={"sharpe_drop_pct": 50},
         )
         assert compute_robustness_score(good, base_cfg) > compute_robustness_score(mediocre, base_cfg)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Code Fix Loop (_eval_with_code_fix & _is_runtime_error)
+# ═══════════════════════════════════════════════════════════════════════════
+
+class TestEvalWithCodeFix:
+    def test_code_fix_result_unpacking(self):
+        from llm.orchestrator import CodeFixResult
+        cfr = CodeFixResult("mock_res", "mock_code", 2, True)
+        assert cfr.result == "mock_res"
+        assert cfr.code == "mock_code"
+        assert cfr.fix_attempts == 2
+        assert cfr.success is True
+        # Unpack 4-tuple
+        res, code, attempts, succ = cfr
+        assert (res, code, attempts, succ) == ("mock_res", "mock_code", 2, True)
+        # Unpack 2-tuple
+        res2, code2 = cfr
+        assert (res2, code2) == ("mock_res", "mock_code")
+
+    def test_is_runtime_error_detection(self, base_cfg):
+        from llm.orchestrator import Orchestrator
+        orch = Orchestrator(base_cfg)
+
+        # None is error
+        is_err, msg = orch._is_runtime_error(None)
+        assert is_err is True
+
+        # Successful result
+        from unittest.mock import MagicMock
+        passed_res = MagicMock()
+        passed_res.all_passed = True
+        assert orch._is_runtime_error(passed_res)[0] is False
+
+        # Gate failure that is NOT runtime error (e.g. basic_quality)
+        quality_res = MagicMock()
+        quality_res.all_passed = False
+        quality_res.stopped_at = "basic_quality"
+        gate_res = MagicMock()
+        gate_res.passed = False
+        gate_res.name = "basic_quality"
+        gate_res.category = "economic"
+        gate_res.details = {"sharpe": 0.2}
+        quality_res.results = [gate_res]
+        is_err, _ = orch._is_runtime_error(quality_res)
+        assert is_err is False
+
+        # Determinism failure with Traceback in detail
+        crash_res = MagicMock()
+        crash_res.all_passed = False
+        crash_res.stopped_at = "determinism"
+        gate_crash = MagicMock()
+        gate_crash.passed = False
+        gate_crash.name = "determinism"
+        gate_crash.category = "execution"
+        gate_crash.details = {"detail": "Failed with error: Traceback: IndexError at line 42"}
+        crash_res.results = [gate_crash]
+        is_err, msg = orch._is_runtime_error(crash_res)
+        assert is_err is True
+        assert "IndexError" in msg
+
+    def test_eval_with_code_fix_successful_fix(self, base_cfg):
+        from llm.orchestrator import Orchestrator, TrialRecord
+        from llm.client import LLMResponse
+        from unittest.mock import MagicMock
+
+        orch = Orchestrator(base_cfg)
+        mock_llm = MagicMock()
+        fixed_code = "class Strategy:\n    def on_bar(self, bars):\n        return None"
+        mock_llm.chat.return_value = LLMResponse(content=f"```python\n{fixed_code}\n```", model="test")
+        mock_llm.extract_code.return_value = fixed_code
+        orch._llm = mock_llm
+
+        def mock_eval(c):
+            # Once fixed, evaluation passes
+            res = MagicMock()
+            res.all_passed = True
+            return res
+
+        rec = TrialRecord(trial_id="t1", strategy_name="test", timeframe="1h", idea={}, source_code="bad", source_hash="1")
+        fix_res = orch._eval_with_code_fix(
+            code="bad_code",
+            traceback_str="KeyError: 'close' on bar 59",
+            spec={"name": "test"},
+            record=rec,
+            evaluate_fn=mock_eval,
+        )
+
+        assert fix_res.success is True
+        assert fix_res.fix_attempts == 1
+        assert fix_res.code == fixed_code
+        assert rec.source_code == fixed_code
+        assert rec.llm_calls == 1
+
+    def test_eval_with_code_fix_no_initial_error(self, base_cfg):
+        from llm.orchestrator import Orchestrator, TrialRecord
+        from llm.client import LLMResponse
+        from unittest.mock import MagicMock
+
+        orch = Orchestrator(base_cfg)
+        mock_llm = MagicMock()
+        fixed_code = "class Strategy:\n    def on_bar(self, bars):\n        return None"
+        mock_llm.chat.return_value = LLMResponse(content=f"```python\n{fixed_code}\n```", model="test")
+        mock_llm.extract_code.return_value = fixed_code
+        orch._llm = mock_llm
+
+        calls = []
+        def mock_eval(c):
+            calls.append(c)
+            if len(calls) == 1:
+                # First run (no initial traceback passed) fails
+                raise RuntimeError("ZeroDivisionError: division by zero")
+            res = MagicMock()
+            res.all_passed = True
+            return res
+
+        fix_res = orch._eval_with_code_fix(
+            code="bad_code",
+            spec={"name": "test"},
+            evaluate_fn=mock_eval,
+        )
+
+        assert fix_res.success is True
+        assert fix_res.fix_attempts == 1
+        assert len(calls) == 2
+
+
+    def test_eval_with_code_fix_exhausted(self, base_cfg):
+        from llm.orchestrator import Orchestrator
+        from llm.client import LLMResponse
+        from unittest.mock import MagicMock
+
+        orch = Orchestrator(base_cfg)
+        mock_llm = MagicMock()
+        broken_code = "class Strategy:\n    pass"
+        mock_llm.chat.return_value = LLMResponse(content=f"```python\n{broken_code}\n```", model="test")
+        mock_llm.extract_code.return_value = broken_code
+        orch._llm = mock_llm
+
+        def always_fail(c):
+            raise ValueError("Persistent bug")
+
+        fix_res = orch._eval_with_code_fix(
+            code="broken_code",
+            traceback_str="ValueError: Persistent bug",
+            spec={"name": "test"},
+            evaluate_fn=always_fail,
+        )
+
+        assert fix_res.success is False
+        assert fix_res.fix_attempts == base_cfg.get("llm", {}).get("max_code_fix_attempts", 3)
+
