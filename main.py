@@ -232,7 +232,84 @@ def main(argv: list[str] | None = None) -> int:
         return run_tui(cfg)
 
     sub.add_parser("tui", help="Launch terminal dashboard (Rich)").set_defaults(fn=cmd_tui)
-    sub.add_parser("forward").set_defaults(fn=lambda a: print("Phase 12: Holdout and forward testing"))
+
+    def cmd_holdout(args):
+        from forward.holdout_runner import run_holdout, HoldoutEligibilityError
+        from storage.mongo import get_db
+        from core.config import mongo_db_name
+
+        cfg = load_config(args.config)
+        db = get_db(mongo_db_name(cfg))
+        try:
+            res = run_holdout(args.strategy, cfg=cfg, db=db)
+            print(f"\n[Holdout Evaluation] Strategy: {args.strategy}")
+            print(f"  Result: {'PASSED' if res.passed else 'FAILED'}")
+            print(f"  Holdout Sharpe: {res.holdout_sharpe:.2f} (Required: >= {0.5 * res.train_sharpe:.2f})")
+            print(f"  Net Profit: ${res.net_profit:,.2f}")
+            print(f"  Trades: {res.total_trades}")
+            return 0 if res.passed else 1
+        except HoldoutEligibilityError as exc:
+            print(f"Holdout rejected: {exc}", file=sys.stderr)
+            return 2
+
+    hold_p = sub.add_parser("holdout", help="Run strict one-time holdout evaluation for a candidate")
+    hold_p.add_argument("--strategy", "-s", required=True, help="Strategy ID to evaluate on holdout")
+    hold_p.set_defaults(fn=cmd_holdout)
+
+    def cmd_forward(args):
+        import os
+        from forward.feeds import CSVFolderFeed, BrokerFeedStub
+        from forward.paper_trader import PaperTrader
+        from storage.mongo import get_db
+        from core.config import mongo_db_name
+
+        cfg = load_config(args.config)
+        db = get_db(mongo_db_name(cfg))
+
+        feed_type = args.feed or "csv"
+        if feed_type == "broker":
+            feed = BrokerFeedStub()
+        else:
+            folder = args.folder or os.path.join(cfg.get("data", {}).get("base_dir", "data"), "live_feed")
+            feed = CSVFolderFeed(folder)
+
+        trader = PaperTrader(cfg=cfg, db=db, feed=feed)
+        res = trader.run_session(strategy_id=args.strategy, max_bars=args.bars)
+        print(f"\n[Paper Trading Session] Strategy: {args.strategy}")
+        print(f"  Bars processed: {res.get('total_bars_processed', 0)}")
+        print(f"  Trades generated: {res.get('trades_generated', 0)}")
+        print(f"  Forward metrics: {res.get('forward_metrics', {})}")
+        return 0
+
+    fwd_p = sub.add_parser("forward", help="Run paper trading session on incoming feed")
+    fwd_p.add_argument("--strategy", "-s", required=True, help="Strategy ID")
+    fwd_p.add_argument("--feed", default="csv", choices=["csv", "broker"], help="Feed type")
+    fwd_p.add_argument("--folder", default=None, help="Folder path for CSV feed")
+    fwd_p.add_argument("--bars", type=int, default=1000, help="Max bars to process")
+    fwd_p.set_defaults(fn=cmd_forward)
+
+    def cmd_live_ready(args):
+        from forward.live_ready import evaluate_live_ready, CandidateUnprovenError
+        from storage.mongo import get_db
+        from core.config import mongo_db_name
+
+        cfg = load_config(args.config)
+        db = get_db(mongo_db_name(cfg))
+        try:
+            res = evaluate_live_ready(args.strategy, db=db, cfg=cfg)
+            print(f"\n[LIVE-READY Gate] Strategy '{args.strategy}' PROMOTED to LIVE_READY!")
+            print(f"  Calendar Days: {res.get('calendar_days')} (Required: >= 60)")
+            print(f"  Total Trades: {res.get('total_trades')} (Required: >= 50)")
+            print(f"  Forward Sharpe: {res.get('sharpe', 0):.2f}")
+            print(f"  Forward Profit Factor: {res.get('profit_factor', 0):.2f}")
+            return 0
+        except CandidateUnprovenError as exc:
+            print(f"[LIVE-READY Gate] REJECTED: {exc}", file=sys.stderr)
+            return 1
+
+    lr_p = sub.add_parser("live-ready", help="Verify non-negotiable LIVE-READY gate")
+    lr_p.add_argument("--strategy", "-s", required=True, help="Strategy ID")
+    lr_p.set_defaults(fn=cmd_live_ready)
 
     def cmd_refreeze(args):
         from core.splits import refreeze

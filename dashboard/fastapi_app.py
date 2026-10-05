@@ -365,6 +365,45 @@ def create_app(db: Any = None, cfg: dict | None = None, token: str | None = None
         ).limit(limit))
         return {"strategy_id": strat_id, "logs": logs}
 
+    @app.post("/api/strategies/{strat_id}/holdout", dependencies=[Depends(_verify_csrf)])
+    async def trigger_holdout_run(strat_id: str, _auth: str = Depends(_verify_auth)) -> dict[str, Any]:
+        from forward.holdout_runner import run_holdout, HoldoutEligibilityError
+        try:
+            res = run_holdout(strat_id, cfg=cfg, db=database)
+            _write_audit_log("holdout_run", "dashboard_ui", {"strategy_id": strat_id, "passed": res.passed})
+            return {
+                "strategy_id": strat_id,
+                "passed": res.passed,
+                "net_profit": res.net_profit,
+                "total_trades": res.total_trades,
+                "holdout_sharpe": res.holdout_sharpe,
+            }
+        except HoldoutEligibilityError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+
+    @app.get("/api/strategies/{strat_id}/forward")
+    async def get_strategy_forward(strat_id: str, _auth: str = Depends(_verify_auth)) -> dict[str, Any]:
+        doc = database["candidates"].find_one({"strategy_id": strat_id})
+        if not doc:
+            raise HTTPException(status_code=404, detail="Strategy not found.")
+        trades = list(database["forward_trades"].find({"strategy_id": strat_id}, projection={"_id": 0}).limit(100))
+        return {
+            "strategy_id": strat_id,
+            "status": doc.get("status", "unknown"),
+            "forward_metrics": doc.get("forward_metrics", {}),
+            "recent_trades": trades,
+        }
+
+    @app.post("/api/strategies/{strat_id}/live-ready", dependencies=[Depends(_verify_csrf)])
+    async def verify_live_ready(strat_id: str, _auth: str = Depends(_verify_auth)) -> dict[str, Any]:
+        from forward.live_ready import evaluate_live_ready, CandidateUnprovenError
+        try:
+            res = evaluate_live_ready(strat_id, db=database, cfg=cfg)
+            _write_audit_log("promote_live_ready", "dashboard_ui", {"strategy_id": strat_id})
+            return res
+        except CandidateUnprovenError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+
     # ── System Logs API ─────────────────────────────────────────────────────
     @app.get("/api/logs")
     async def get_logs(
