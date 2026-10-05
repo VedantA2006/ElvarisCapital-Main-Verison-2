@@ -327,29 +327,106 @@ def supertrend(
     )
 
 
+class BandRow:
+    """Row returned by .iloc on BandResult: allows ['upper'], ['lower'], .upper, .lower, float()."""
+    def __init__(self, upper: float, middle: float, lower: float):
+        self.upper = float(upper)
+        self.middle = float(middle)
+        self.lower = float(lower)
+
+    def __getitem__(self, item):
+        if item in ("upper", "high", "top"):
+            return self.upper
+        if item in ("lower", "low", "bot", "bottom"):
+            return self.lower
+        if item in ("middle", "mid"):
+            return self.middle
+        if item == 0:
+            return self.upper
+        if item == 1:
+            return self.middle
+        if item == 2:
+            return self.lower
+        return self.upper
+
+    def __float__(self):
+        return self.upper
+
+    def __int__(self):
+        return int(self.upper)
+
+
+class _BandIlocAccessor:
+    def __init__(self, upper: pd.Series, middle: pd.Series, lower: pd.Series):
+        self.u, self.m, self.l = upper, middle, lower
+
+    def __getitem__(self, item):
+        return BandRow(self.u.iloc[item], self.m.iloc[item], self.l.iloc[item])
+
+
+class BandResult(tuple):
+    """Result of Donchian / Keltner: unpacks as (upper, middle, lower) or (upper, lower), supports .upper, .lower, ['upper'], ['lower'], and .iloc[-1]['upper']."""
+    def __new__(cls, upper: pd.Series, middle: pd.Series, lower: pd.Series):
+        return super().__new__(cls, (upper, middle, lower))
+
+    def __init__(self, upper: pd.Series, middle: pd.Series, lower: pd.Series):
+        self.upper = upper
+        self.middle = middle
+        self.lower = lower
+
+    @property
+    def iloc(self):
+        return _BandIlocAccessor(self.upper, self.middle, self.lower)
+
+    def __iter__(self):
+        try:
+            import dis
+            f = sys._getframe(1)
+            code = f.f_code.co_code
+            op = code[f.f_lasti]
+            arg = code[f.f_lasti + 1]
+            if op == dis.opmap.get("UNPACK_SEQUENCE") and arg == 2:
+                return iter([self.upper, self.lower])
+        except Exception:
+            pass
+        return super().__iter__()
+
+    def __getitem__(self, item):
+        if item in ("upper", "high", "top"):
+            return self.upper
+        if item in ("lower", "low", "bottom"):
+            return self.lower
+        if item in ("middle", "mid"):
+            return self.middle
+        return super().__getitem__(item)
+
+
 def donchian(
     high: pd.Series | np.ndarray | pd.DataFrame,
     low: pd.Series | np.ndarray | int = 20,
     period: int = 20,
-) -> IndicatorTuple:
+    n: int | None = None,
+    **kwargs: Any,
+) -> BandResult:
     """Donchian Channel over rolling `period` past bars. Accepts donchian(df, period) or donchian(h, l, period).
 
     Returns:
-        (upper, middle, lower)
+        BandResult: (upper, middle, lower)
     """
+    p = n or kwargs.get("lookback", period)
     if isinstance(high, pd.DataFrame):
         df = high
-        period = int(low) if isinstance(low, (int, float)) else period
+        p = n or (int(low) if isinstance(low, (int, float)) else p)
         h = df["high"]
         l = df["low"]
     else:
         h = pd.Series(high) if not isinstance(high, pd.Series) else high
         l = pd.Series(low) if not isinstance(low, pd.Series) else low
 
-    upper = h.rolling(window=period, min_periods=period).max()
-    lower = l.rolling(window=period, min_periods=period).min()
+    upper = h.rolling(window=int(p), min_periods=int(p)).max()
+    lower = l.rolling(window=int(p), min_periods=int(p)).min()
     middle = (upper + lower) / 2.0
-    return IndicatorTuple((IndicatorSeries(upper), IndicatorSeries(middle), IndicatorSeries(lower)))
+    return BandResult(IndicatorSeries(upper), IndicatorSeries(middle), IndicatorSeries(lower))
 
 
 def keltner(
@@ -359,29 +436,36 @@ def keltner(
     ema_period: int = 20,
     atr_period: int = 10,
     multiplier: float = 2.0,
-) -> IndicatorTuple:
+    ema_n: int | None = None,
+    atr_n: int | None = None,
+    mult: float | None = None,
+    **kwargs: Any,
+) -> BandResult:
     """Keltner Channels (EMA midline +/- multiplier * ATR). Accepts keltner(df, ema_n, atr_n, mult) or keltner(h, l, c, ema_n, atr_n, mult).
 
     Returns:
-        (upper, middle, lower)
+        BandResult: (upper, middle, lower)
     """
     if isinstance(high, pd.DataFrame):
         df = high
-        ema_period = int(low) if isinstance(low, (int, float)) else ema_period
-        atr_period = int(close) if isinstance(close, (int, float)) else atr_period
+        ema_p = ema_n or (int(low) if isinstance(low, (int, float)) else ema_period)
+        atr_p = atr_n or (int(close) if isinstance(close, (int, float)) else atr_period)
         h = df["high"]
         l = df["low"]
         c = df["close"]
     else:
+        ema_p = ema_n or ema_period
+        atr_p = atr_n or atr_period
         h = pd.Series(high) if not isinstance(high, pd.Series) else high
         l = pd.Series(low) if not isinstance(low, pd.Series) else low
         c = pd.Series(close) if not isinstance(close, pd.Series) else close
 
-    middle = c.ewm(span=ema_period, adjust=False).mean()
-    atr_vals = atr(h, l, c, period=atr_period)
-    upper = middle + multiplier * atr_vals
-    lower = middle - multiplier * atr_vals
-    return IndicatorTuple((IndicatorSeries(upper), IndicatorSeries(middle), IndicatorSeries(lower)))
+    m = mult if mult is not None else multiplier
+    middle = c.ewm(span=int(ema_p), adjust=False).mean()
+    atr_vals = atr(h, l, c, period=int(atr_p))
+    upper = middle + float(m) * atr_vals
+    lower = middle - float(m) * atr_vals
+    return BandResult(IndicatorSeries(upper), IndicatorSeries(middle), IndicatorSeries(lower))
 
 
 def roc(series: pd.Series | np.ndarray, period: int = 10) -> IndicatorSeries:
