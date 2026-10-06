@@ -1,0 +1,313 @@
+{
+  "_id": "6ac3f964d18a7b04b14106da",
+  "strategy_name": "Strategy_trial-5d",
+  "timeframe": "1h",
+  "source_hash": "a316a9f2b7162b14",
+  "idea": {
+    "donchian_n": {
+      "default": 20,
+      "min": 8,
+      "max": 40
+    },
+    "htf_ema_n": {
+      "default": 20,
+      "min": 10,
+      "max": 50
+    },
+    "atr_n": {
+      "default": 14,
+      "min": 7,
+      "max": 30
+    },
+    "sl_mult": {
+      "default": 1.5,
+      "min": 0.8,
+      "max": 3.0
+    },
+    "tp_mult": {
+      "default": 2.5,
+      "min": 1.5,
+      "max": 5.0
+    },
+    "cooldown": {
+      "default": 4,
+      "min": 2,
+      "max": 8
+    }
+  },
+  "status": "rejected",
+  "rejected_at": "basic_quality",
+  "train_gates": {
+    "all_passed": false,
+    "stopped_at": "basic_quality",
+    "robustness_score": 0.0,
+    "status": "rejected",
+    "gates": [
+      {
+        "name": "policy_scan",
+        "passed": true,
+        "category": "safety",
+        "details": {
+          "passed": true,
+          "violations": [],
+          "banned_imports": [],
+          "summary": "Clean"
+        },
+        "public_summary": "passed: policy_scan"
+      },
+      {
+        "name": "smoke_run",
+        "passed": true,
+        "category": "clean_load",
+        "details": {
+          "detail": "Sandbox instantiation succeeded."
+        },
+        "public_summary": "passed: smoke_run"
+      },
+      {
+        "name": "determinism",
+        "passed": true,
+        "category": "determinism",
+        "details": {
+          "passed": true,
+          "first_diverging_bar": null,
+          "first_diverging_timestamp": null,
+          "diverging_field": null,
+          "detail": "Bit-identical signal tapes produced on two independent runs with seed=42."
+        },
+        "public_summary": "passed: determinism"
+      },
+      {
+        "name": "truncation",
+        "passed": true,
+        "category": "truncation",
+        "details": {
+          "passed": true,
+          "num_cuts": 20,
+          "first_diverging_bar": null,
+          "first_diverging_timestamp": null,
+          "diverging_field": null,
+          "detail": "Verified signal identity T_c[0..c] == T_full[0..c] across 20 cut points (tolerance 1e-9)."
+        },
+        "public_summary": "passed: truncation"
+      },
+      {
+        "name": "signal_validity",
+        "passed": true,
+        "category": "signal_valid",
+        "details": {
+          "failures": []
+        },
+        "public_summary": "passed: signal_validity"
+      },
+      {
+        "name": "train_backtest",
+        "passed": true,
+        "category": "train_simulation_success",
+        "details": {
+          "trades": 321,
+          "net_pnl": -5131.53
+        },
+        "public_summary": "passed: train_backtest"
+      },
+      {
+        "name": "minimum_sample",
+        "passed": true,
+        "category": "sample_sufficient",
+        "details": {
+          "total_trades": 321,
+          "min_trades": 100,
+          "trades_per_year": 107.1,
+          "min_tpy": 30,
+          "failures": []
+        },
+        "public_summary": "passed: minimum_sample"
+      },
+      {
+        "name": "basic_quality",
+        "passed": false,
+        "category": "basic_quality",
+        "details": {
+          "failures": [
+            "PF=0.97 < 1.25",
+            "Sharpe=0.02 < 0.8",
+            "expectancy=-15.99 <= 0.0"
+          ],
+          "metrics": {
+            "total_trades": 321,
+            "winners": 100,
+            "losers": 221,
+            "win_rate": 0.3115,
+            "total_net_pnl": -5131.53,
+            "total_gross_pnl": 37020.84,
+            "total_costs": 42152.37,
+            "spread_cost_total": 14225.0,
+            "slippage_cost_total": 24521.44,
+            "commission_total": 3359.02,
+            "swap_cost_total": 46.91,
+            "cost_gross_ratio": 0.2014,
+            "profit_factor": 0.975,
+            "expectancy": -15.99,
+            "expectancy_usd": -15.99,
+            "expectancy_r": 0.0025,
+            "avg_win": 1999.87,
+            "avg_loss": -928.14,
+            "payoff": 2.1547,
+            "payoff_ratio": 2.1547,
+            "largest_win": 16088.75,
+            "largest_loss": -1667.67,
+            "max_consecutive_wins": 5,
+            "max_consecutive_losses": 10,
+            "avg_holding_bars": 17.3,
+            "avg_holding_hours": 25.4,
+            "exposure_pct": 0.3131,
+            "trades_per_month": 8.92,
+            "trades_per_year": 107.1,
+            "years_covered": 2.998,
+            "long_trades": 161,
+            "short_trades": 160,
+            "long_win_rate": 0.4534,
+            "short_win_rate": 0.1688,
+            "profit_concentration_top5pct": 0.4304,
+            "yearly_pnl": {
+              "2021": -13802.55,
+              "2022": 5611.17,
+              "2023": 21055.35,
+              "2024": -17805.38
+            },
+            "total_return_pct": -5.13,
+            "final_equity": 94868.47,
+            "cagr": -1.74,
+            "sharpe": 0.0234,
+            "sortino": 0.0194,
+            "calmar": -0.0793,
+            "omega": 1.0056,
+            "max_drawdown": 0.2197,
+            "average_drawdown": 0.1089,
+            "max_drawdown_bars": 8168,
+            "max_drawdown_days": 504.7,
+            "time_under_water": 0.9911,
+            "ulcer_index": 0.119,
+            "recovery_factor": -0.208,
+            "long_breakdown": {
+              "trades": 161,
+              "win_rate": 0.4534,
+              "net_pnl": 25365.64,
+              "profit_factor": 1.3166
+            },
+            "short_breakdown": {
+              "trades": 160,
+              "win_rate": 0.1688,
+              "net_pnl": -30497.17,
+              "profit_factor": 0.756
+            },
+            "exit_reasons": {
+              "stop_loss": {
+                "count": 214,
+                "net_pnl": -200892.06,
+                "pct_of_trades": 0.6667
+              },
+              "take_profit": {
+                "count": 73,
+                "net_pnl": 105480.95,
+                "pct_of_trades": 0.2274
+              },
+              "signal_reversal": {
+                "count": 34,
+                "net_pnl": 90279.59,
+                "pct_of_trades": 0.1059
+              }
+            },
+            "avg_mae": 1011.46,
+            "avg_mfe": 1653.64,
+            "monthly_table": {
+              "2021": {
+                "09": -0.66,
+                "10": -3.22,
+                "11": -9.09,
+                "12": -0.92
+              },
+              "2022": {
+                "01": 3.09,
+                "02": -2.57,
+                "03": -5.13,
+                "04": 10.24,
+                "05": 5.04,
+                "06": -9.96,
+                "07": 16.4,
+                "08": -5.63,
+                "09": -2.01,
+                "10": 3.56,
+                "11": -1.96,
+                "12": -1.86
+              },
+              "2023": {
+                "01": 0.25,
+                "02": 1.86,
+                "03": 1.15,
+                "04": -8.02,
+                "05": 2.79,
+                "06": -6.0,
+                "07": -2.08,
+                "08": 9.74,
+                "09": 17.57,
+                "10": 1.6,
+                "11": 3.11,
+                "12": 0.71
+              },
+              "2024": {
+                "01": -2.46,
+                "02": -0.44,
+                "03": -3.32,
+                "04": 10.57,
+                "05": -11.42,
+                "06": -5.52,
+                "07": 3.7,
+                "08": -2.45,
+                "09": -5.03
+              }
+            },
+            "average_monthly_return_pct": 0.04,
+            "median_monthly_return_pct": -0.92,
+            "best_month_pct": 17.57,
+            "worst_month_pct": -11.42,
+            "pct_profitable_months": 0.4324,
+            "avg_winning_month_pct": 5.71,
+            "avg_losing_month_pct": -4.27,
+            "average_monthly_max_drawdown": 0.064,
+            "yearly_table": {
+              "2021": {
+                "return_pct": -13.8,
+                "net_pnl": -13802.55,
+                "trades": 35
+              },
+              "2022": {
+                "return_pct": 6.51,
+                "net_pnl": 5611.17,
+                "trades": 110
+              },
+              "2023": {
+                "return_pct": 22.93,
+                "net_pnl": 21055.35,
+                "trades": 85
+              },
+              "2024": {
+                "return_pct": -15.8,
+                "net_pnl": -17805.38,
+                "trades": 91
+              }
+            },
+            "buy_and_hold_return_pct": 50.06,
+            "beta": -0.3929,
+            "status": "completed"
+          }
+        },
+        "public_summary": "failed: basic_quality"
+      }
+    ],
+    "candidate_data": {}
+  },
+  "started_at": "2026-10-05 19:24:20.370000",
+  "is_rerun": true,
+  "original_rejected_at": "determinism"
+}

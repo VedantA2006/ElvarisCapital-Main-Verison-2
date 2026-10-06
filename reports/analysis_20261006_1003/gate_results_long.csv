@@ -1,0 +1,966 @@
+run_id,strategy_name,gate,passed,details
+trial-64322441f9c4,unnamed,policy_scan,True,"{'passed': True, 'violations': [{'line': 50, 'col': 0, 'pattern': 'regex_match', 'detail': 'suspicious variable/comment name', 'severity': 'warning'}]"
+trial-64322441f9c4,unnamed,smoke_run,False,"{'error': 'Strategy initialization failed: Import of \'core.indicators\' blocked by sandbox audit hook.\nTraceback (most recent call last):\n  File ""C"
+trial-a664bbba271a,LondonNY_LiquiditySweep_CHOCH,policy_scan,True,"{'passed': True, 'violations': [{'line': 47, 'col': 0, 'pattern': 'regex_match', 'detail': 'iloc[i+N] may access future data', 'severity': 'warning'}]"
+trial-a664bbba271a,LondonNY_LiquiditySweep_CHOCH,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-a664bbba271a,LondonNY_LiquiditySweep_CHOCH,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-004f63da7f39,LondonNY_LiquiditySweep_CHOCH,policy_scan,True,"{'passed': True, 'violations': [{'line': 47, 'col': 0, 'pattern': 'regex_match', 'detail': 'iloc[i+N] may access future data', 'severity': 'warning'}]"
+trial-004f63da7f39,LondonNY_LiquiditySweep_CHOCH,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-004f63da7f39,LondonNY_LiquiditySweep_CHOCH,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-d933bde08918,LondonNY_LiquiditySweep_CHOCH,policy_scan,True,"{'passed': True, 'violations': [{'line': 47, 'col': 0, 'pattern': 'regex_match', 'detail': 'iloc[i+N] may access future data', 'severity': 'warning'}]"
+trial-d933bde08918,LondonNY_LiquiditySweep_CHOCH,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-d933bde08918,LondonNY_LiquiditySweep_CHOCH,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-15dd063029c7,GoldLiquidityReclaim,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-15dd063029c7,GoldLiquidityReclaim,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-15dd063029c7,GoldLiquidityReclaim,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-f01f53d6007a,LondonSweepDisplacement,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-f01f53d6007a,LondonSweepDisplacement,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-f01f53d6007a,LondonSweepDisplacement,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-f01f53d6007a,LondonSweepDisplacement,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-f01f53d6007a,LondonSweepDisplacement,signal_validity,False,"{'error': 'Tape error: Traceback (most recent call last):\n  File ""C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\core\\backtester.py"", "
+trial-8bd57fab1aa3,Strategy_trial-8b,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-8bd57fab1aa3,Strategy_trial-8b,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-8bd57fab1aa3,Strategy_trial-8b,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-1784cb9aa3b3,LondonSweepReversal,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-1784cb9aa3b3,LondonSweepReversal,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-1784cb9aa3b3,LondonSweepReversal,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-1784cb9aa3b3,LondonSweepReversal,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-1784cb9aa3b3,LondonSweepReversal,signal_validity,True,{'failures': []}
+trial-1784cb9aa3b3,LondonSweepReversal,train_backtest,True,"{'trades': 15, 'net_pnl': -6108.53}"
+trial-1784cb9aa3b3,LondonSweepReversal,minimum_sample,False,"{'total_trades': 15, 'min_trades': 200, 'trades_per_year': 5.0, 'min_tpy': 30, 'failures': ['trades=15 < 200', 'trades_per_year=5.0 < 30']}"
+trial-522e404a053d,LiquiditySweepCHOCH,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-522e404a053d,LiquiditySweepCHOCH,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-522e404a053d,LiquiditySweepCHOCH,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-522e404a053d,LiquiditySweepCHOCH,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-522e404a053d,LiquiditySweepCHOCH,signal_validity,True,{'failures': []}
+trial-522e404a053d,LiquiditySweepCHOCH,train_backtest,True,"{'trades': 5, 'net_pnl': -2143.73}"
+trial-522e404a053d,LiquiditySweepCHOCH,minimum_sample,False,"{'total_trades': 5, 'min_trades': 100, 'trades_per_year': 1.7, 'min_tpy': 15, 'failures': ['trades=5 < 100', 'trades_per_year=1.7 < 15']}"
+trial-5025aa77f17b,Strategy_trial-50,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-5025aa77f17b,Strategy_trial-50,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-5025aa77f17b,Strategy_trial-50,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-5d2570ac88f5,GoldVolCompressionBreakout,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-5d2570ac88f5,GoldVolCompressionBreakout,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-5d2570ac88f5,GoldVolCompressionBreakout,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-066ab9921b87,LondonNY_LiquiditySweep_Choch,policy_scan,True,"{'passed': True, 'violations': [{'line': 37, 'col': 0, 'pattern': 'regex_match', 'detail': 'suspicious variable/comment name', 'severity': 'warning'}]"
+trial-066ab9921b87,LondonNY_LiquiditySweep_Choch,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-066ab9921b87,LondonNY_LiquiditySweep_Choch,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-066ab9921b87,LondonNY_LiquiditySweep_Choch,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-066ab9921b87,LondonNY_LiquiditySweep_Choch,signal_validity,True,{'failures': []}
+trial-066ab9921b87,LondonNY_LiquiditySweep_Choch,train_backtest,True,"{'trades': 97, 'net_pnl': 17197.45}"
+trial-066ab9921b87,LondonNY_LiquiditySweep_Choch,minimum_sample,False,"{'total_trades': 97, 'min_trades': 200, 'trades_per_year': 32.4, 'min_tpy': 30, 'failures': ['trades=97 < 200']}"
+trial-f9ab2568c278,Strategy_trial-f9,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-f9ab2568c278,Strategy_trial-f9,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-f9ab2568c278,Strategy_trial-f9,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-f9ab2568c278,Strategy_trial-f9,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-f9ab2568c278,Strategy_trial-f9,signal_validity,True,{'failures': []}
+trial-f9ab2568c278,Strategy_trial-f9,train_backtest,True,"{'trades': 0, 'net_pnl': 0.0}"
+trial-f9ab2568c278,Strategy_trial-f9,minimum_sample,False,"{'total_trades': 0, 'min_trades': 200, 'trades_per_year': 0.0, 'min_tpy': 30, 'failures': ['trades=0 < 200', 'trades_per_year=0.0 < 30']}"
+trial-59afe33f118b,Gold_VolExpansion_TrendContinuation,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-59afe33f118b,Gold_VolExpansion_TrendContinuation,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-59afe33f118b,Gold_VolExpansion_TrendContinuation,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-c91050ea112b,Gold_HTF_Aligned_FVG_Reversion,policy_scan,True,"{'passed': True, 'violations': [{'line': 33, 'col': 0, 'pattern': 'regex_match', 'detail': 'iloc[i+N] may access future data', 'severity': 'warning'}]"
+trial-c91050ea112b,Gold_HTF_Aligned_FVG_Reversion,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-c91050ea112b,Gold_HTF_Aligned_FVG_Reversion,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-997d457802e4,Gold_Session_VWAP_MeanReversion_Expansion,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-997d457802e4,Gold_Session_VWAP_MeanReversion_Expansion,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-997d457802e4,Gold_Session_VWAP_MeanReversion_Expansion,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-0cb5991af79b,Gold_Squeeze_Momentum_Breakout,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-0cb5991af79b,Gold_Squeeze_Momentum_Breakout,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-0cb5991af79b,Gold_Squeeze_Momentum_Breakout,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-dafd0a3c9bed,Gold_Daily_Range_Liquidity_Continuation,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-dafd0a3c9bed,Gold_Daily_Range_Liquidity_Continuation,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-dafd0a3c9bed,Gold_Daily_Range_Liquidity_Continuation,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-4ded36f82f98,Gold_4H_Trend_Keltner_Pullback,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-4ded36f82f98,Gold_4H_Trend_Keltner_Pullback,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-4ded36f82f98,Gold_4H_Trend_Keltner_Pullback,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-199398231e97,Gold_Asia_OR_Directional_Sweep,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-199398231e97,Gold_Asia_OR_Directional_Sweep,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-199398231e97,Gold_Asia_OR_Directional_Sweep,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-43feca95b97e,Gold_Structural_Displacement_Momentum,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-43feca95b97e,Gold_Structural_Displacement_Momentum,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-43feca95b97e,Gold_Structural_Displacement_Momentum,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-abbf1182c87a,Gold_4H_BOS_ADX_Momentum,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-abbf1182c87a,Gold_4H_BOS_ADX_Momentum,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-abbf1182c87a,Gold_4H_BOS_ADX_Momentum,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-0cdd59a54fe6,Strategy_trial-0c,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-0cdd59a54fe6,Strategy_trial-0c,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-0cdd59a54fe6,Strategy_trial-0c,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-d95125e4b159,Gold_4H_ZScore_Donchian_Regime,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-d95125e4b159,Gold_4H_ZScore_Donchian_Regime,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-d95125e4b159,Gold_4H_ZScore_Donchian_Regime,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-b72a9fb292e4,GoldKeltnerSweepMomentum,policy_scan,True,"{'passed': True, 'violations': [{'line': 48, 'col': 0, 'pattern': 'regex_match', 'detail': 'suspicious variable/comment name', 'severity': 'warning'}]"
+trial-b72a9fb292e4,GoldKeltnerSweepMomentum,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-b72a9fb292e4,GoldKeltnerSweepMomentum,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-a3490b1a909b,GoldSessionLiquidityReversal,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-a3490b1a909b,GoldSessionLiquidityReversal,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-a3490b1a909b,GoldSessionLiquidityReversal,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-a3490b1a909b,GoldSessionLiquidityReversal,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-a3490b1a909b,GoldSessionLiquidityReversal,signal_validity,True,{'failures': []}
+trial-a3490b1a909b,GoldSessionLiquidityReversal,train_backtest,True,"{'trades': 14, 'net_pnl': -2513.05}"
+trial-a3490b1a909b,GoldSessionLiquidityReversal,minimum_sample,False,"{'total_trades': 14, 'min_trades': 200, 'trades_per_year': 4.7, 'min_tpy': 30, 'failures': ['trades=14 < 200', 'trades_per_year=4.7 < 30']}"
+trial-ab649bc10376,GoldVolExpansionBreakout,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-ab649bc10376,GoldVolExpansionBreakout,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-ab649bc10376,GoldVolExpansionBreakout,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-953ca6a888be,GoldSessionMomentumBreakout,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-953ca6a888be,GoldSessionMomentumBreakout,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-953ca6a888be,GoldSessionMomentumBreakout,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-d2021f568941,GoldKeltnerTrendContinuation,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-d2021f568941,GoldKeltnerTrendContinuation,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-d2021f568941,GoldKeltnerTrendContinuation,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-a01cd4e2afc6,GoldLiquiditySweepReversal,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-a01cd4e2afc6,GoldLiquiditySweepReversal,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-a01cd4e2afc6,GoldLiquiditySweepReversal,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-3fc1154c864e,GoldVolSqueezeTrend,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-3fc1154c864e,GoldVolSqueezeTrend,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-3fc1154c864e,GoldVolSqueezeTrend,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-b874acfe1665,GoldHTFMicrostructureAlignment,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-b874acfe1665,GoldHTFMicrostructureAlignment,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-b874acfe1665,GoldHTFMicrostructureAlignment,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-b874acfe1665,GoldHTFMicrostructureAlignment,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-b874acfe1665,GoldHTFMicrostructureAlignment,signal_validity,False,"{'error': 'Tape error: Traceback (most recent call last):\n  File ""C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\core\\backtester.py"", "
+trial-9b3ae436c5e9,GoldDonchianVolExpansion,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-9b3ae436c5e9,GoldDonchianVolExpansion,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-9b3ae436c5e9,GoldDonchianVolExpansion,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-fbe50bb6431f,GoldAdxRsiTrendPullback,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-fbe50bb6431f,GoldAdxRsiTrendPullback,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-fbe50bb6431f,GoldAdxRsiTrendPullback,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-d4d3860056e2,GoldBosPremiumDiscount,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-d4d3860056e2,GoldBosPremiumDiscount,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-d4d3860056e2,GoldBosPremiumDiscount,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-d4d3860056e2,GoldBosPremiumDiscount,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-d4d3860056e2,GoldBosPremiumDiscount,signal_validity,True,{'failures': []}
+trial-d4d3860056e2,GoldBosPremiumDiscount,train_backtest,True,"{'trades': 5, 'net_pnl': 106.89}"
+trial-d4d3860056e2,GoldBosPremiumDiscount,minimum_sample,False,"{'total_trades': 5, 'min_trades': 100, 'trades_per_year': 1.7, 'min_tpy': 15, 'failures': ['trades=5 < 100', 'trades_per_year=1.7 < 15']}"
+trial-aacc8eeb7cf6,GoldVWAPMeanReversion,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-aacc8eeb7cf6,GoldVWAPMeanReversion,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-aacc8eeb7cf6,GoldVWAPMeanReversion,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-a7764b7a6a87,GoldEMARocMomentumTrend,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-a7764b7a6a87,GoldEMARocMomentumTrend,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-a7764b7a6a87,GoldEMARocMomentumTrend,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-a7764b7a6a87,GoldEMARocMomentumTrend,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-a7764b7a6a87,GoldEMARocMomentumTrend,signal_validity,True,{'failures': []}
+trial-a7764b7a6a87,GoldEMARocMomentumTrend,train_backtest,True,"{'trades': 0, 'net_pnl': 0.0}"
+trial-a7764b7a6a87,GoldEMARocMomentumTrend,minimum_sample,False,"{'total_trades': 0, 'min_trades': 200, 'trades_per_year': 0.0, 'min_tpy': 30, 'failures': ['trades=0 < 200', 'trades_per_year=0.0 < 30']}"
+trial-2a6458790023,Strategy_trial-2a,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-2a6458790023,Strategy_trial-2a,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-2a6458790023,Strategy_trial-2a,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-470b48f98ccc,GoldZScoreSessionReversion,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-470b48f98ccc,GoldZScoreSessionReversion,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-470b48f98ccc,GoldZScoreSessionReversion,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-50a5d9ba4a8a,GoldSessionRangeVolatilityBreakout,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-50a5d9ba4a8a,GoldSessionRangeVolatilityBreakout,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-50a5d9ba4a8a,GoldSessionRangeVolatilityBreakout,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-212d4334304c,GoldSupertrendRsiMomentum,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-212d4334304c,GoldSupertrendRsiMomentum,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-212d4334304c,GoldSupertrendRsiMomentum,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-860afbde9473,GoldStochKeltnerMomentumPullback,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-860afbde9473,GoldStochKeltnerMomentumPullback,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-860afbde9473,GoldStochKeltnerMomentumPullback,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-510f94c75733,GoldBollingerRsiContinuation,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-510f94c75733,GoldBollingerRsiContinuation,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-510f94c75733,GoldBollingerRsiContinuation,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-ebb498188eb0,GoldHTFDonchianTrendFlow,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-ebb498188eb0,GoldHTFDonchianTrendFlow,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-ebb498188eb0,GoldHTFDonchianTrendFlow,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-cd1070ba7693,GoldDualSessionRangeExpansion,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-cd1070ba7693,GoldDualSessionRangeExpansion,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-cd1070ba7693,GoldDualSessionRangeExpansion,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-cd1070ba7693,GoldDualSessionRangeExpansion,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-cd1070ba7693,GoldDualSessionRangeExpansion,signal_validity,True,{'failures': []}
+trial-cd1070ba7693,GoldDualSessionRangeExpansion,train_backtest,True,"{'trades': 0, 'net_pnl': 0.0}"
+trial-cd1070ba7693,GoldDualSessionRangeExpansion,minimum_sample,False,"{'total_trades': 0, 'min_trades': 100, 'trades_per_year': 0.0, 'min_tpy': 15, 'failures': ['trades=0 < 100', 'trades_per_year=0.0 < 15']}"
+trial-a635f7e6f9ac,Strategy_trial-a6,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-a635f7e6f9ac,Strategy_trial-a6,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-a635f7e6f9ac,Strategy_trial-a6,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-a635f7e6f9ac,Strategy_trial-a6,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-a635f7e6f9ac,Strategy_trial-a6,signal_validity,True,{'failures': []}
+trial-a635f7e6f9ac,Strategy_trial-a6,train_backtest,True,"{'trades': 0, 'net_pnl': 0.0}"
+trial-a635f7e6f9ac,Strategy_trial-a6,minimum_sample,False,"{'total_trades': 0, 'min_trades': 200, 'trades_per_year': 0.0, 'min_tpy': 30, 'failures': ['trades=0 < 200', 'trades_per_year=0.0 < 30']}"
+trial-0a2c2942e0cc,GoldChochAtrMomentum,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-0a2c2942e0cc,GoldChochAtrMomentum,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-0a2c2942e0cc,GoldChochAtrMomentum,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-ef0bcbacfaf1,GoldWmaRsiVolTrend,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-ef0bcbacfaf1,GoldWmaRsiVolTrend,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-ef0bcbacfaf1,GoldWmaRsiVolTrend,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-0a92391bc102,GoldFvgAdxMomentum,policy_scan,True,"{'passed': True, 'violations': [{'line': 52, 'col': 0, 'pattern': 'regex_match', 'detail': 'suspicious variable/comment name', 'severity': 'warning'}]"
+trial-0a92391bc102,GoldFvgAdxMomentum,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-0a92391bc102,GoldFvgAdxMomentum,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-f647677d02d1,GoldKeltnerRocTrend,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-f647677d02d1,GoldKeltnerRocTrend,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-f647677d02d1,GoldKeltnerRocTrend,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-95217e2787fb,GoldLiquiditySweepTrendContinuation,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-95217e2787fb,GoldLiquiditySweepTrendContinuation,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-95217e2787fb,GoldLiquiditySweepTrendContinuation,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-95217e2787fb,GoldLiquiditySweepTrendContinuation,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-95217e2787fb,GoldLiquiditySweepTrendContinuation,signal_validity,True,{'failures': []}
+trial-95217e2787fb,GoldLiquiditySweepTrendContinuation,train_backtest,True,"{'trades': 8, 'net_pnl': -2819.35}"
+trial-95217e2787fb,GoldLiquiditySweepTrendContinuation,minimum_sample,False,"{'total_trades': 8, 'min_trades': 200, 'trades_per_year': 2.7, 'min_tpy': 30, 'failures': ['trades=8 < 200', 'trades_per_year=2.7 < 30']}"
+trial-299a737a8075,GoldSqueezeRsiMomentum,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-299a737a8075,GoldSqueezeRsiMomentum,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-299a737a8075,GoldSqueezeRsiMomentum,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-679dbae31a96,GoldHTFMACDSessionMomentum,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-679dbae31a96,GoldHTFMACDSessionMomentum,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-679dbae31a96,GoldHTFMACDSessionMomentum,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-679dbae31a96,GoldHTFMACDSessionMomentum,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-679dbae31a96,GoldHTFMACDSessionMomentum,signal_validity,True,{'failures': []}
+trial-679dbae31a96,GoldHTFMACDSessionMomentum,train_backtest,True,"{'trades': 20, 'net_pnl': -5520.36}"
+trial-679dbae31a96,GoldHTFMACDSessionMomentum,minimum_sample,False,"{'total_trades': 20, 'min_trades': 200, 'trades_per_year': 6.7, 'min_tpy': 30, 'failures': ['trades=20 < 200', 'trades_per_year=6.7 < 30']}"
+trial-3bd86c3b90f6,GoldVolPercentileDonchianBreakout,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-3bd86c3b90f6,GoldVolPercentileDonchianBreakout,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-3bd86c3b90f6,GoldVolPercentileDonchianBreakout,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-44df286d9281,GoldHTFTrendPullback,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-44df286d9281,GoldHTFTrendPullback,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-44df286d9281,GoldHTFTrendPullback,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-44df286d9281,GoldHTFTrendPullback,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-44df286d9281,GoldHTFTrendPullback,signal_validity,True,{'failures': []}
+trial-44df286d9281,GoldHTFTrendPullback,train_backtest,True,"{'trades': 13, 'net_pnl': -5099.57}"
+trial-44df286d9281,GoldHTFTrendPullback,minimum_sample,False,"{'total_trades': 13, 'min_trades': 200, 'trades_per_year': 4.3, 'min_tpy': 30, 'failures': ['trades=13 < 200', 'trades_per_year=4.3 < 30']}"
+trial-f5005fcae014,GoldBosPremiumDiscountTrend,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-f5005fcae014,GoldBosPremiumDiscountTrend,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-f5005fcae014,GoldBosPremiumDiscountTrend,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-f5005fcae014,GoldBosPremiumDiscountTrend,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-f5005fcae014,GoldBosPremiumDiscountTrend,signal_validity,True,{'failures': []}
+trial-f5005fcae014,GoldBosPremiumDiscountTrend,train_backtest,True,"{'trades': 1, 'net_pnl': -979.52}"
+trial-f5005fcae014,GoldBosPremiumDiscountTrend,minimum_sample,False,"{'total_trades': 1, 'min_trades': 200, 'trades_per_year': 0.3, 'min_tpy': 30, 'failures': ['trades=1 < 200', 'trades_per_year=0.3 < 30']}"
+trial-265ef5d7efc4,GoldSessionVwapAdxTrend,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-265ef5d7efc4,GoldSessionVwapAdxTrend,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-265ef5d7efc4,GoldSessionVwapAdxTrend,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-297ffd11717c,GoldRsiAdxTrendPullback,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-297ffd11717c,GoldRsiAdxTrendPullback,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-297ffd11717c,GoldRsiAdxTrendPullback,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-aac6aece7dc1,GoldWmaVolRegimeTrend,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-aac6aece7dc1,GoldWmaVolRegimeTrend,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-aac6aece7dc1,GoldWmaVolRegimeTrend,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-596540589f37,GoldEmaRocSessionMomentum,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-596540589f37,GoldEmaRocSessionMomentum,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-596540589f37,GoldEmaRocSessionMomentum,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-596540589f37,GoldEmaRocSessionMomentum,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-596540589f37,GoldEmaRocSessionMomentum,signal_validity,True,{'failures': []}
+trial-596540589f37,GoldEmaRocSessionMomentum,train_backtest,True,"{'trades': 52, 'net_pnl': -3097.19}"
+trial-596540589f37,GoldEmaRocSessionMomentum,minimum_sample,False,"{'total_trades': 52, 'min_trades': 100, 'trades_per_year': 17.3, 'min_tpy': 15, 'failures': ['trades=52 < 100']}"
+trial-ae5070385459,GoldZScoreEmaReversion,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-ae5070385459,GoldZScoreEmaReversion,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-ae5070385459,GoldZScoreEmaReversion,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-ae5070385459,GoldZScoreEmaReversion,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-ae5070385459,GoldZScoreEmaReversion,signal_validity,True,{'failures': []}
+trial-ae5070385459,GoldZScoreEmaReversion,train_backtest,True,"{'trades': 28, 'net_pnl': -751.42}"
+trial-ae5070385459,GoldZScoreEmaReversion,minimum_sample,False,"{'total_trades': 28, 'min_trades': 200, 'trades_per_year': 9.3, 'min_tpy': 30, 'failures': ['trades=28 < 200', 'trades_per_year=9.3 < 30']}"
+trial-15f405486afe,GoldSupertrendRsiMomentum,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-15f405486afe,GoldSupertrendRsiMomentum,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-15f405486afe,GoldSupertrendRsiMomentum,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-30064ccb79cf,GoldKeltnerBosMomentum,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-30064ccb79cf,GoldKeltnerBosMomentum,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-30064ccb79cf,GoldKeltnerBosMomentum,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-407380a02c7a,GoldBollingerSweepContinuation,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-407380a02c7a,GoldBollingerSweepContinuation,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-407380a02c7a,GoldBollingerSweepContinuation,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-c3ae3675ec9d,GoldStochDonchianSessionMomentum,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-c3ae3675ec9d,GoldStochDonchianSessionMomentum,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-c3ae3675ec9d,GoldStochDonchianSessionMomentum,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-f1c0b5e9dc5c,Strategy_trial-f1,policy_scan,True,"{'passed': True, 'violations': [{'line': 40, 'col': 0, 'pattern': 'regex_match', 'detail': 'suspicious variable/comment name', 'severity': 'warning'}]"
+trial-f1c0b5e9dc5c,Strategy_trial-f1,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-f1c0b5e9dc5c,Strategy_trial-f1,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-f1c0b5e9dc5c,Strategy_trial-f1,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-f1c0b5e9dc5c,Strategy_trial-f1,signal_validity,True,{'failures': []}
+trial-f1c0b5e9dc5c,Strategy_trial-f1,train_backtest,True,"{'trades': 303, 'net_pnl': -20802.12}"
+trial-f1c0b5e9dc5c,Strategy_trial-f1,minimum_sample,True,"{'total_trades': 303, 'min_trades': 200, 'trades_per_year': 101.1, 'min_tpy': 30, 'failures': []}"
+trial-f1c0b5e9dc5c,Strategy_trial-f1,basic_quality,False,"{'failures': ['PF=0.87 < 1.25', 'Sharpe=-0.46 < 0.8', 'DD=0.26 > 0.25', 'expectancy=-68.65 <= 0.0'], 'metrics': {'total_trades': 303, 'winners': 108, "
+trial-b52a8ce25770,Strategy_trial-b5,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-b52a8ce25770,Strategy_trial-b5,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-b52a8ce25770,Strategy_trial-b5,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-b52a8ce25770,Strategy_trial-b5,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-b52a8ce25770,Strategy_trial-b5,signal_validity,True,{'failures': []}
+trial-b52a8ce25770,Strategy_trial-b5,train_backtest,True,"{'trades': 81, 'net_pnl': -15262.73}"
+trial-b52a8ce25770,Strategy_trial-b5,minimum_sample,False,"{'total_trades': 81, 'min_trades': 100, 'trades_per_year': 27.0, 'min_tpy': 15, 'failures': ['trades=81 < 100']}"
+trial-61a8f3f7798c,GoldAdxChochSessionMomentum,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-61a8f3f7798c,GoldAdxChochSessionMomentum,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-61a8f3f7798c,GoldAdxChochSessionMomentum,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-c1ae13cdb338,GoldSessionRangeAtrBreakout,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-c1ae13cdb338,GoldSessionRangeAtrBreakout,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-c1ae13cdb338,GoldSessionRangeAtrBreakout,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-c1ae13cdb338,GoldSessionRangeAtrBreakout,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-c1ae13cdb338,GoldSessionRangeAtrBreakout,signal_validity,True,{'failures': []}
+trial-c1ae13cdb338,GoldSessionRangeAtrBreakout,train_backtest,True,"{'trades': 1, 'net_pnl': 1557.66}"
+trial-c1ae13cdb338,GoldSessionRangeAtrBreakout,minimum_sample,False,"{'total_trades': 1, 'min_trades': 100, 'trades_per_year': 0.3, 'min_tpy': 15, 'failures': ['trades=1 < 100', 'trades_per_year=0.3 < 15']}"
+trial-fd8057244cde,GoldFvgRsiTrendContinuation,policy_scan,True,"{'passed': True, 'violations': [{'line': 42, 'col': 0, 'pattern': 'regex_match', 'detail': 'suspicious variable/comment name', 'severity': 'warning'}]"
+trial-fd8057244cde,GoldFvgRsiTrendContinuation,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-fd8057244cde,GoldFvgRsiTrendContinuation,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-8efe2bc49bee,GoldOpeningRangeVolExpansion,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-8efe2bc49bee,GoldOpeningRangeVolExpansion,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-8efe2bc49bee,GoldOpeningRangeVolExpansion,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-18f977d8e40a,GoldLiquiditySweepEmaTrend,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-18f977d8e40a,GoldLiquiditySweepEmaTrend,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-18f977d8e40a,GoldLiquiditySweepEmaTrend,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-18f977d8e40a,GoldLiquiditySweepEmaTrend,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-18f977d8e40a,GoldLiquiditySweepEmaTrend,signal_validity,True,{'failures': []}
+trial-18f977d8e40a,GoldLiquiditySweepEmaTrend,train_backtest,True,"{'trades': 15, 'net_pnl': -2178.9}"
+trial-18f977d8e40a,GoldLiquiditySweepEmaTrend,minimum_sample,False,"{'total_trades': 15, 'min_trades': 100, 'trades_per_year': 5.0, 'min_tpy': 15, 'failures': ['trades=15 < 100', 'trades_per_year=5.0 < 15']}"
+trial-2dc541dfdbe8,Strategy_trial-2d,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-2dc541dfdbe8,Strategy_trial-2d,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-2dc541dfdbe8,Strategy_trial-2d,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-08cf2e1542bd,GoldHtfKeltnerMomentumBreakout,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-08cf2e1542bd,GoldHtfKeltnerMomentumBreakout,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-08cf2e1542bd,GoldHtfKeltnerMomentumBreakout,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-5ebb6302891c,GoldSqueezeVolExpansion,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-5ebb6302891c,GoldSqueezeVolExpansion,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-5ebb6302891c,GoldSqueezeVolExpansion,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-5ebb6302891c,GoldSqueezeVolExpansion,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-5ebb6302891c,GoldSqueezeVolExpansion,signal_validity,True,{'failures': []}
+trial-5ebb6302891c,GoldSqueezeVolExpansion,train_backtest,True,"{'trades': 30, 'net_pnl': -3904.25}"
+trial-5ebb6302891c,GoldSqueezeVolExpansion,minimum_sample,False,"{'total_trades': 30, 'min_trades': 200, 'trades_per_year': 10.0, 'min_tpy': 30, 'failures': ['trades=30 < 200', 'trades_per_year=10.0 < 30']}"
+trial-5d5ccf10cd0e,Strategy_trial-5d,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-5d5ccf10cd0e,Strategy_trial-5d,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-5d5ccf10cd0e,Strategy_trial-5d,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-a51b0bb4118f,GoldPremiumDiscountMacdTrend,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-a51b0bb4118f,GoldPremiumDiscountMacdTrend,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-a51b0bb4118f,GoldPremiumDiscountMacdTrend,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-a51b0bb4118f,GoldPremiumDiscountMacdTrend,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-a51b0bb4118f,GoldPremiumDiscountMacdTrend,signal_validity,True,{'failures': []}
+trial-a51b0bb4118f,GoldPremiumDiscountMacdTrend,train_backtest,True,"{'trades': 36, 'net_pnl': -2526.46}"
+trial-a51b0bb4118f,GoldPremiumDiscountMacdTrend,minimum_sample,False,"{'total_trades': 36, 'min_trades': 200, 'trades_per_year': 12.0, 'min_tpy': 30, 'failures': ['trades=36 < 200', 'trades_per_year=12.0 < 30']}"
+trial-fc3413a05fd1,GoldWmaRocSessionMomentum,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-fc3413a05fd1,GoldWmaRocSessionMomentum,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-fc3413a05fd1,GoldWmaRocSessionMomentum,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-fc3413a05fd1,GoldWmaRocSessionMomentum,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-fc3413a05fd1,GoldWmaRocSessionMomentum,signal_validity,True,{'failures': []}
+trial-fc3413a05fd1,GoldWmaRocSessionMomentum,train_backtest,True,"{'trades': 33, 'net_pnl': -13873.49}"
+trial-fc3413a05fd1,GoldWmaRocSessionMomentum,minimum_sample,False,"{'total_trades': 33, 'min_trades': 200, 'trades_per_year': 11.0, 'min_tpy': 30, 'failures': ['trades=33 < 200', 'trades_per_year=11.0 < 30']}"
+trial-c852930b56be,GoldAdxDonchianVolBreakout,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-c852930b56be,GoldAdxDonchianVolBreakout,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-c852930b56be,GoldAdxDonchianVolBreakout,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-b247573dbc53,GoldHtfTrendVolPullback,policy_scan,True,"{'passed': True, 'violations': [{'line': 41, 'col': 0, 'pattern': 'regex_match', 'detail': 'suspicious variable/comment name', 'severity': 'warning'}]"
+trial-b247573dbc53,GoldHtfTrendVolPullback,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-b247573dbc53,GoldHtfTrendVolPullback,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-b247573dbc53,GoldHtfTrendVolPullback,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-b247573dbc53,GoldHtfTrendVolPullback,signal_validity,True,{'failures': []}
+trial-b247573dbc53,GoldHtfTrendVolPullback,train_backtest,True,"{'trades': 0, 'net_pnl': 0.0}"
+trial-b247573dbc53,GoldHtfTrendVolPullback,minimum_sample,False,"{'total_trades': 0, 'min_trades': 200, 'trades_per_year': 0.0, 'min_tpy': 30, 'failures': ['trades=0 < 200', 'trades_per_year=0.0 < 30']}"
+trial-2730c7e3335e,GoldVolPercentileRsiSwing,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-2730c7e3335e,GoldVolPercentileRsiSwing,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-2730c7e3335e,GoldVolPercentileRsiSwing,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-9a60d1534204,Strategy_trial-9a,policy_scan,True,"{'passed': True, 'violations': [{'line': 41, 'col': 0, 'pattern': 'regex_match', 'detail': 'suspicious variable/comment name', 'severity': 'warning'}]"
+trial-9a60d1534204,Strategy_trial-9a,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-9a60d1534204,Strategy_trial-9a,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-9a60d1534204,Strategy_trial-9a,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-9a60d1534204,Strategy_trial-9a,signal_validity,True,{'failures': []}
+trial-9a60d1534204,Strategy_trial-9a,train_backtest,True,"{'trades': 0, 'net_pnl': 0.0}"
+trial-9a60d1534204,Strategy_trial-9a,minimum_sample,False,"{'total_trades': 0, 'min_trades': 100, 'trades_per_year': 0.0, 'min_tpy': 15, 'failures': ['trades=0 < 100', 'trades_per_year=0.0 < 15']}"
+trial-30415b47558c,GoldSupertrendRsiPullback,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-30415b47558c,GoldSupertrendRsiPullback,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-30415b47558c,GoldSupertrendRsiPullback,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-5cfb3530dad5,GoldZscoreBosSessionTrend,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-5cfb3530dad5,GoldZscoreBosSessionTrend,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-5cfb3530dad5,GoldZscoreBosSessionTrend,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-5cfb3530dad5,GoldZscoreBosSessionTrend,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-5cfb3530dad5,GoldZscoreBosSessionTrend,signal_validity,True,{'failures': []}
+trial-5cfb3530dad5,GoldZscoreBosSessionTrend,train_backtest,True,"{'trades': 35, 'net_pnl': -478.25}"
+trial-5cfb3530dad5,GoldZscoreBosSessionTrend,minimum_sample,False,"{'total_trades': 35, 'min_trades': 200, 'trades_per_year': 11.7, 'min_tpy': 30, 'failures': ['trades=35 < 200', 'trades_per_year=11.7 < 30']}"
+trial-d5cdc5f1572b,GoldKeltnerSweepMomentum,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-d5cdc5f1572b,GoldKeltnerSweepMomentum,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-d5cdc5f1572b,GoldKeltnerSweepMomentum,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-95933ffb956c,Strategy_trial-95,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-95933ffb956c,Strategy_trial-95,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-95933ffb956c,Strategy_trial-95,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-95933ffb956c,Strategy_trial-95,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-95933ffb956c,Strategy_trial-95,signal_validity,True,{'failures': []}
+trial-95933ffb956c,Strategy_trial-95,train_backtest,True,"{'trades': 221, 'net_pnl': -42549.43}"
+trial-95933ffb956c,Strategy_trial-95,minimum_sample,True,"{'total_trades': 221, 'min_trades': 100, 'trades_per_year': 73.7, 'min_tpy': 15, 'failures': []}"
+trial-95933ffb956c,Strategy_trial-95,basic_quality,False,"{'failures': ['PF=0.67 < 1.25', 'Sharpe=-0.63 < 0.8', 'DD=0.53 > 0.25', 'expectancy=-192.53 <= 0.0'], 'metrics': {'total_trades': 221, 'winners': 45, "
+trial-c907be2b4860,GoldKeltnerSweepReversal,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-c907be2b4860,GoldKeltnerSweepReversal,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-c907be2b4860,GoldKeltnerSweepReversal,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-9a9ae6033e7f,GoldSessionORB_TrendContinuation,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-9a9ae6033e7f,GoldSessionORB_TrendContinuation,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-9a9ae6033e7f,GoldSessionORB_TrendContinuation,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-9a9ae6033e7f,GoldSessionORB_TrendContinuation,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-9a9ae6033e7f,GoldSessionORB_TrendContinuation,signal_validity,True,{'failures': []}
+trial-9a9ae6033e7f,GoldSessionORB_TrendContinuation,train_backtest,True,"{'trades': 5, 'net_pnl': 700.02}"
+trial-9a9ae6033e7f,GoldSessionORB_TrendContinuation,minimum_sample,False,"{'total_trades': 5, 'min_trades': 200, 'trades_per_year': 1.7, 'min_tpy': 30, 'failures': ['trades=5 < 200', 'trades_per_year=1.7 < 30']}"
+trial-6082d98a4d84,GoldVolatilityAdaptiveTrend,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-6082d98a4d84,GoldVolatilityAdaptiveTrend,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-6082d98a4d84,GoldVolatilityAdaptiveTrend,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-6082d98a4d84,GoldVolatilityAdaptiveTrend,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-6082d98a4d84,GoldVolatilityAdaptiveTrend,signal_validity,True,{'failures': []}
+trial-6082d98a4d84,GoldVolatilityAdaptiveTrend,train_backtest,True,"{'trades': 0, 'net_pnl': 0.0}"
+trial-6082d98a4d84,GoldVolatilityAdaptiveTrend,minimum_sample,False,"{'total_trades': 0, 'min_trades': 100, 'trades_per_year': 0.0, 'min_tpy': 15, 'failures': ['trades=0 < 100', 'trades_per_year=0.0 < 15']}"
+trial-ee2ee9f4686c,GoldHTFMomentumPullback,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-ee2ee9f4686c,GoldHTFMomentumPullback,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-ee2ee9f4686c,GoldHTFMomentumPullback,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-9e2ecb60186a,GoldDonchianBOSMomentum,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-9e2ecb60186a,GoldDonchianBOSMomentum,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-9e2ecb60186a,GoldDonchianBOSMomentum,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-cc8c97ee6615,GoldLiquiditySweepTrend,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-cc8c97ee6615,GoldLiquiditySweepTrend,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-cc8c97ee6615,GoldLiquiditySweepTrend,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-a6e04a23c5d7,GoldRSIMomentumSessionTrend,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-a6e04a23c5d7,GoldRSIMomentumSessionTrend,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-a6e04a23c5d7,GoldRSIMomentumSessionTrend,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-a6e04a23c5d7,GoldRSIMomentumSessionTrend,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-a6e04a23c5d7,GoldRSIMomentumSessionTrend,signal_validity,True,{'failures': []}
+trial-a6e04a23c5d7,GoldRSIMomentumSessionTrend,train_backtest,True,"{'trades': 400, 'net_pnl': -40420.25}"
+trial-a6e04a23c5d7,GoldRSIMomentumSessionTrend,minimum_sample,True,"{'total_trades': 400, 'min_trades': 200, 'trades_per_year': 133.4, 'min_tpy': 30, 'failures': []}"
+trial-a6e04a23c5d7,GoldRSIMomentumSessionTrend,basic_quality,False,"{'failures': ['PF=0.77 < 1.25', 'Sharpe=-1.16 < 0.8', 'DD=0.53 > 0.25', 'expectancy=-101.05 <= 0.0'], 'metrics': {'total_trades': 400, 'winners': 123,"
+trial-0ff9259b373a,GoldVWAPMeanReversionSession,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-0ff9259b373a,GoldVWAPMeanReversionSession,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-0ff9259b373a,GoldVWAPMeanReversionSession,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-2a25b2c1dfec,GoldSqueezeMomentumBreakout,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-2a25b2c1dfec,GoldSqueezeMomentumBreakout,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-2a25b2c1dfec,GoldSqueezeMomentumBreakout,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-10ae0c86f7fa,GoldPremiumDiscountTrendFlow,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-10ae0c86f7fa,GoldPremiumDiscountTrendFlow,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-10ae0c86f7fa,GoldPremiumDiscountTrendFlow,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-10ae0c86f7fa,GoldPremiumDiscountTrendFlow,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-10ae0c86f7fa,GoldPremiumDiscountTrendFlow,signal_validity,True,{'failures': []}
+trial-10ae0c86f7fa,GoldPremiumDiscountTrendFlow,train_backtest,True,"{'trades': 0, 'net_pnl': 0.0}"
+trial-10ae0c86f7fa,GoldPremiumDiscountTrendFlow,minimum_sample,False,"{'total_trades': 0, 'min_trades': 100, 'trades_per_year': 0.0, 'min_tpy': 15, 'failures': ['trades=0 < 100', 'trades_per_year=0.0 < 15']}"
+trial-5e55c334a6fa,GoldSessionVolatilityExpansion,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-5e55c334a6fa,GoldSessionVolatilityExpansion,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-5e55c334a6fa,GoldSessionVolatilityExpansion,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-1476dd5870e0,GoldZScoreVolRegime,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-1476dd5870e0,GoldZScoreVolRegime,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-1476dd5870e0,GoldZScoreVolRegime,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-722e0dc79e24,GoldROCAdxTrendContinuation,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-722e0dc79e24,GoldROCAdxTrendContinuation,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-722e0dc79e24,GoldROCAdxTrendContinuation,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-f551f82a5c66,GoldKeltnerADXRegimeTrend,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-f551f82a5c66,GoldKeltnerADXRegimeTrend,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-f551f82a5c66,GoldKeltnerADXRegimeTrend,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+trial-c50505d466b7,GoldSupertrendRSIPullback,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-c50505d466b7,GoldSupertrendRSIPullback,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-c50505d466b7,GoldSupertrendRSIPullback,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-c50505d466b7,GoldSupertrendRSIPullback,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-c50505d466b7,GoldSupertrendRSIPullback,signal_validity,True,{'failures': []}
+trial-c50505d466b7,GoldSupertrendRSIPullback,train_backtest,True,"{'trades': 0, 'net_pnl': 0.0}"
+trial-c50505d466b7,GoldSupertrendRSIPullback,minimum_sample,False,"{'total_trades': 0, 'min_trades': 100, 'trades_per_year': 0.0, 'min_tpy': 15, 'failures': ['trades=0 < 100', 'trades_per_year=0.0 < 15']}"
+trial-7e456a860da7,Strategy_trial-7e,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-7e456a860da7,Strategy_trial-7e,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-7e456a860da7,Strategy_trial-7e,determinism,False,"{'passed': False, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Run 1 failed with error: Traceba"
+6ac3e9f3d18a7b04b14106c5,Strategy_trial-7e,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+6ac3e9f3d18a7b04b14106c5,Strategy_trial-7e,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+6ac3e9f3d18a7b04b14106c5,Strategy_trial-7e,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+6ac3e9f3d18a7b04b14106c5,Strategy_trial-7e,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+6ac3e9f3d18a7b04b14106c5,Strategy_trial-7e,signal_validity,True,{'failures': []}
+6ac3e9f3d18a7b04b14106c5,Strategy_trial-7e,train_backtest,True,"{'trades': 0, 'net_pnl': 0.0}"
+6ac3e9f3d18a7b04b14106c5,Strategy_trial-7e,minimum_sample,False,"{'total_trades': 0, 'min_trades': 100, 'trades_per_year': 0.0, 'min_tpy': 30, 'failures': ['trades=0 < 100', 'trades_per_year=0.0 < 30']}"
+6ac3ea7ad18a7b04b14106c6,GoldSupertrendRSIPullback,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+6ac3ea7ad18a7b04b14106c6,GoldSupertrendRSIPullback,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+6ac3ea7ad18a7b04b14106c6,GoldSupertrendRSIPullback,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+6ac3ea7ad18a7b04b14106c6,GoldSupertrendRSIPullback,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+6ac3ea7ad18a7b04b14106c6,GoldSupertrendRSIPullback,signal_validity,True,{'failures': []}
+6ac3ea7ad18a7b04b14106c6,GoldSupertrendRSIPullback,train_backtest,True,"{'trades': 0, 'net_pnl': 0.0}"
+6ac3ea7ad18a7b04b14106c6,GoldSupertrendRSIPullback,minimum_sample,False,"{'total_trades': 0, 'min_trades': 80, 'trades_per_year': 0.0, 'min_tpy': 15, 'failures': ['trades=0 < 80', 'trades_per_year=0.0 < 15']}"
+6ac3eaf9d18a7b04b14106c7,GoldKeltnerADXRegimeTrend,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+6ac3eaf9d18a7b04b14106c7,GoldKeltnerADXRegimeTrend,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+6ac3eaf9d18a7b04b14106c7,GoldKeltnerADXRegimeTrend,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+6ac3eaf9d18a7b04b14106c7,GoldKeltnerADXRegimeTrend,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+6ac3eaf9d18a7b04b14106c7,GoldKeltnerADXRegimeTrend,signal_validity,True,{'failures': []}
+6ac3eaf9d18a7b04b14106c7,GoldKeltnerADXRegimeTrend,train_backtest,True,"{'trades': 23, 'net_pnl': -5935.22}"
+6ac3eaf9d18a7b04b14106c7,GoldKeltnerADXRegimeTrend,minimum_sample,False,"{'total_trades': 23, 'min_trades': 80, 'trades_per_year': 7.7, 'min_tpy': 15, 'failures': ['trades=23 < 80', 'trades_per_year=7.7 < 15']}"
+6ac3eb7fd18a7b04b14106c8,GoldROCAdxTrendContinuation,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+6ac3eb7fd18a7b04b14106c8,GoldROCAdxTrendContinuation,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+6ac3eb7fd18a7b04b14106c8,GoldROCAdxTrendContinuation,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+6ac3eb7fd18a7b04b14106c8,GoldROCAdxTrendContinuation,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+6ac3eb7fd18a7b04b14106c8,GoldROCAdxTrendContinuation,signal_validity,True,{'failures': []}
+6ac3eb7fd18a7b04b14106c8,GoldROCAdxTrendContinuation,train_backtest,True,"{'trades': 36, 'net_pnl': 5081.71}"
+6ac3eb7fd18a7b04b14106c8,GoldROCAdxTrendContinuation,minimum_sample,False,"{'total_trades': 36, 'min_trades': 80, 'trades_per_year': 12.0, 'min_tpy': 15, 'failures': ['trades=36 < 80', 'trades_per_year=12.0 < 15']}"
+6ac3ebecd18a7b04b14106c9,GoldZScoreVolRegime,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+6ac3ebecd18a7b04b14106c9,GoldZScoreVolRegime,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+6ac3ebecd18a7b04b14106c9,GoldZScoreVolRegime,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+6ac3ebecd18a7b04b14106c9,GoldZScoreVolRegime,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+6ac3ebecd18a7b04b14106c9,GoldZScoreVolRegime,signal_validity,True,{'failures': []}
+6ac3ebecd18a7b04b14106c9,GoldZScoreVolRegime,train_backtest,True,"{'trades': 9, 'net_pnl': -2381.04}"
+6ac3ebecd18a7b04b14106c9,GoldZScoreVolRegime,minimum_sample,False,"{'total_trades': 9, 'min_trades': 100, 'trades_per_year': 3.0, 'min_tpy': 30, 'failures': ['trades=9 < 100', 'trades_per_year=3.0 < 30']}"
+6ac3ec8ad18a7b04b14106ca,GoldPremiumDiscountTrendFlow,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+6ac3ec8ad18a7b04b14106ca,GoldPremiumDiscountTrendFlow,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+6ac3ec8ad18a7b04b14106ca,GoldPremiumDiscountTrendFlow,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+6ac3ec8ad18a7b04b14106ca,GoldPremiumDiscountTrendFlow,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+6ac3ec8ad18a7b04b14106ca,GoldPremiumDiscountTrendFlow,signal_validity,True,{'failures': []}
+6ac3ec8ad18a7b04b14106ca,GoldPremiumDiscountTrendFlow,train_backtest,True,"{'trades': 0, 'net_pnl': 0.0}"
+6ac3ec8ad18a7b04b14106ca,GoldPremiumDiscountTrendFlow,minimum_sample,False,"{'total_trades': 0, 'min_trades': 80, 'trades_per_year': 0.0, 'min_tpy': 15, 'failures': ['trades=0 < 80', 'trades_per_year=0.0 < 15']}"
+6ac3ecf7d18a7b04b14106cb,GoldVWAPMeanReversionSession,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+6ac3ecf7d18a7b04b14106cb,GoldVWAPMeanReversionSession,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+6ac3ecf7d18a7b04b14106cb,GoldVWAPMeanReversionSession,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+6ac3ecf7d18a7b04b14106cb,GoldVWAPMeanReversionSession,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+6ac3ecf7d18a7b04b14106cb,GoldVWAPMeanReversionSession,signal_validity,True,{'failures': []}
+6ac3ecf7d18a7b04b14106cb,GoldVWAPMeanReversionSession,train_backtest,True,"{'trades': 5, 'net_pnl': -1254.57}"
+6ac3ecf7d18a7b04b14106cb,GoldVWAPMeanReversionSession,minimum_sample,False,"{'total_trades': 5, 'min_trades': 100, 'trades_per_year': 1.7, 'min_tpy': 30, 'failures': ['trades=5 < 100', 'trades_per_year=1.7 < 30']}"
+6ac3edbed18a7b04b14106cc,GoldLiquiditySweepTrend,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+6ac3edbed18a7b04b14106cc,GoldLiquiditySweepTrend,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+6ac3edbed18a7b04b14106cc,GoldLiquiditySweepTrend,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+6ac3edbed18a7b04b14106cc,GoldLiquiditySweepTrend,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+6ac3edbed18a7b04b14106cc,GoldLiquiditySweepTrend,signal_validity,True,{'failures': []}
+6ac3edbed18a7b04b14106cc,GoldLiquiditySweepTrend,train_backtest,True,"{'trades': 399, 'net_pnl': -30871.96}"
+6ac3edbed18a7b04b14106cc,GoldLiquiditySweepTrend,minimum_sample,True,"{'total_trades': 399, 'min_trades': 100, 'trades_per_year': 133.1, 'min_tpy': 30, 'failures': []}"
+6ac3edbed18a7b04b14106cc,GoldLiquiditySweepTrend,basic_quality,False,"{'failures': ['PF=0.84 < 1.25', 'Sharpe=-0.77 < 0.8', 'DD=0.35 > 0.25', 'expectancy=-77.37 <= 0.0'], 'metrics': {'total_trades': 399, 'winners': 139, "
+6ac3ef19d18a7b04b14106cd,GoldHTFMomentumPullback,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+6ac3ef19d18a7b04b14106cd,GoldHTFMomentumPullback,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+6ac3ef19d18a7b04b14106cd,GoldHTFMomentumPullback,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+6ac3ef19d18a7b04b14106cd,GoldHTFMomentumPullback,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+6ac3ef19d18a7b04b14106cd,GoldHTFMomentumPullback,signal_validity,False,"{'error': 'Tape error: Traceback (most recent call last):\n  File ""C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\core\\backtester.py"", "
+6ac3f046d18a7b04b14106ce,GoldVolatilityAdaptiveTrend,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+6ac3f046d18a7b04b14106ce,GoldVolatilityAdaptiveTrend,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+6ac3f046d18a7b04b14106ce,GoldVolatilityAdaptiveTrend,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+6ac3f046d18a7b04b14106ce,GoldVolatilityAdaptiveTrend,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+6ac3f046d18a7b04b14106ce,GoldVolatilityAdaptiveTrend,signal_validity,True,{'failures': []}
+6ac3f046d18a7b04b14106ce,GoldVolatilityAdaptiveTrend,train_backtest,True,"{'trades': 205, 'net_pnl': -4378.71}"
+6ac3f046d18a7b04b14106ce,GoldVolatilityAdaptiveTrend,minimum_sample,True,"{'total_trades': 205, 'min_trades': 80, 'trades_per_year': 68.4, 'min_tpy': 15, 'failures': []}"
+6ac3f046d18a7b04b14106ce,GoldVolatilityAdaptiveTrend,basic_quality,False,"{'failures': ['PF=0.96 < 1.25', 'Sharpe=-0.09 < 0.8', 'expectancy=-21.36 <= 0.0'], 'metrics': {'total_trades': 205, 'winners': 81, 'losers': 124, 'win"
+6ac3f0f5d18a7b04b14106cf,GoldSessionORB_TrendContinuation,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+6ac3f0f5d18a7b04b14106cf,GoldSessionORB_TrendContinuation,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+6ac3f0f5d18a7b04b14106cf,GoldSessionORB_TrendContinuation,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+6ac3f0f5d18a7b04b14106cf,GoldSessionORB_TrendContinuation,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+6ac3f0f5d18a7b04b14106cf,GoldSessionORB_TrendContinuation,signal_validity,True,{'failures': []}
+6ac3f0f5d18a7b04b14106cf,GoldSessionORB_TrendContinuation,train_backtest,True,"{'trades': 18, 'net_pnl': -8927.51}"
+6ac3f0f5d18a7b04b14106cf,GoldSessionORB_TrendContinuation,minimum_sample,False,"{'total_trades': 18, 'min_trades': 100, 'trades_per_year': 6.0, 'min_tpy': 30, 'failures': ['trades=18 < 100', 'trades_per_year=6.0 < 30']}"
+6ac3f191d18a7b04b14106d0,GoldKeltnerSweepReversal,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+6ac3f191d18a7b04b14106d0,GoldKeltnerSweepReversal,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+6ac3f191d18a7b04b14106d0,GoldKeltnerSweepReversal,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+6ac3f191d18a7b04b14106d0,GoldKeltnerSweepReversal,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+6ac3f191d18a7b04b14106d0,GoldKeltnerSweepReversal,signal_validity,True,{'failures': []}
+6ac3f191d18a7b04b14106d0,GoldKeltnerSweepReversal,train_backtest,True,"{'trades': 2, 'net_pnl': -1923.91}"
+6ac3f191d18a7b04b14106d0,GoldKeltnerSweepReversal,minimum_sample,False,"{'total_trades': 2, 'min_trades': 100, 'trades_per_year': 0.7, 'min_tpy': 30, 'failures': ['trades=2 < 100', 'trades_per_year=0.7 < 30']}"
+6ac3f270d18a7b04b14106d1,GoldKeltnerSweepMomentum,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+6ac3f270d18a7b04b14106d1,GoldKeltnerSweepMomentum,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+6ac3f270d18a7b04b14106d1,GoldKeltnerSweepMomentum,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+6ac3f270d18a7b04b14106d1,GoldKeltnerSweepMomentum,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+6ac3f270d18a7b04b14106d1,GoldKeltnerSweepMomentum,signal_validity,True,{'failures': []}
+6ac3f270d18a7b04b14106d1,GoldKeltnerSweepMomentum,train_backtest,True,"{'trades': 13, 'net_pnl': 2395.19}"
+6ac3f270d18a7b04b14106d1,GoldKeltnerSweepMomentum,minimum_sample,False,"{'total_trades': 13, 'min_trades': 80, 'trades_per_year': 4.3, 'min_tpy': 15, 'failures': ['trades=13 < 80', 'trades_per_year=4.3 < 15']}"
+6ac3f2e1d18a7b04b14106d2,GoldZscoreBosSessionTrend,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+6ac3f2e1d18a7b04b14106d2,GoldZscoreBosSessionTrend,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+6ac3f2e1d18a7b04b14106d2,GoldZscoreBosSessionTrend,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+6ac3f2e1d18a7b04b14106d2,GoldZscoreBosSessionTrend,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+6ac3f2e1d18a7b04b14106d2,GoldZscoreBosSessionTrend,signal_validity,True,{'failures': []}
+6ac3f2e1d18a7b04b14106d2,GoldZscoreBosSessionTrend,train_backtest,True,"{'trades': 82, 'net_pnl': 2669.75}"
+6ac3f2e1d18a7b04b14106d2,GoldZscoreBosSessionTrend,minimum_sample,False,"{'total_trades': 82, 'min_trades': 100, 'trades_per_year': 27.4, 'min_tpy': 30, 'failures': ['trades=82 < 100', 'trades_per_year=27.4 < 30']}"
+6ac3f382d18a7b04b14106d3,GoldSupertrendRsiPullback,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+6ac3f382d18a7b04b14106d3,GoldSupertrendRsiPullback,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+6ac3f382d18a7b04b14106d3,GoldSupertrendRsiPullback,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+6ac3f382d18a7b04b14106d3,GoldSupertrendRsiPullback,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+6ac3f382d18a7b04b14106d3,GoldSupertrendRsiPullback,signal_validity,True,{'failures': []}
+6ac3f382d18a7b04b14106d3,GoldSupertrendRsiPullback,train_backtest,True,"{'trades': 11, 'net_pnl': -7784.93}"
+6ac3f382d18a7b04b14106d3,GoldSupertrendRsiPullback,minimum_sample,False,"{'total_trades': 11, 'min_trades': 80, 'trades_per_year': 3.7, 'min_tpy': 15, 'failures': ['trades=11 < 80', 'trades_per_year=3.7 < 15']}"
+6ac3f40ad18a7b04b14106d4,Strategy_trial-9a,policy_scan,True,"{'passed': True, 'violations': [{'line': 41, 'col': 0, 'pattern': 'regex_match', 'detail': 'suspicious variable/comment name', 'severity': 'warning'}]"
+6ac3f40ad18a7b04b14106d4,Strategy_trial-9a,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+6ac3f40ad18a7b04b14106d4,Strategy_trial-9a,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+6ac3f40ad18a7b04b14106d4,Strategy_trial-9a,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+6ac3f40ad18a7b04b14106d4,Strategy_trial-9a,signal_validity,True,{'failures': []}
+6ac3f40ad18a7b04b14106d4,Strategy_trial-9a,train_backtest,True,"{'trades': 0, 'net_pnl': 0.0}"
+6ac3f40ad18a7b04b14106d4,Strategy_trial-9a,minimum_sample,False,"{'total_trades': 0, 'min_trades': 80, 'trades_per_year': 0.0, 'min_tpy': 15, 'failures': ['trades=0 < 80', 'trades_per_year=0.0 < 15']}"
+6ac3f511d18a7b04b14106d5,GoldVolPercentileRsiSwing,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+6ac3f511d18a7b04b14106d5,GoldVolPercentileRsiSwing,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+6ac3f511d18a7b04b14106d5,GoldVolPercentileRsiSwing,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+6ac3f511d18a7b04b14106d5,GoldVolPercentileRsiSwing,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+6ac3f511d18a7b04b14106d5,GoldVolPercentileRsiSwing,signal_validity,True,{'failures': []}
+6ac3f511d18a7b04b14106d5,GoldVolPercentileRsiSwing,train_backtest,True,"{'trades': 0, 'net_pnl': 0.0}"
+6ac3f511d18a7b04b14106d5,GoldVolPercentileRsiSwing,minimum_sample,False,"{'total_trades': 0, 'min_trades': 80, 'trades_per_year': 0.0, 'min_tpy': 15, 'failures': ['trades=0 < 80', 'trades_per_year=0.0 < 15']}"
+6ac3f708d18a7b04b14106d6,GoldHtfTrendVolPullback,policy_scan,True,"{'passed': True, 'violations': [{'line': 41, 'col': 0, 'pattern': 'regex_match', 'detail': 'suspicious variable/comment name', 'severity': 'warning'}]"
+6ac3f708d18a7b04b14106d6,GoldHtfTrendVolPullback,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+6ac3f708d18a7b04b14106d6,GoldHtfTrendVolPullback,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+6ac3f708d18a7b04b14106d6,GoldHtfTrendVolPullback,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+6ac3f708d18a7b04b14106d6,GoldHtfTrendVolPullback,signal_validity,False,"{'error': 'Tape error: Traceback (most recent call last):\n  File ""C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\core\\backtester.py"", "
+6ac3f796d18a7b04b14106d7,GoldAdxDonchianVolBreakout,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+6ac3f796d18a7b04b14106d7,GoldAdxDonchianVolBreakout,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+6ac3f796d18a7b04b14106d7,GoldAdxDonchianVolBreakout,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+6ac3f796d18a7b04b14106d7,GoldAdxDonchianVolBreakout,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+6ac3f796d18a7b04b14106d7,GoldAdxDonchianVolBreakout,signal_validity,True,{'failures': []}
+6ac3f796d18a7b04b14106d7,GoldAdxDonchianVolBreakout,train_backtest,True,"{'trades': 0, 'net_pnl': 0.0}"
+6ac3f796d18a7b04b14106d7,GoldAdxDonchianVolBreakout,minimum_sample,False,"{'total_trades': 0, 'min_trades': 80, 'trades_per_year': 0.0, 'min_tpy': 15, 'failures': ['trades=0 < 80', 'trades_per_year=0.0 < 15']}"
+6ac3f81ed18a7b04b14106d8,GoldWmaRocSessionMomentum,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+6ac3f81ed18a7b04b14106d8,GoldWmaRocSessionMomentum,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+6ac3f81ed18a7b04b14106d8,GoldWmaRocSessionMomentum,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+6ac3f81ed18a7b04b14106d8,GoldWmaRocSessionMomentum,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+6ac3f81ed18a7b04b14106d8,GoldWmaRocSessionMomentum,signal_validity,True,{'failures': []}
+6ac3f81ed18a7b04b14106d8,GoldWmaRocSessionMomentum,train_backtest,True,"{'trades': 76, 'net_pnl': -27250.1}"
+6ac3f81ed18a7b04b14106d8,GoldWmaRocSessionMomentum,minimum_sample,False,"{'total_trades': 76, 'min_trades': 100, 'trades_per_year': 25.4, 'min_tpy': 30, 'failures': ['trades=76 < 100', 'trades_per_year=25.4 < 30']}"
+6ac3f898d18a7b04b14106d9,GoldPremiumDiscountMacdTrend,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+6ac3f898d18a7b04b14106d9,GoldPremiumDiscountMacdTrend,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+6ac3f898d18a7b04b14106d9,GoldPremiumDiscountMacdTrend,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+6ac3f898d18a7b04b14106d9,GoldPremiumDiscountMacdTrend,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+6ac3f898d18a7b04b14106d9,GoldPremiumDiscountMacdTrend,signal_validity,True,{'failures': []}
+6ac3f898d18a7b04b14106d9,GoldPremiumDiscountMacdTrend,train_backtest,True,"{'trades': 36, 'net_pnl': -2526.46}"
+6ac3f898d18a7b04b14106d9,GoldPremiumDiscountMacdTrend,minimum_sample,False,"{'total_trades': 36, 'min_trades': 100, 'trades_per_year': 12.0, 'min_tpy': 30, 'failures': ['trades=36 < 100', 'trades_per_year=12.0 < 30']}"
+6ac3f964d18a7b04b14106da,Strategy_trial-5d,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+6ac3f964d18a7b04b14106da,Strategy_trial-5d,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+6ac3f964d18a7b04b14106da,Strategy_trial-5d,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+6ac3f964d18a7b04b14106da,Strategy_trial-5d,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+6ac3f964d18a7b04b14106da,Strategy_trial-5d,signal_validity,True,{'failures': []}
+6ac3f964d18a7b04b14106da,Strategy_trial-5d,train_backtest,True,"{'trades': 321, 'net_pnl': -5131.53}"
+6ac3f964d18a7b04b14106da,Strategy_trial-5d,minimum_sample,True,"{'total_trades': 321, 'min_trades': 100, 'trades_per_year': 107.1, 'min_tpy': 30, 'failures': []}"
+6ac3f964d18a7b04b14106da,Strategy_trial-5d,basic_quality,False,"{'failures': ['PF=0.97 < 1.25', 'Sharpe=0.02 < 0.8', 'expectancy=-15.99 <= 0.0'], 'metrics': {'total_trades': 321, 'winners': 100, 'losers': 221, 'win"
+6ac3f9b8d18a7b04b14106db,GoldSqueezeVolExpansion,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+6ac3f9b8d18a7b04b14106db,GoldSqueezeVolExpansion,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+6ac3f9b8d18a7b04b14106db,GoldSqueezeVolExpansion,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+6ac3f9b8d18a7b04b14106db,GoldSqueezeVolExpansion,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+6ac3f9b8d18a7b04b14106db,GoldSqueezeVolExpansion,signal_validity,True,{'failures': []}
+6ac3f9b8d18a7b04b14106db,GoldSqueezeVolExpansion,train_backtest,True,"{'trades': 30, 'net_pnl': -3904.25}"
+6ac3f9b8d18a7b04b14106db,GoldSqueezeVolExpansion,minimum_sample,False,"{'total_trades': 30, 'min_trades': 100, 'trades_per_year': 10.0, 'min_tpy': 30, 'failures': ['trades=30 < 100', 'trades_per_year=10.0 < 30']}"
+6ac3faecd18a7b04b14106dc,GoldHtfKeltnerMomentumBreakout,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+6ac3faecd18a7b04b14106dc,GoldHtfKeltnerMomentumBreakout,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+6ac3faecd18a7b04b14106dc,GoldHtfKeltnerMomentumBreakout,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+6ac3faecd18a7b04b14106dc,GoldHtfKeltnerMomentumBreakout,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+6ac3faecd18a7b04b14106dc,GoldHtfKeltnerMomentumBreakout,signal_validity,False,"{'error': 'Tape error: Traceback (most recent call last):\n  File ""C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\core\\backtester.py"", "
+6ac3fb6fd18a7b04b14106dd,Strategy_trial-2d,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+6ac3fb6fd18a7b04b14106dd,Strategy_trial-2d,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+6ac3fb6fd18a7b04b14106dd,Strategy_trial-2d,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+6ac3fb6fd18a7b04b14106dd,Strategy_trial-2d,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+6ac3fb6fd18a7b04b14106dd,Strategy_trial-2d,signal_validity,True,{'failures': []}
+6ac3fb6fd18a7b04b14106dd,Strategy_trial-2d,train_backtest,True,"{'trades': 0, 'net_pnl': 0.0}"
+6ac3fb6fd18a7b04b14106dd,Strategy_trial-2d,minimum_sample,False,"{'total_trades': 0, 'min_trades': 80, 'trades_per_year': 0.0, 'min_tpy': 15, 'failures': ['trades=0 < 80', 'trades_per_year=0.0 < 15']}"
+trial-0a83b6944bb3,LondonNY_SessionMomentumBOS,policy_scan,True,"{'passed': True, 'violations': [{'line': 56, 'col': 0, 'pattern': 'regex_match', 'detail': 'reversed() on time series is suspicious', 'severity': 'war"
+trial-0a83b6944bb3,LondonNY_SessionMomentumBOS,smoke_run,False,"{'error': 'Strategy initialization failed: No strategy class with an \'on_bar\' method found (no class).\nTraceback (most recent call last):\n  File """
+trial-55db857b8939,GoldSessionMomentumBreakout,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-55db857b8939,GoldSessionMomentumBreakout,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-55db857b8939,GoldSessionMomentumBreakout,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-55db857b8939,GoldSessionMomentumBreakout,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-55db857b8939,GoldSessionMomentumBreakout,signal_validity,True,{'failures': []}
+trial-55db857b8939,GoldSessionMomentumBreakout,train_backtest,True,"{'trades': 742, 'net_pnl': -39383.23}"
+trial-55db857b8939,GoldSessionMomentumBreakout,minimum_sample,True,"{'total_trades': 742, 'min_trades': 100, 'trades_per_year': 247.5, 'min_tpy': 30, 'failures': []}"
+trial-55db857b8939,GoldSessionMomentumBreakout,basic_quality,False,"{'failures': ['PF=0.87 < 1.25', 'Sharpe=-0.70 < 0.8', 'DD=0.45 > 0.25', 'expectancy=-53.08 <= 0.0'], 'metrics': {'total_trades': 742, 'winners': 267, "
+trial-561598dc3c6e,GoldVolatilitySqueezeTrend,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-561598dc3c6e,GoldVolatilitySqueezeTrend,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-561598dc3c6e,GoldVolatilitySqueezeTrend,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-561598dc3c6e,GoldVolatilitySqueezeTrend,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-561598dc3c6e,GoldVolatilitySqueezeTrend,signal_validity,True,{'failures': []}
+trial-561598dc3c6e,GoldVolatilitySqueezeTrend,train_backtest,True,"{'trades': 1, 'net_pnl': -991.98}"
+trial-561598dc3c6e,GoldVolatilitySqueezeTrend,minimum_sample,False,"{'total_trades': 1, 'min_trades': 80, 'trades_per_year': 0.3, 'min_tpy': 15, 'failures': ['trades=1 < 80', 'trades_per_year=0.3 < 15']}"
+trial-539dd835659e,GoldKeltnerTrendPullback,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-539dd835659e,GoldKeltnerTrendPullback,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-539dd835659e,GoldKeltnerTrendPullback,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-539dd835659e,GoldKeltnerTrendPullback,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-539dd835659e,GoldKeltnerTrendPullback,signal_validity,True,{'failures': []}
+trial-539dd835659e,GoldKeltnerTrendPullback,train_backtest,True,"{'trades': 4, 'net_pnl': -1423.62}"
+trial-539dd835659e,GoldKeltnerTrendPullback,minimum_sample,False,"{'total_trades': 4, 'min_trades': 100, 'trades_per_year': 1.3, 'min_tpy': 30, 'failures': ['trades=4 < 100', 'trades_per_year=1.3 < 30']}"
+trial-4f69a94d26f6,GoldHTFMomentumPullback,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-4f69a94d26f6,GoldHTFMomentumPullback,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-4f69a94d26f6,GoldHTFMomentumPullback,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-4f69a94d26f6,GoldHTFMomentumPullback,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-4f69a94d26f6,GoldHTFMomentumPullback,signal_validity,True,{'failures': []}
+trial-4f69a94d26f6,GoldHTFMomentumPullback,train_backtest,True,"{'trades': 1, 'net_pnl': -1005.67}"
+trial-4f69a94d26f6,GoldHTFMomentumPullback,minimum_sample,False,"{'total_trades': 1, 'min_trades': 100, 'trades_per_year': 0.3, 'min_tpy': 30, 'failures': ['trades=1 < 100', 'trades_per_year=0.3 < 30']}"
+trial-27cc862820b6,GoldDonchianRegimeBreakout,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-27cc862820b6,GoldDonchianRegimeBreakout,smoke_run,False,"{'error': 'Strategy initialization failed: No strategy class with an \'on_bar\' method found (no class).\nTraceback (most recent call last):\n  File """
+trial-45852ba1710a,GoldLiquiditySweepReversal,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-45852ba1710a,GoldLiquiditySweepReversal,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-45852ba1710a,GoldLiquiditySweepReversal,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-45852ba1710a,GoldLiquiditySweepReversal,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-45852ba1710a,GoldLiquiditySweepReversal,signal_validity,True,{'failures': []}
+trial-45852ba1710a,GoldLiquiditySweepReversal,train_backtest,True,"{'trades': 61, 'net_pnl': -14397.11}"
+trial-45852ba1710a,GoldLiquiditySweepReversal,minimum_sample,False,"{'total_trades': 61, 'min_trades': 100, 'trades_per_year': 20.3, 'min_tpy': 30, 'failures': ['trades=61 < 100', 'trades_per_year=20.3 < 30']}"
+trial-84ceebf6419f,GoldVWAPMeanReversionSession,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-84ceebf6419f,GoldVWAPMeanReversionSession,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-84ceebf6419f,GoldVWAPMeanReversionSession,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-84ceebf6419f,GoldVWAPMeanReversionSession,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-84ceebf6419f,GoldVWAPMeanReversionSession,signal_validity,True,{'failures': []}
+trial-84ceebf6419f,GoldVWAPMeanReversionSession,train_backtest,True,"{'trades': 100, 'net_pnl': -12299.0}"
+trial-84ceebf6419f,GoldVWAPMeanReversionSession,minimum_sample,True,"{'total_trades': 100, 'min_trades': 100, 'trades_per_year': 33.4, 'min_tpy': 30, 'failures': []}"
+trial-84ceebf6419f,GoldVWAPMeanReversionSession,basic_quality,False,"{'failures': ['PF=0.78 < 1.25', 'Sharpe=-0.59 < 0.8', 'expectancy=-122.99 <= 0.0'], 'metrics': {'total_trades': 100, 'winners': 40, 'losers': 60, 'win"
+trial-2421ebc1f069,GoldAdxMacdTrendContinuation,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-2421ebc1f069,GoldAdxMacdTrendContinuation,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-2421ebc1f069,GoldAdxMacdTrendContinuation,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-2421ebc1f069,GoldAdxMacdTrendContinuation,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-2421ebc1f069,GoldAdxMacdTrendContinuation,signal_validity,True,{'failures': []}
+trial-2421ebc1f069,GoldAdxMacdTrendContinuation,train_backtest,True,"{'trades': 66, 'net_pnl': -1416.82}"
+trial-2421ebc1f069,GoldAdxMacdTrendContinuation,minimum_sample,False,"{'total_trades': 66, 'min_trades': 80, 'trades_per_year': 22.0, 'min_tpy': 15, 'failures': ['trades=66 < 80']}"
+trial-b80578de0d9e,GoldBollingerZScoreMeanReversion,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-b80578de0d9e,GoldBollingerZScoreMeanReversion,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-b80578de0d9e,GoldBollingerZScoreMeanReversion,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-b80578de0d9e,GoldBollingerZScoreMeanReversion,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-b80578de0d9e,GoldBollingerZScoreMeanReversion,signal_validity,True,{'failures': []}
+trial-b80578de0d9e,GoldBollingerZScoreMeanReversion,train_backtest,True,"{'trades': 827, 'net_pnl': -57201.82}"
+trial-b80578de0d9e,GoldBollingerZScoreMeanReversion,minimum_sample,True,"{'total_trades': 827, 'min_trades': 100, 'trades_per_year': 275.9, 'min_tpy': 30, 'failures': []}"
+trial-b80578de0d9e,GoldBollingerZScoreMeanReversion,basic_quality,False,"{'failures': ['PF=0.80 < 1.25', 'Sharpe=-1.55 < 0.8', 'DD=0.61 > 0.25', 'expectancy=-69.17 <= 0.0'], 'metrics': {'total_trades': 827, 'winners': 378, "
+trial-1305388616e6,GoldSupertrendRsiContinuation,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-1305388616e6,GoldSupertrendRsiContinuation,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-1305388616e6,GoldSupertrendRsiContinuation,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-1305388616e6,GoldSupertrendRsiContinuation,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-1305388616e6,GoldSupertrendRsiContinuation,signal_validity,True,{'failures': []}
+trial-1305388616e6,GoldSupertrendRsiContinuation,train_backtest,True,"{'trades': 4, 'net_pnl': -3847.21}"
+trial-1305388616e6,GoldSupertrendRsiContinuation,minimum_sample,False,"{'total_trades': 4, 'min_trades': 100, 'trades_per_year': 1.3, 'min_tpy': 30, 'failures': ['trades=4 < 100', 'trades_per_year=1.3 < 30']}"
+trial-22d50b9e62a4,GoldEmaRocMomentumTrend,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-22d50b9e62a4,GoldEmaRocMomentumTrend,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-22d50b9e62a4,GoldEmaRocMomentumTrend,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-22d50b9e62a4,GoldEmaRocMomentumTrend,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-22d50b9e62a4,GoldEmaRocMomentumTrend,signal_validity,True,{'failures': []}
+trial-22d50b9e62a4,GoldEmaRocMomentumTrend,train_backtest,True,"{'trades': 265, 'net_pnl': -11137.35}"
+trial-22d50b9e62a4,GoldEmaRocMomentumTrend,minimum_sample,True,"{'total_trades': 265, 'min_trades': 80, 'trades_per_year': 88.4, 'min_tpy': 15, 'failures': []}"
+trial-22d50b9e62a4,GoldEmaRocMomentumTrend,basic_quality,False,"{'failures': ['PF=0.92 < 1.25', 'Sharpe=-0.28 < 0.8', 'expectancy=-42.03 <= 0.0'], 'metrics': {'total_trades': 265, 'winners': 97, 'losers': 168, 'win"
+trial-c6d7cbf14629,GoldSessionOrderBlockBOS,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-c6d7cbf14629,GoldSessionOrderBlockBOS,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-c6d7cbf14629,GoldSessionOrderBlockBOS,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-c6d7cbf14629,GoldSessionOrderBlockBOS,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-c6d7cbf14629,GoldSessionOrderBlockBOS,signal_validity,True,{'failures': []}
+trial-c6d7cbf14629,GoldSessionOrderBlockBOS,train_backtest,True,"{'trades': 70, 'net_pnl': -14323.49}"
+trial-c6d7cbf14629,GoldSessionOrderBlockBOS,minimum_sample,False,"{'total_trades': 70, 'min_trades': 100, 'trades_per_year': 23.4, 'min_tpy': 30, 'failures': ['trades=70 < 100', 'trades_per_year=23.4 < 30']}"
+trial-9a3660c5a1a3,GoldSessionRangeVolatilityExpansion,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-9a3660c5a1a3,GoldSessionRangeVolatilityExpansion,smoke_run,False,"{'error': 'Strategy initialization failed: No strategy class with an \'on_bar\' method found (no class).\nTraceback (most recent call last):\n  File """
+trial-79e21e3fb3d9,GoldKeltnerRocMomentum,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-79e21e3fb3d9,GoldKeltnerRocMomentum,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-79e21e3fb3d9,GoldKeltnerRocMomentum,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-79e21e3fb3d9,GoldKeltnerRocMomentum,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-79e21e3fb3d9,GoldKeltnerRocMomentum,signal_validity,True,{'failures': []}
+trial-79e21e3fb3d9,GoldKeltnerRocMomentum,train_backtest,True,"{'trades': 465, 'net_pnl': -55254.6}"
+trial-79e21e3fb3d9,GoldKeltnerRocMomentum,minimum_sample,True,"{'total_trades': 465, 'min_trades': 100, 'trades_per_year': 155.1, 'min_tpy': 30, 'failures': []}"
+trial-79e21e3fb3d9,GoldKeltnerRocMomentum,basic_quality,False,"{'failures': ['PF=0.73 < 1.25', 'Sharpe=-1.57 < 0.8', 'DD=0.57 > 0.25', 'expectancy=-118.83 <= 0.0'], 'metrics': {'total_trades': 465, 'winners': 151,"
+trial-6681001dc56a,GoldStochTrendPullback,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-6681001dc56a,GoldStochTrendPullback,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-6681001dc56a,GoldStochTrendPullback,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-6681001dc56a,GoldStochTrendPullback,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-6681001dc56a,GoldStochTrendPullback,signal_validity,True,{'failures': []}
+trial-6681001dc56a,GoldStochTrendPullback,train_backtest,True,"{'trades': 9, 'net_pnl': -3230.52}"
+trial-6681001dc56a,GoldStochTrendPullback,minimum_sample,False,"{'total_trades': 9, 'min_trades': 80, 'trades_per_year': 3.0, 'min_tpy': 15, 'failures': ['trades=9 < 80', 'trades_per_year=3.0 < 15']}"
+trial-078e70112342,GoldPrevWeekLiquidityRun,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-078e70112342,GoldPrevWeekLiquidityRun,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-078e70112342,GoldPrevWeekLiquidityRun,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-078e70112342,GoldPrevWeekLiquidityRun,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-078e70112342,GoldPrevWeekLiquidityRun,signal_validity,True,{'failures': []}
+trial-078e70112342,GoldPrevWeekLiquidityRun,train_backtest,True,"{'trades': 143, 'net_pnl': -18581.93}"
+trial-078e70112342,GoldPrevWeekLiquidityRun,minimum_sample,True,"{'total_trades': 143, 'min_trades': 80, 'trades_per_year': 47.7, 'min_tpy': 15, 'failures': []}"
+trial-078e70112342,GoldPrevWeekLiquidityRun,basic_quality,False,"{'failures': ['PF=0.78 < 1.25', 'Sharpe=-0.69 < 0.8', 'expectancy=-129.94 <= 0.0'], 'metrics': {'total_trades': 143, 'winners': 51, 'losers': 92, 'win"
+trial-fedf3ad950fd,Strategy_trial-fe,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-fedf3ad950fd,Strategy_trial-fe,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-fedf3ad950fd,Strategy_trial-fe,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-fedf3ad950fd,Strategy_trial-fe,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-fedf3ad950fd,Strategy_trial-fe,signal_validity,True,{'failures': []}
+trial-fedf3ad950fd,Strategy_trial-fe,train_backtest,True,"{'trades': 1, 'net_pnl': -1001.07}"
+trial-fedf3ad950fd,Strategy_trial-fe,minimum_sample,False,"{'total_trades': 1, 'min_trades': 100, 'trades_per_year': 0.3, 'min_tpy': 30, 'failures': ['trades=1 < 100', 'trades_per_year=0.3 < 30']}"
+trial-5fb0406ab35f,GoldPrevDaySweepContinuation,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-5fb0406ab35f,GoldPrevDaySweepContinuation,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-5fb0406ab35f,GoldPrevDaySweepContinuation,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-5fb0406ab35f,GoldPrevDaySweepContinuation,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-5fb0406ab35f,GoldPrevDaySweepContinuation,signal_validity,True,{'failures': []}
+trial-5fb0406ab35f,GoldPrevDaySweepContinuation,train_backtest,True,"{'trades': 190, 'net_pnl': -11009.13}"
+trial-5fb0406ab35f,GoldPrevDaySweepContinuation,minimum_sample,True,"{'total_trades': 190, 'min_trades': 80, 'trades_per_year': 63.4, 'min_tpy': 15, 'failures': []}"
+trial-5fb0406ab35f,GoldPrevDaySweepContinuation,basic_quality,False,"{'failures': ['PF=0.90 < 1.25', 'Sharpe=-0.34 < 0.8', 'expectancy=-57.94 <= 0.0'], 'metrics': {'total_trades': 190, 'winners': 68, 'losers': 122, 'win"
+trial-55ac0544da24,GoldAdxKeltnerMomentumBreakout,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-55ac0544da24,GoldAdxKeltnerMomentumBreakout,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-55ac0544da24,GoldAdxKeltnerMomentumBreakout,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-55ac0544da24,GoldAdxKeltnerMomentumBreakout,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-55ac0544da24,GoldAdxKeltnerMomentumBreakout,signal_validity,True,{'failures': []}
+trial-55ac0544da24,GoldAdxKeltnerMomentumBreakout,train_backtest,True,"{'trades': 149, 'net_pnl': -5624.63}"
+trial-55ac0544da24,GoldAdxKeltnerMomentumBreakout,minimum_sample,True,"{'total_trades': 149, 'min_trades': 80, 'trades_per_year': 49.7, 'min_tpy': 15, 'failures': []}"
+trial-55ac0544da24,GoldAdxKeltnerMomentumBreakout,basic_quality,False,"{'failures': ['PF=0.94 < 1.25', 'Sharpe=-0.16 < 0.8', 'expectancy=-37.75 <= 0.0'], 'metrics': {'total_trades': 149, 'winners': 57, 'losers': 92, 'win_"
+trial-f7556b51a205,GoldZScoreSessionMomentum,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-f7556b51a205,GoldZScoreSessionMomentum,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-f7556b51a205,GoldZScoreSessionMomentum,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-f7556b51a205,GoldZScoreSessionMomentum,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-f7556b51a205,GoldZScoreSessionMomentum,signal_validity,True,{'failures': []}
+trial-f7556b51a205,GoldZScoreSessionMomentum,train_backtest,True,"{'trades': 171, 'net_pnl': 2458.36}"
+trial-f7556b51a205,GoldZScoreSessionMomentum,minimum_sample,True,"{'total_trades': 171, 'min_trades': 80, 'trades_per_year': 57.0, 'min_tpy': 15, 'failures': []}"
+trial-f7556b51a205,GoldZScoreSessionMomentum,basic_quality,False,"{'failures': ['PF=1.03 < 1.25', 'Sharpe=0.12 < 0.8'], 'metrics': {'total_trades': 171, 'winners': 69, 'losers': 102, 'win_rate': 0.4035, 'total_net_pn"
+trial-35ba1f9a6c9d,GoldHTFDonchianTrendPullback,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-35ba1f9a6c9d,GoldHTFDonchianTrendPullback,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-35ba1f9a6c9d,GoldHTFDonchianTrendPullback,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-35ba1f9a6c9d,GoldHTFDonchianTrendPullback,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-35ba1f9a6c9d,GoldHTFDonchianTrendPullback,signal_validity,True,{'failures': []}
+trial-35ba1f9a6c9d,GoldHTFDonchianTrendPullback,train_backtest,True,"{'trades': 50, 'net_pnl': -14161.97}"
+trial-35ba1f9a6c9d,GoldHTFDonchianTrendPullback,minimum_sample,False,"{'total_trades': 50, 'min_trades': 100, 'trades_per_year': 16.7, 'min_tpy': 30, 'failures': ['trades=50 < 100', 'trades_per_year=16.7 < 30']}"
+trial-d5926040c87d,GoldAdxDiDonchianBreakout,policy_scan,True,"{'passed': True, 'violations': [{'line': 46, 'col': 0, 'pattern': 'regex_match', 'detail': 'suspicious variable/comment name', 'severity': 'warning'}]"
+trial-d5926040c87d,GoldAdxDiDonchianBreakout,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-d5926040c87d,GoldAdxDiDonchianBreakout,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-d5926040c87d,GoldAdxDiDonchianBreakout,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-d5926040c87d,GoldAdxDiDonchianBreakout,signal_validity,True,{'failures': []}
+trial-d5926040c87d,GoldAdxDiDonchianBreakout,train_backtest,True,"{'trades': 34, 'net_pnl': -5730.76}"
+trial-d5926040c87d,GoldAdxDiDonchianBreakout,minimum_sample,False,"{'total_trades': 34, 'min_trades': 80, 'trades_per_year': 11.3, 'min_tpy': 15, 'failures': ['trades=34 < 80', 'trades_per_year=11.3 < 15']}"
+trial-004f04e2d6c4,GoldSqueezeSessionBreakout,policy_scan,True,"{'passed': True, 'violations': [{'line': 46, 'col': 0, 'pattern': 'regex_match', 'detail': 'iloc[i+N] may access future data', 'severity': 'warning'}]"
+trial-004f04e2d6c4,GoldSqueezeSessionBreakout,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-004f04e2d6c4,GoldSqueezeSessionBreakout,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-004f04e2d6c4,GoldSqueezeSessionBreakout,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-004f04e2d6c4,GoldSqueezeSessionBreakout,signal_validity,True,{'failures': []}
+trial-004f04e2d6c4,GoldSqueezeSessionBreakout,train_backtest,True,"{'trades': 38, 'net_pnl': -4203.9}"
+trial-004f04e2d6c4,GoldSqueezeSessionBreakout,minimum_sample,False,"{'total_trades': 38, 'min_trades': 100, 'trades_per_year': 12.7, 'min_tpy': 30, 'failures': ['trades=38 < 100', 'trades_per_year=12.7 < 30']}"
+trial-7914ad080198,GoldHtfTrendFvgMomentum,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-7914ad080198,GoldHtfTrendFvgMomentum,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-7914ad080198,GoldHtfTrendFvgMomentum,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-7914ad080198,GoldHtfTrendFvgMomentum,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-7914ad080198,GoldHtfTrendFvgMomentum,signal_validity,True,{'failures': []}
+trial-7914ad080198,GoldHtfTrendFvgMomentum,train_backtest,True,"{'trades': 319, 'net_pnl': -30523.91}"
+trial-7914ad080198,GoldHtfTrendFvgMomentum,minimum_sample,True,"{'total_trades': 319, 'min_trades': 100, 'trades_per_year': 106.4, 'min_tpy': 30, 'failures': []}"
+trial-7914ad080198,GoldHtfTrendFvgMomentum,basic_quality,False,"{'failures': ['PF=0.81 < 1.25', 'Sharpe=-0.81 < 0.8', 'DD=0.36 > 0.25', 'expectancy=-95.69 <= 0.0'], 'metrics': {'total_trades': 319, 'winners': 111, "
+trial-58a35d588c4f,GoldVolPercentileRsiTrend,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-58a35d588c4f,GoldVolPercentileRsiTrend,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-58a35d588c4f,GoldVolPercentileRsiTrend,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-58a35d588c4f,GoldVolPercentileRsiTrend,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-58a35d588c4f,GoldVolPercentileRsiTrend,signal_validity,True,{'failures': []}
+trial-58a35d588c4f,GoldVolPercentileRsiTrend,train_backtest,True,"{'trades': 5, 'net_pnl': 39.01}"
+trial-58a35d588c4f,GoldVolPercentileRsiTrend,minimum_sample,False,"{'total_trades': 5, 'min_trades': 100, 'trades_per_year': 1.7, 'min_tpy': 30, 'failures': ['trades=5 < 100', 'trades_per_year=1.7 < 30']}"
+trial-9eea09def7ce,GoldWmaRsiRegimeTrend,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-9eea09def7ce,GoldWmaRsiRegimeTrend,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-9eea09def7ce,GoldWmaRsiRegimeTrend,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-9eea09def7ce,GoldWmaRsiRegimeTrend,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-9eea09def7ce,GoldWmaRsiRegimeTrend,signal_validity,True,{'failures': []}
+trial-9eea09def7ce,GoldWmaRsiRegimeTrend,train_backtest,True,"{'trades': 0, 'net_pnl': 0.0}"
+trial-9eea09def7ce,GoldWmaRsiRegimeTrend,minimum_sample,False,"{'total_trades': 0, 'min_trades': 80, 'trades_per_year': 0.0, 'min_tpy': 15, 'failures': ['trades=0 < 80', 'trades_per_year=0.0 < 15']}"
+trial-399e305ac547,GoldDonchianSessionSweep,policy_scan,True,"{'passed': True, 'violations': [{'line': 63, 'col': 0, 'pattern': 'regex_match', 'detail': 'suspicious variable/comment name', 'severity': 'warning'}]"
+trial-399e305ac547,GoldDonchianSessionSweep,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-399e305ac547,GoldDonchianSessionSweep,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-399e305ac547,GoldDonchianSessionSweep,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-399e305ac547,GoldDonchianSessionSweep,signal_validity,True,{'failures': []}
+trial-399e305ac547,GoldDonchianSessionSweep,train_backtest,True,"{'trades': 57, 'net_pnl': -16776.22}"
+trial-399e305ac547,GoldDonchianSessionSweep,minimum_sample,False,"{'total_trades': 57, 'min_trades': 100, 'trades_per_year': 19.0, 'min_tpy': 30, 'failures': ['trades=57 < 100', 'trades_per_year=19.0 < 30']}"
+trial-f8bf4fff717f,GoldVwapRegimeTrend,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-f8bf4fff717f,GoldVwapRegimeTrend,smoke_run,False,"{'error': 'Strategy initialization failed: No strategy class with an \'on_bar\' method found (no class).\nTraceback (most recent call last):\n  File """
+trial-e09e8d5891e2,GoldMacdAdxTrendContinuation,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-e09e8d5891e2,GoldMacdAdxTrendContinuation,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-e09e8d5891e2,GoldMacdAdxTrendContinuation,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-e09e8d5891e2,GoldMacdAdxTrendContinuation,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-e09e8d5891e2,GoldMacdAdxTrendContinuation,signal_validity,True,{'failures': []}
+trial-e09e8d5891e2,GoldMacdAdxTrendContinuation,train_backtest,True,"{'trades': 56, 'net_pnl': 1051.84}"
+trial-e09e8d5891e2,GoldMacdAdxTrendContinuation,minimum_sample,False,"{'total_trades': 56, 'min_trades': 80, 'trades_per_year': 18.7, 'min_tpy': 15, 'failures': ['trades=56 < 80']}"
+trial-6b8ca5a4bc9a,GoldBollingerRsiSessionReversion,policy_scan,True,"{'passed': True, 'violations': [{'line': 40, 'col': 0, 'pattern': 'regex_match', 'detail': 'suspicious variable/comment name', 'severity': 'warning'}]"
+trial-6b8ca5a4bc9a,GoldBollingerRsiSessionReversion,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-6b8ca5a4bc9a,GoldBollingerRsiSessionReversion,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-6b8ca5a4bc9a,GoldBollingerRsiSessionReversion,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-6b8ca5a4bc9a,GoldBollingerRsiSessionReversion,signal_validity,True,{'failures': []}
+trial-6b8ca5a4bc9a,GoldBollingerRsiSessionReversion,train_backtest,True,"{'trades': 8, 'net_pnl': -3128.18}"
+trial-6b8ca5a4bc9a,GoldBollingerRsiSessionReversion,minimum_sample,False,"{'total_trades': 8, 'min_trades': 100, 'trades_per_year': 2.7, 'min_tpy': 30, 'failures': ['trades=8 < 100', 'trades_per_year=2.7 < 30']}"
+trial-11f1dd934f08,GoldSupertrendBosMomentum,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-11f1dd934f08,GoldSupertrendBosMomentum,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-11f1dd934f08,GoldSupertrendBosMomentum,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-11f1dd934f08,GoldSupertrendBosMomentum,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-11f1dd934f08,GoldSupertrendBosMomentum,signal_validity,True,{'failures': []}
+trial-11f1dd934f08,GoldSupertrendBosMomentum,train_backtest,True,"{'trades': 53, 'net_pnl': -4491.87}"
+trial-11f1dd934f08,GoldSupertrendBosMomentum,minimum_sample,False,"{'total_trades': 53, 'min_trades': 80, 'trades_per_year': 17.7, 'min_tpy': 15, 'failures': ['trades=53 < 80']}"
+trial-ae077a88f1de,GoldRocSessionTrend,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-ae077a88f1de,GoldRocSessionTrend,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-ae077a88f1de,GoldRocSessionTrend,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-ae077a88f1de,GoldRocSessionTrend,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-ae077a88f1de,GoldRocSessionTrend,signal_validity,True,{'failures': []}
+trial-ae077a88f1de,GoldRocSessionTrend,train_backtest,True,"{'trades': 68, 'net_pnl': -5660.84}"
+trial-ae077a88f1de,GoldRocSessionTrend,minimum_sample,False,"{'total_trades': 68, 'min_trades': 100, 'trades_per_year': 22.7, 'min_tpy': 30, 'failures': ['trades=68 < 100', 'trades_per_year=22.7 < 30']}"
+trial-d9955dc0f39c,GoldAdxKeltnerRocContinuation,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-d9955dc0f39c,GoldAdxKeltnerRocContinuation,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-d9955dc0f39c,GoldAdxKeltnerRocContinuation,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-d9955dc0f39c,GoldAdxKeltnerRocContinuation,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-d9955dc0f39c,GoldAdxKeltnerRocContinuation,signal_validity,True,{'failures': []}
+trial-d9955dc0f39c,GoldAdxKeltnerRocContinuation,train_backtest,True,"{'trades': 101, 'net_pnl': 3609.09}"
+trial-d9955dc0f39c,GoldAdxKeltnerRocContinuation,minimum_sample,True,"{'total_trades': 101, 'min_trades': 80, 'trades_per_year': 33.7, 'min_tpy': 15, 'failures': []}"
+trial-d9955dc0f39c,GoldAdxKeltnerRocContinuation,basic_quality,False,"{'failures': ['PF=1.06 < 1.25', 'Sharpe=0.18 < 0.8'], 'metrics': {'total_trades': 101, 'winners': 43, 'losers': 58, 'win_rate': 0.4257, 'total_net_pnl"
+trial-23774f19d27b,GoldBbWidthMomentumBreakout,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-23774f19d27b,GoldBbWidthMomentumBreakout,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-23774f19d27b,GoldBbWidthMomentumBreakout,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-23774f19d27b,GoldBbWidthMomentumBreakout,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-23774f19d27b,GoldBbWidthMomentumBreakout,signal_validity,True,{'failures': []}
+trial-23774f19d27b,GoldBbWidthMomentumBreakout,train_backtest,True,"{'trades': 133, 'net_pnl': 6954.44}"
+trial-23774f19d27b,GoldBbWidthMomentumBreakout,minimum_sample,True,"{'total_trades': 133, 'min_trades': 80, 'trades_per_year': 44.4, 'min_tpy': 15, 'failures': []}"
+trial-23774f19d27b,GoldBbWidthMomentumBreakout,basic_quality,False,"{'failures': ['PF=1.09 < 1.25', 'Sharpe=0.26 < 0.8'], 'metrics': {'total_trades': 133, 'winners': 48, 'losers': 85, 'win_rate': 0.3609, 'total_net_pnl"
+trial-d6a209c91741,GoldKeltnerRsiMomentumFlow,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-d6a209c91741,GoldKeltnerRsiMomentumFlow,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-d6a209c91741,GoldKeltnerRsiMomentumFlow,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-d6a209c91741,GoldKeltnerRsiMomentumFlow,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-d6a209c91741,GoldKeltnerRsiMomentumFlow,signal_validity,True,{'failures': []}
+trial-d6a209c91741,GoldKeltnerRsiMomentumFlow,train_backtest,True,"{'trades': 409, 'net_pnl': -51775.06}"
+trial-d6a209c91741,GoldKeltnerRsiMomentumFlow,minimum_sample,True,"{'total_trades': 409, 'min_trades': 100, 'trades_per_year': 136.4, 'min_tpy': 30, 'failures': []}"
+trial-d6a209c91741,GoldKeltnerRsiMomentumFlow,basic_quality,False,"{'failures': ['PF=0.72 < 1.25', 'Sharpe=-1.53 < 0.8', 'DD=0.54 > 0.25', 'expectancy=-126.59 <= 0.0'], 'metrics': {'total_trades': 409, 'winners': 132,"
+trial-ac2b26ccd9dd,GoldChochPremiumDiscountTrend,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-ac2b26ccd9dd,GoldChochPremiumDiscountTrend,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-ac2b26ccd9dd,GoldChochPremiumDiscountTrend,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-ac2b26ccd9dd,GoldChochPremiumDiscountTrend,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-ac2b26ccd9dd,GoldChochPremiumDiscountTrend,signal_validity,True,{'failures': []}
+trial-ac2b26ccd9dd,GoldChochPremiumDiscountTrend,train_backtest,True,"{'trades': 10, 'net_pnl': -9465.33}"
+trial-ac2b26ccd9dd,GoldChochPremiumDiscountTrend,minimum_sample,False,"{'total_trades': 10, 'min_trades': 80, 'trades_per_year': 3.3, 'min_tpy': 15, 'failures': ['trades=10 < 80', 'trades_per_year=3.3 < 15']}"
+trial-ac40eb2e59ed,GoldHtfEmaStochSessionMomentum,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-ac40eb2e59ed,GoldHtfEmaStochSessionMomentum,smoke_run,False,"{'error': 'Strategy initialization failed: No strategy class with an \'on_bar\' method found (no class).\nTraceback (most recent call last):\n  File """
+trial-34ddea38d9dc,GoldLiqSweepEmaTrend,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-34ddea38d9dc,GoldLiqSweepEmaTrend,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-34ddea38d9dc,GoldLiqSweepEmaTrend,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-34ddea38d9dc,GoldLiqSweepEmaTrend,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-34ddea38d9dc,GoldLiqSweepEmaTrend,signal_validity,True,{'failures': []}
+trial-34ddea38d9dc,GoldLiqSweepEmaTrend,train_backtest,True,"{'trades': 57, 'net_pnl': -11675.85}"
+trial-34ddea38d9dc,GoldLiqSweepEmaTrend,minimum_sample,False,"{'total_trades': 57, 'min_trades': 80, 'trades_per_year': 19.0, 'min_tpy': 15, 'failures': ['trades=57 < 80']}"
+trial-3731c053240e,GoldStochEmaSessionPullback,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-3731c053240e,GoldStochEmaSessionPullback,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-3731c053240e,GoldStochEmaSessionPullback,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-3731c053240e,GoldStochEmaSessionPullback,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-3731c053240e,GoldStochEmaSessionPullback,signal_validity,True,{'failures': []}
+trial-3731c053240e,GoldStochEmaSessionPullback,train_backtest,True,"{'trades': 95, 'net_pnl': -21052.0}"
+trial-3731c053240e,GoldStochEmaSessionPullback,minimum_sample,False,"{'total_trades': 95, 'min_trades': 100, 'trades_per_year': 31.7, 'min_tpy': 30, 'failures': ['trades=95 < 100']}"
+trial-c810668aa90a,GoldOrBosSessionTrend,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-c810668aa90a,GoldOrBosSessionTrend,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-c810668aa90a,GoldOrBosSessionTrend,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-c810668aa90a,GoldOrBosSessionTrend,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-c810668aa90a,GoldOrBosSessionTrend,signal_validity,True,{'failures': []}
+trial-c810668aa90a,GoldOrBosSessionTrend,train_backtest,True,"{'trades': 67, 'net_pnl': -17237.67}"
+trial-c810668aa90a,GoldOrBosSessionTrend,minimum_sample,False,"{'total_trades': 67, 'min_trades': 100, 'trades_per_year': 22.3, 'min_tpy': 30, 'failures': ['trades=67 < 100', 'trades_per_year=22.3 < 30']}"
+trial-caf9274c9e0d,GoldZscoreSwingSweep,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-caf9274c9e0d,GoldZscoreSwingSweep,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-caf9274c9e0d,GoldZscoreSwingSweep,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-caf9274c9e0d,GoldZscoreSwingSweep,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-caf9274c9e0d,GoldZscoreSwingSweep,signal_validity,True,{'failures': []}
+trial-caf9274c9e0d,GoldZscoreSwingSweep,train_backtest,True,"{'trades': 0, 'net_pnl': 0.0}"
+trial-caf9274c9e0d,GoldZscoreSwingSweep,minimum_sample,False,"{'total_trades': 0, 'min_trades': 80, 'trades_per_year': 0.0, 'min_tpy': 15, 'failures': ['trades=0 < 80', 'trades_per_year=0.0 < 15']}"
+trial-bd60b45b9ca2,GoldPrevDayLiqSweepSessionTrend,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-bd60b45b9ca2,GoldPrevDayLiqSweepSessionTrend,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-bd60b45b9ca2,GoldPrevDayLiqSweepSessionTrend,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-bd60b45b9ca2,GoldPrevDayLiqSweepSessionTrend,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-bd60b45b9ca2,GoldPrevDayLiqSweepSessionTrend,signal_validity,True,{'failures': []}
+trial-bd60b45b9ca2,GoldPrevDayLiqSweepSessionTrend,train_backtest,True,"{'trades': 0, 'net_pnl': 0.0}"
+trial-bd60b45b9ca2,GoldPrevDayLiqSweepSessionTrend,minimum_sample,False,"{'total_trades': 0, 'min_trades': 100, 'trades_per_year': 0.0, 'min_tpy': 30, 'failures': ['trades=0 < 100', 'trades_per_year=0.0 < 30']}"
+trial-6df9cd4b6897,GoldSessionVwapRocMomentum,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-6df9cd4b6897,GoldSessionVwapRocMomentum,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-6df9cd4b6897,GoldSessionVwapRocMomentum,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-6df9cd4b6897,GoldSessionVwapRocMomentum,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-6df9cd4b6897,GoldSessionVwapRocMomentum,signal_validity,True,{'failures': []}
+trial-6df9cd4b6897,GoldSessionVwapRocMomentum,train_backtest,True,"{'trades': 4, 'net_pnl': -1396.85}"
+trial-6df9cd4b6897,GoldSessionVwapRocMomentum,minimum_sample,False,"{'total_trades': 4, 'min_trades': 100, 'trades_per_year': 1.3, 'min_tpy': 30, 'failures': ['trades=4 < 100', 'trades_per_year=1.3 < 30']}"
+trial-19449b693198,GoldSqueezeAdxMomentum,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-19449b693198,GoldSqueezeAdxMomentum,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-19449b693198,GoldSqueezeAdxMomentum,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-19449b693198,GoldSqueezeAdxMomentum,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-19449b693198,GoldSqueezeAdxMomentum,signal_validity,True,{'failures': []}
+trial-19449b693198,GoldSqueezeAdxMomentum,train_backtest,True,"{'trades': 9, 'net_pnl': -346.89}"
+trial-19449b693198,GoldSqueezeAdxMomentum,minimum_sample,False,"{'total_trades': 9, 'min_trades': 100, 'trades_per_year': 3.0, 'min_tpy': 30, 'failures': ['trades=9 < 100', 'trades_per_year=3.0 < 30']}"
+trial-4f041ece917b,GoldHtfDonchianAdxTrend,policy_scan,True,"{'passed': True, 'violations': [{'line': 35, 'col': 0, 'pattern': 'regex_match', 'detail': 'suspicious variable/comment name', 'severity': 'warning'}]"
+trial-4f041ece917b,GoldHtfDonchianAdxTrend,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-4f041ece917b,GoldHtfDonchianAdxTrend,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-4f041ece917b,GoldHtfDonchianAdxTrend,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-4f041ece917b,GoldHtfDonchianAdxTrend,signal_validity,True,{'failures': []}
+trial-4f041ece917b,GoldHtfDonchianAdxTrend,train_backtest,True,"{'trades': 0, 'net_pnl': 0.0}"
+trial-4f041ece917b,GoldHtfDonchianAdxTrend,minimum_sample,False,"{'total_trades': 0, 'min_trades': 100, 'trades_per_year': 0.0, 'min_tpy': 30, 'failures': ['trades=0 < 100', 'trades_per_year=0.0 < 30']}"
+trial-da693a8c699c,GoldKeltnerRocSessionFlow,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-da693a8c699c,GoldKeltnerRocSessionFlow,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-da693a8c699c,GoldKeltnerRocSessionFlow,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-da693a8c699c,GoldKeltnerRocSessionFlow,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-da693a8c699c,GoldKeltnerRocSessionFlow,signal_validity,True,{'failures': []}
+trial-da693a8c699c,GoldKeltnerRocSessionFlow,train_backtest,True,"{'trades': 135, 'net_pnl': -924.81}"
+trial-da693a8c699c,GoldKeltnerRocSessionFlow,minimum_sample,True,"{'total_trades': 135, 'min_trades': 80, 'trades_per_year': 45.0, 'min_tpy': 15, 'failures': []}"
+trial-da693a8c699c,GoldKeltnerRocSessionFlow,basic_quality,False,"{'failures': ['PF=0.99 < 1.25', 'Sharpe=0.00 < 0.8', 'expectancy=-6.85 <= 0.0'], 'metrics': {'total_trades': 135, 'winners': 53, 'losers': 82, 'win_ra"
+trial-3a95977a325f,GoldVolRegimeWmaOrderBlock,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-3a95977a325f,GoldVolRegimeWmaOrderBlock,smoke_run,False,"{'error': 'Strategy initialization failed: No strategy class with an \'on_bar\' method found (no class).\nTraceback (most recent call last):\n  File """
+trial-7b960a9dbbcd,GoldDonchianAdxVolBreakout,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-7b960a9dbbcd,GoldDonchianAdxVolBreakout,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-7b960a9dbbcd,GoldDonchianAdxVolBreakout,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-7b960a9dbbcd,GoldDonchianAdxVolBreakout,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-7b960a9dbbcd,GoldDonchianAdxVolBreakout,signal_validity,True,{'failures': []}
+trial-7b960a9dbbcd,GoldDonchianAdxVolBreakout,train_backtest,True,"{'trades': 39, 'net_pnl': -5662.22}"
+trial-7b960a9dbbcd,GoldDonchianAdxVolBreakout,minimum_sample,False,"{'total_trades': 39, 'min_trades': 80, 'trades_per_year': 13.0, 'min_tpy': 15, 'failures': ['trades=39 < 80', 'trades_per_year=13.0 < 15']}"
+trial-6d339bc5d398,GoldRsiTrendPullbackBreakout,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-6d339bc5d398,GoldRsiTrendPullbackBreakout,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-6d339bc5d398,GoldRsiTrendPullbackBreakout,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-6d339bc5d398,GoldRsiTrendPullbackBreakout,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-6d339bc5d398,GoldRsiTrendPullbackBreakout,signal_validity,True,{'failures': []}
+trial-6d339bc5d398,GoldRsiTrendPullbackBreakout,train_backtest,True,"{'trades': 19, 'net_pnl': -1574.01}"
+trial-6d339bc5d398,GoldRsiTrendPullbackBreakout,minimum_sample,False,"{'total_trades': 19, 'min_trades': 80, 'trades_per_year': 6.3, 'min_tpy': 15, 'failures': ['trades=19 < 80', 'trades_per_year=6.3 < 15']}"
+trial-ef66f60be5f6,GoldMacdHtfTrendSessionFlow,policy_scan,True,"{'passed': True, 'violations': [{'line': 28, 'col': 0, 'pattern': 'regex_match', 'detail': 'suspicious variable/comment name', 'severity': 'warning'}]"
+trial-ef66f60be5f6,GoldMacdHtfTrendSessionFlow,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-ef66f60be5f6,GoldMacdHtfTrendSessionFlow,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-ef66f60be5f6,GoldMacdHtfTrendSessionFlow,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-ef66f60be5f6,GoldMacdHtfTrendSessionFlow,signal_validity,True,{'failures': []}
+trial-ef66f60be5f6,GoldMacdHtfTrendSessionFlow,train_backtest,True,"{'trades': 104, 'net_pnl': -7278.03}"
+trial-ef66f60be5f6,GoldMacdHtfTrendSessionFlow,minimum_sample,True,"{'total_trades': 104, 'min_trades': 100, 'trades_per_year': 34.7, 'min_tpy': 30, 'failures': []}"
+trial-ef66f60be5f6,GoldMacdHtfTrendSessionFlow,basic_quality,False,"{'failures': ['PF=0.88 < 1.25', 'Sharpe=-0.27 < 0.8', 'expectancy=-69.98 <= 0.0'], 'metrics': {'total_trades': 104, 'winners': 38, 'losers': 66, 'win_"
+trial-2d4b5ac32de9,GoldBollingerAdxTrendPullback,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-2d4b5ac32de9,GoldBollingerAdxTrendPullback,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-2d4b5ac32de9,GoldBollingerAdxTrendPullback,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-2d4b5ac32de9,GoldBollingerAdxTrendPullback,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-2d4b5ac32de9,GoldBollingerAdxTrendPullback,signal_validity,True,{'failures': []}
+trial-2d4b5ac32de9,GoldBollingerAdxTrendPullback,train_backtest,True,"{'trades': 6, 'net_pnl': 1625.89}"
+trial-2d4b5ac32de9,GoldBollingerAdxTrendPullback,minimum_sample,False,"{'total_trades': 6, 'min_trades': 80, 'trades_per_year': 2.0, 'min_tpy': 15, 'failures': ['trades=6 < 80', 'trades_per_year=2.0 < 15']}"
+trial-df5908c08d7d,GoldSupertrendFvgContinuation,policy_scan,True,"{'passed': True, 'violations': [], 'banned_imports': [], 'summary': 'Clean'}"
+trial-df5908c08d7d,GoldSupertrendFvgContinuation,smoke_run,True,{'detail': 'Sandbox instantiation succeeded.'}
+trial-df5908c08d7d,GoldSupertrendFvgContinuation,determinism,True,"{'passed': True, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Bit-identical signal tapes produc"
+trial-df5908c08d7d,GoldSupertrendFvgContinuation,truncation,True,"{'passed': True, 'num_cuts': 20, 'first_diverging_bar': None, 'first_diverging_timestamp': None, 'diverging_field': None, 'detail': 'Verified signal i"
+trial-df5908c08d7d,GoldSupertrendFvgContinuation,signal_validity,True,{'failures': []}
+trial-df5908c08d7d,GoldSupertrendFvgContinuation,train_backtest,True,"{'trades': 300, 'net_pnl': -14417.19}"
+trial-df5908c08d7d,GoldSupertrendFvgContinuation,minimum_sample,True,"{'total_trades': 300, 'min_trades': 80, 'trades_per_year': 100.1, 'min_tpy': 15, 'failures': []}"
+trial-df5908c08d7d,GoldSupertrendFvgContinuation,basic_quality,False,"{'failures': ['PF=0.91 < 1.25', 'Sharpe=-0.33 < 0.8', 'DD=0.26 > 0.25', 'expectancy=-48.06 <= 0.0'], 'metrics': {'total_trades': 300, 'winners': 111, "

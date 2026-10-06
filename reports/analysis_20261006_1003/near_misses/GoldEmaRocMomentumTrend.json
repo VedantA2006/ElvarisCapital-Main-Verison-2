@@ -1,0 +1,292 @@
+{
+  "_id": "6ac3cdca1e98da606df988f0",
+  "trial_id": "trial-a7764b7a6a87",
+  "strategy_name": "GoldEMARocMomentumTrend",
+  "timeframe": "1h",
+  "idea": {
+    "spec": {
+      "name": "GoldEMARocMomentumTrend",
+      "timeframe": "1h",
+      "hypothesis": "XAUUSD exhibits persistent intraday momentum during London/NY overlap due to institutional order flow clustering around macroeconomic releases and ETF rebalancing. Retail traders often fade early moves or enter late on exhaustion; this strategy captures the initial acceleration phase by combining EMA trend alignment with Rate-of-Change (ROC) expansion, entering only when volatility confirms directional commitment. The losing side consists of mean-reversion scalpers and breakout chasers who misjudge the sustainability of the move.",
+      "concept_family": "trend",
+      "indicators_used": [
+        "ema",
+        "roc",
+        "atr",
+        "is_session"
+      ],
+      "entry_logic": "Long: Fast EMA > Slow EMA AND ROC(fast_ema, n) > roc_thresh AND current bar closes above fast EMA AND is_session('london_ny'). Short: Fast EMA < Slow EMA AND ROC(fast_ema, n) < -roc_thresh AND current bar closes below fast EMA AND is_session('london_ny'). Requires ATR > 0 for valid SL/TP.",
+      "exit_logic": "Stop loss set at max(5.0, atr * sl_mult) USD points from entry. Take profit set at max(1.5, atr * tp_mult) USD points. No trailing stop to preserve sample size and avoid overfitting.",
+      "filters": [
+        "London-NY session only",
+        "ATR > 0 sanity check",
+        "Minimum 60-bar warmup"
+      ],
+      "session_filter": "london_ny",
+      "direction": "both",
+      "parameters": {
+        "fast_ema": {
+          "default": 9,
+          "min": 5,
+          "max": 20
+        },
+        "slow_ema": {
+          "default": 21,
+          "min": 15,
+          "max": 50
+        },
+        "roc_period": {
+          "default": 10,
+          "min": 5,
+          "max": 20
+        },
+        "roc_thresh": {
+          "default": 0.8,
+          "min": 0.3,
+          "max": 2.0
+        },
+        "sl_mult": {
+          "default": 1.5,
+          "min": 1.0,
+          "max": 3.0
+        },
+        "tp_mult": {
+          "default": 2.5,
+          "min": 1.5,
+          "max": 4.0
+        }
+      },
+      "expected_trades_per_year": 65,
+      "expected_failure_conditions": "Extended low-volatility consolidation outside major sessions or during holiday-thinned liquidity periods where ROC fails to exceed threshold despite EMA alignment."
+    },
+    "code": "class Strategy:\n    PARAMS = {\n        \"fast_ema\": {\"default\": 9, \"min\": 5, \"max\": 20},\n        \"slow_ema\": {\"default\": 21, \"min\": 15, \"max\": 50},\n        \"roc_period\": {\"default\": 10, \"min\": 5, \"max\": 20},\n        \"roc_thresh\": {\"default\": 0.8, \"min\": 0.3, \"max\": 2.0},\n        \"sl_mult\": {\"default\": 1.5, \"min\": 1.0, \"max\": 3.0},\n        \"tp_mult\": {\"default\": 2.5, \"min\": 1.5, \"max\": 4.0}\n    }\n\n    def __init__(self, params):\n        self.params = params\n\n    def on_bar(self, bars):\n        if len(bars) < 60:\n            return None\n\n        # Compute indicators\n        fast_ema = ema(bars, self.params[\"fast_ema\"])\n        slow_ema = ema(bars, self.params[\"slow_ema\"])\n        roc_vals = roc(bars, self.params[\"roc_period\"])\n        atr_vals = atr(bars, 14)\n        in_session = is_session(bars, \"london_ny\")\n\n        # Get latest values\n        fast_val = fast_ema.iloc[-1]\n        slow_val = slow_ema.iloc[-1]\n        roc_val = roc_vals.iloc[-1]\n        atr_val = atr_vals.iloc[-1]\n        session_active = in_session.iloc[-1]\n\n        # Safety checks\n        if np.isnan(fast_val) or np.isnan(slow_val) or np.isnan(roc_val) or np.isnan(atr_val):\n            return None\n        if atr_val <= 0:\n            return None\n        if not session_active:\n            return None\n\n        close_price = bars[\"close\"].iloc[-1]\n        roc_thresh = self.params[\"roc_thresh\"]\n\n        # Entry logic\n        if fast_val > slow_val and roc_val > roc_thresh and close_price > fast_val:\n            sl_dist = max(5.0, float(atr_val * self.params[\"sl_mult\"]))\n            tp_dist = max(1.5, float(atr_val * self.params[\"tp_mult\"]))\n            return Signal.enter_long(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        elif fast_val < slow_val and roc_val < -roc_thresh and close_price < fast_val:\n            sl_dist = max(5.0, float(atr_val * self.params[\"sl_mult\"]))\n            tp_dist = max(1.5, float(atr_val * self.params[\"tp_mult\"]))\n            return Signal.enter_short(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        return None"
+  },
+  "source_hash": "41eb5a3ed3293392",
+  "static_scan": {
+    "passed": true,
+    "violations": [],
+    "banned_imports": [],
+    "summary": "Clean"
+  },
+  "train_result": {
+    "trades": [],
+    "equity_curve_summary": {
+      "start": 100000.0,
+      "end": 100000.0,
+      "points": 17720
+    },
+    "metrics": {
+      "total_trades": 0,
+      "error": "no_trades",
+      "total_net_pnl": 0.0,
+      "total_gross_pnl": 0.0,
+      "total_costs": 0.0,
+      "cost_gross_ratio": 0.0,
+      "total_return_pct": 0.0,
+      "final_equity": 100000.0,
+      "cagr": 0.0,
+      "sharpe": 0.0,
+      "sortino": 0.0,
+      "calmar": 0.0,
+      "omega": 0.0,
+      "max_drawdown": 0.0,
+      "average_drawdown": 0.0,
+      "max_drawdown_bars": 0,
+      "max_drawdown_days": 0.0,
+      "time_under_water": 0.0,
+      "ulcer_index": 0.0,
+      "recovery_factor": 0.0,
+      "exposure_pct": 0.0,
+      "buy_and_hold_return_pct": 50.06,
+      "beta": 0.0,
+      "monthly_table": {
+        "2021": {
+          "09": 0.0,
+          "10": 0.0,
+          "11": 0.0,
+          "12": 0.0
+        },
+        "2022": {
+          "01": 0.0,
+          "02": 0.0,
+          "03": 0.0,
+          "04": 0.0,
+          "05": 0.0,
+          "06": 0.0,
+          "07": 0.0,
+          "08": 0.0,
+          "09": 0.0,
+          "10": 0.0,
+          "11": 0.0,
+          "12": 0.0
+        },
+        "2023": {
+          "01": 0.0,
+          "02": 0.0,
+          "03": 0.0,
+          "04": 0.0,
+          "05": 0.0,
+          "06": 0.0,
+          "07": 0.0,
+          "08": 0.0,
+          "09": 0.0,
+          "10": 0.0,
+          "11": 0.0,
+          "12": 0.0
+        },
+        "2024": {
+          "01": 0.0,
+          "02": 0.0,
+          "03": 0.0,
+          "04": 0.0,
+          "05": 0.0,
+          "06": 0.0,
+          "07": 0.0,
+          "08": 0.0,
+          "09": 0.0
+        }
+      },
+      "yearly_table": {
+        "2021": {
+          "return_pct": 0.0,
+          "net_pnl": 0.0
+        },
+        "2022": {
+          "return_pct": 0.0,
+          "net_pnl": 0.0
+        },
+        "2023": {
+          "return_pct": 0.0,
+          "net_pnl": 0.0
+        },
+        "2024": {
+          "return_pct": 0.0,
+          "net_pnl": 0.0
+        }
+      },
+      "yearly_pnl": {
+        "2021": 0.0,
+        "2022": 0.0,
+        "2023": 0.0,
+        "2024": 0.0
+      },
+      "status": "completed"
+    },
+    "metadata": {
+      "timeframe": "1h",
+      "split": "train",
+      "file_hash": "2959682a19a528cdb8674ef61a9174aa4a9006d87ad4aa4d6d7010f2287e5ee1",
+      "slice_hash": "42a0ec00ad82e627aaaf92be13edc325178d07db31db7fb2d95181da445eca73",
+      "total_bars": 17720,
+      "live_bars": 17720,
+      "warmup_bars": 0,
+      "skipped_min_lot": 0,
+      "skipped_margin": 0,
+      "forced_closes": 0,
+      "strategy_errors": 0,
+      "first_strategy_error": null
+    },
+    "status": "completed",
+    "wall_seconds": 0.731,
+    "created_at": "2026-10-05 16:18:18.511000"
+  },
+  "train_gates": {
+    "all_passed": false,
+    "stopped_at": "minimum_sample",
+    "robustness_score": 0.0,
+    "status": "rejected",
+    "gates": [
+      {
+        "name": "policy_scan",
+        "passed": true,
+        "category": "safety",
+        "details": {
+          "passed": true,
+          "violations": [],
+          "banned_imports": [],
+          "summary": "Clean"
+        },
+        "public_summary": "passed: policy_scan"
+      },
+      {
+        "name": "smoke_run",
+        "passed": true,
+        "category": "clean_load",
+        "details": {
+          "detail": "Sandbox instantiation succeeded."
+        },
+        "public_summary": "passed: smoke_run"
+      },
+      {
+        "name": "determinism",
+        "passed": true,
+        "category": "determinism",
+        "details": {
+          "passed": true,
+          "first_diverging_bar": null,
+          "first_diverging_timestamp": null,
+          "diverging_field": null,
+          "detail": "Bit-identical signal tapes produced on two independent runs with seed=42."
+        },
+        "public_summary": "passed: determinism"
+      },
+      {
+        "name": "truncation",
+        "passed": true,
+        "category": "truncation",
+        "details": {
+          "passed": true,
+          "num_cuts": 20,
+          "first_diverging_bar": null,
+          "first_diverging_timestamp": null,
+          "diverging_field": null,
+          "detail": "Verified signal identity T_c[0..c] == T_full[0..c] across 20 cut points (tolerance 1e-9)."
+        },
+        "public_summary": "passed: truncation"
+      },
+      {
+        "name": "signal_validity",
+        "passed": true,
+        "category": "signal_valid",
+        "details": {
+          "failures": []
+        },
+        "public_summary": "passed: signal_validity"
+      },
+      {
+        "name": "train_backtest",
+        "passed": true,
+        "category": "train_simulation_success",
+        "details": {
+          "trades": 0,
+          "net_pnl": 0.0
+        },
+        "public_summary": "passed: train_backtest"
+      },
+      {
+        "name": "minimum_sample",
+        "passed": false,
+        "category": "sample_size",
+        "details": {
+          "total_trades": 0,
+          "min_trades": 200,
+          "trades_per_year": 0.0,
+          "min_tpy": 30,
+          "failures": [
+            "trades=0 < 200",
+            "trades_per_year=0.0 < 30"
+          ]
+        },
+        "public_summary": "failed: sample_size"
+      }
+    ],
+    "candidate_data": {}
+  },
+  "status": "rejected",
+  "rejected_at": "minimum_sample",
+  "started_at": "2026-10-05 16:15:52.846000",
+  "finished_at": "2026-10-05 16:18:18.511000",
+  "wall_seconds": 145.66,
+  "llm_calls": 0,
+  "llm_tokens": 0
+}

@@ -1,0 +1,196 @@
+.FF......................F.............F................................ [ 30%]
+........................................................................ [ 60%]
+................F......F................F............................... [ 90%]
+.......................                                                  [100%]
+================================== FAILURES ===================================
+____________ TestDB1RunsArePersisted.test_1000_runs_are_all_stored ____________
+
+self = <quantforge.tests.regression.test_f0_hygiene.TestDB1RunsArePersisted object at 0x000001BCF347E050>
+base_cfg = {'data': {'base_dir': '../data', 'symbol': 'XAUUSD', 'files': {'5m': 'XAUUSD_M5.csv', '15m': 'XAUUSD_M15.csv', '1h': '...dation': {'max_gap_multiplier': 3.0, 'spike_atr_threshold': 10.0, 'atr_period': 20, 'critical_errors_halt': True}, ...}
+fresh_db = Database(mongomock.MongoClient('localhost', 27017), 'quantforge_test')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001BC8F659850>
+
+    def test_1000_runs_are_all_stored(self, base_cfg, fresh_db, monkeypatch):
+        from storage import mongo
+        orch = _make_orchestrator(base_cfg, monkeypatch)
+        # Use the database that has the production indexes (ensure_indexes ran on it).
+        # Without this, the old DB-3 bug sends writes to an unindexed DB and hides DB-1.
+        orch._db = fresh_db
+        mongo.increment_trial_counter()          # the counter exists, as in production
+        for i in range(1000):
+            orch._finish(_blank_record(i), time.perf_counter())
+        stored = _stored_run_count(fresh_db)
+>       assert stored == 1000, f"only {stored} of 1000 run documents were stored"
+E       AssertionError: only 2000 of 1000 run documents were stored
+E       assert 2000 == 1000
+
+tests\regression\test_f0_hygiene.py:95: AssertionError
+___ TestDB1RunsArePersisted.test_trial_counter_counts_every_attempted_idea ____
+
+self = <quantforge.tests.regression.test_f0_hygiene.TestDB1RunsArePersisted object at 0x000001BCF347E790>
+base_cfg = {'data': {'base_dir': '../data', 'symbol': 'XAUUSD', 'files': {'5m': 'XAUUSD_M5.csv', '15m': 'XAUUSD_M15.csv', '1h': '...dation': {'max_gap_multiplier': 3.0, 'spike_atr_threshold': 10.0, 'atr_period': 20, 'critical_errors_halt': True}, ...}
+fresh_db = Database(mongomock.MongoClient('localhost', 27017), 'quantforge_test')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001BC9100AA90>
+
+    def test_trial_counter_counts_every_attempted_idea(self, base_cfg, fresh_db, monkeypatch):
+        from storage import mongo
+        orch = _make_orchestrator(base_cfg, monkeypatch)
+        for _ in range(3):
+            rec = orch.run_trial("1h")
+            assert rec.status in ("rejected", "error")
+        assert mongo.get_trial_count() == 3, \
+            f"trial counter is {mongo.get_trial_count()} after 3 attempted ideas"
+>       assert _stored_run_count(orch._db) == 3
+E       AssertionError: assert 6 == 3
+E        +  where 6 = _stored_run_count(Database(mongomock.MongoClient('localhost', 27017), 'quantforge_test'))
+E        +    where Database(mongomock.MongoClient('localhost', 27017), 'quantforge_test') = <llm.orchestrator.Orchestrator object at 0x000001BC9100A650>._db
+
+tests\regression\test_f0_hygiene.py:105: AssertionError
+____________________ test_no_silently_swallowed_exceptions ____________________
+
+    def test_no_silently_swallowed_exceptions():
+        offenders = []
+        for d in SOURCE_DIRS:
+            for f in (ROOT / d).rglob("*.py") if (ROOT / d).exists() else []:
+                tree = ast.parse(f.read_text(encoding="utf-8"))
+                for node in ast.walk(tree):
+                    if isinstance(node, ast.ExceptHandler) and _handler_is_silent(node):
+                        offenders.append(f"{f.relative_to(ROOT)}:{node.lineno}")
+        for f in (ROOT / "main.py",):
+            tree = ast.parse(f.read_text(encoding="utf-8"))
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ExceptHandler) and _handler_is_silent(node):
+                    offenders.append(f"{f.relative_to(ROOT)}:{node.lineno}")
+>       assert not offenders, "exceptions swallowed without logging or re-raising:\n  " + "\n  ".join(offenders)
+E       AssertionError: exceptions swallowed without logging or re-raising:
+E           core\indicators.py:1343
+E           core\indicators.py:148
+E           core\indicators.py:407
+E           core\indicators.py:631
+E           core\indicators.py:762
+E           llm\orchestrator.py:118
+E           scripts\export_analysis.py:873
+E           scripts\export_analysis.py:950
+E           scripts\export_analysis.py:1280
+E           scripts\export_analysis.py:183
+E           scripts\export_analysis.py:830
+E           sandbox\child.py:102
+E       assert not ['core\\indicators.py:1343', 'core\\indicators.py:148', 'core\\indicators.py:407', 'core\\indicators.py:631', 'core\\indicators.py:762', 'llm\\orchestrator.py:118', ...]
+
+tests\regression\test_f0_hygiene.py:307: AssertionError
+_____ TestDashboardSecurityAndAuth.test_unauthenticated_request_rejected ______
+
+self = <quantforge.tests.regression.test_f11_dashboard.TestDashboardSecurityAndAuth object at 0x000001BCF4F42150>
+client = <starlette.testclient.TestClient object at 0x000001BC9127D290>
+
+    def test_unauthenticated_request_rejected(self, client):
+        resp = client.get("/api/engine/state")
+>       assert resp.status_code == 401
+E       assert 200 == 401
+E        +  where 200 = <Response [200 OK]>.status_code
+
+tests\regression\test_f11_dashboard.py:54: AssertionError
+_ TestF7ImproveLoopMustPass.test_validation_and_robustness_numbers_never_reach_any_prompt _
+
+self = <quantforge.tests.regression.test_f7_prompts_improve.TestF7ImproveLoopMustPass object at 0x000001BCF5A64FD0>
+base_cfg = {'data': {'base_dir': '../data', 'symbol': 'XAUUSD', 'files': {'5m': 'XAUUSD_M5.csv', '15m': 'XAUUSD_M15.csv', '1h': '...dation': {'max_gap_multiplier': 3.0, 'spike_atr_threshold': 10.0, 'atr_period': 20, 'critical_errors_halt': True}, ...}
+fresh_db = Database(mongomock.MongoClient('localhost', 27017), 'quantforge_test')
+
+    def test_validation_and_robustness_numbers_never_reach_any_prompt(self, base_cfg, fresh_db):
+        from llm.improve_loop import EvalOutcome
+    
+        secret_numbers = ["7.7777", "3.3333", "4.4444", "0.1234"]
+        llm = ScriptedLLM(lambda p, t, n: _child_payload(f"Sec_v{n + 1}", _BASE_CODE + f"# v{n + 1}\n"))
+        trades = _planted_trades(False)
+        state = {"n": 0}
+    
+        def evaluate(spec, code):
+            state["n"] += 1
+            if state["n"] == 1:  # v1: robustness failure with private numbers
+                return EvalOutcome(status="robustness_failed", category="parameter_fragility",
+                                   train_metrics=_metrics_from(trades), train_trades=trades,
+                                   private_details={"neighbour_sharpe": 4.4444, "pbo": 0.1234})
+            return EvalOutcome(status="validation_failed", category="insufficient_sharpe",
+                               train_metrics=_metrics_from(trades), train_trades=trades,
+                               private_details={"val_sharpe": 7.7777, "val_pf": 3.3333})
+    
+        res = self._loop(base_cfg, fresh_db, llm).run("root_sec", _BASE_SPEC, _BASE_CODE, evaluate)
+    
+        text = llm.all_prompt_text
+        for num in secret_numbers:
+            assert num not in text, f"private number {num} leaked into a prompt"
+>       assert "validation" not in text.lower()
+E       assert 'validation' not in 'you are a s...ent_reason".'
+E         
+E         'validation' is contained here:
+E           itutional validation strictly enforces gate 7 (minimum sample): total trades >= 150 (at least 30-50 trades per year).
+E         ?           ++++++++++
+E               - ensure your entry criteria are not excessively restrictive. the strategy must actively participate during valid market conditions to generate sufficient trade observations for monte carlo and walk-forward statistical significance.
+E           
+E           strategy 'sessiontrend' was rejected: failed robustness: parameter_fragility....
+E         
+E         ...Full output truncated (22 lines hidden), use '-vv' to show
+
+tests\regression\test_f7_prompts_improve.py:444: AssertionError
+---------------------------- Captured stdout call -----------------------------
+2026-10-06 10:03:37 [INFO] Robustness failed (parameter_fragility), requesting ONE structural rethink
+------------------------------ Captured log call ------------------------------
+INFO     quantforge.llm.improve:improve_loop.py:278 Robustness failed (parameter_fragility), requesting ONE structural rethink
+_ TestF7PromptsMustPass.test_ideation_prompt_respects_budget_truncating_low_priority_first _
+
+self = <quantforge.tests.regression.test_f7_prompts_improve.TestF7PromptsMustPass object at 0x000001BCF5A66E10>
+
+    def test_ideation_prompt_respects_budget_truncating_low_priority_first(self):
+        from llm.prompts import render_ideation_prompt
+        long = "x" * 300
+        accepted = [{"name": f"A{i}", "concept_family": "trend", "logic_summary": long} for i in range(50)]
+        rejected = [{"name": f"R{i}", "concept_family": "trend", "category": "low_sharpe"} for i in range(50)]
+        text = render_ideation_prompt("4h", past_accepted=accepted, past_rejected=rejected,
+                                      max_chars=8000)[-1]["content"]
+        assert len(text) <= 8000
+        assert "OUTPUT FORMAT" in text and "supertrend" in text  # contract + helper list survive
+>       assert "A49" in text  # newest ideas kept, oldest dropped first
+        ^^^^^^^^^^^^^^^^^^^^
+E       assert 'A49' in 'Invent a NEW, institutional-grade trading strategy for XAUUSD on the 4h timeframe.\n\n\n\nCRITICAL VALIDATION CRITERI...:\\n    PARAMS = {...}\\n    def __init__(self, params):\\n        ...\\n    def on_bar(self, bars):\\n        ..."\n}'
+
+tests\regression\test_f7_prompts_improve.py:542: AssertionError
+_____________________ Test19GatesUnit.test_g3_determinism _____________________
+
+self = <quantforge.tests.regression.test_f8_gates.Test19GatesUnit object at 0x000001BCF5A87910>
+base_cfg = {'data': {'base_dir': '../data', 'symbol': 'XAUUSD', 'files': {'5m': 'XAUUSD_M5.csv', '15m': 'XAUUSD_M15.csv', '1h': '...dation': {'max_gap_multiplier': 3.0, 'spike_atr_threshold': 10.0, 'atr_period': 20, 'critical_errors_halt': True}, ...}
+
+    def test_g3_determinism(self, base_cfg):
+        from validation.gates import gate_determinism
+        df = _make_df(50)
+        good_src = "class Strategy:\n    def on_bar(self, b): return None"
+        bad_src = "import random\nclass Strategy:\n    def on_bar(self, b):\n        if random.random() > 0.5:\n            return Signal(direction=Direction.LONG, stop_loss=100.0, take_profit=200.0)\n        return None"
+        assert gate_determinism(good_src, df, base_cfg).passed
+        r_bad = gate_determinism(bad_src, df, base_cfg)
+        assert not r_bad.passed
+>       assert r_bad.category == "lookahead_leak"
+E       AssertionError: assert 'runtime_error' == 'lookahead_leak'
+E         
+E         - lookahead_leak
+E         + runtime_error
+
+tests\regression\test_f8_gates.py:421: AssertionError
+---------------------------- Captured stdout call -----------------------------
+2026-10-06 10:03:49 [ERROR] Signal validation failed at bar 0: Inverted target: LONG take_profit (200.00) must be strictly above current close (1801.10).
+------------------------------ Captured log call ------------------------------
+ERROR    quantforge.backtester:backtester.py:313 Signal validation failed at bar 0: Inverted target: LONG take_profit (200.00) must be strictly above current close (1801.10).
+============================== warnings summary ===============================
+..\..\..\AppData\Local\Programs\Python\Python311\Lib\site-packages\starlette\formparsers.py:12
+  C:\Users\vedan\AppData\Local\Programs\Python\Python311\Lib\site-packages\starlette\formparsers.py:12: PendingDeprecationWarning: Please use `import python_multipart` instead.
+    import multipart
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/regression/test_f0_hygiene.py::TestDB1RunsArePersisted::test_1000_runs_are_all_stored
+FAILED tests/regression/test_f0_hygiene.py::TestDB1RunsArePersisted::test_trial_counter_counts_every_attempted_idea
+FAILED tests/regression/test_f0_hygiene.py::test_no_silently_swallowed_exceptions
+FAILED tests/regression/test_f11_dashboard.py::TestDashboardSecurityAndAuth::test_unauthenticated_request_rejected
+FAILED tests/regression/test_f7_prompts_improve.py::TestF7ImproveLoopMustPass::test_validation_and_robustness_numbers_never_reach_any_prompt
+FAILED tests/regression/test_f7_prompts_improve.py::TestF7PromptsMustPass::test_ideation_prompt_respects_budget_truncating_low_priority_first
+FAILED tests/regression/test_f8_gates.py::Test19GatesUnit::test_g3_determinism
+7 failed, 232 passed, 1 warning in 87.43s (0:01:27)
+

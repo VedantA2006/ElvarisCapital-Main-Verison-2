@@ -115,8 +115,8 @@ class CodeFixResult(tuple):
             arg = code[f.f_lasti + 1]
             if op == dis.opmap.get("UNPACK_SEQUENCE") and arg == 2:
                 return iter([self[0], self[1]])
-        except Exception:
-            pass
+        except (AttributeError, ValueError, KeyError, IndexError) as exc:
+            _log.debug("CodeFixResult unpack inspect fallback: %s", exc)
         return super().__iter__()
 
     @property
@@ -649,11 +649,6 @@ class Orchestrator:
         doc = record.to_doc()
         col = self._db["runs"]
         col.insert_one(doc)
-        # Mirror to 'trials' collection for backward compatibility with dashboard counters
-        try:
-            self._db["trials"].insert_one(record.to_doc())
-        except Exception as exc:
-            _log.warning("could not mirror trial to trials collection: %s", exc)
         increment_trial_counter()
 
         if record.status in ("candidate", "candidate (unproven)", "survived"):

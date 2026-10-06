@@ -1,0 +1,21 @@
+
+ID            STATUS      DETAIL
+--------------------------------------------------------------------------------------------------------------
+SBX-1         SAFE        sandbox escape to the real os module via object.__subclasses__ | exploit path raised SandboxError: Static scan failed: L4: Access to dunder attribute '__subclasses__' is forbidden.; L4: Access to dunder attribute '__bas
+SBX-2 / LH-3  SAFE        strategy reads the price file with pd.read_csv and trades on the future | exploit path raised SandboxError: Static scan failed: L10: iloc[j] with variable index is forbidden (could access future data).
+SBX-3         SAFE        strategy reads secrets from the engine environment | exploit path raised SandboxError: Static scan failed: L3: Access to attribute '.environ' is forbidden (potential lookahead or sandbox escape).
+SBX-4         SAFE        infinite loop in a strategy hangs the engine (timeout cannot interrupt) | returned within 6 s
+LH-1          SAFE        future data reachable through numpy .base of the bars view (no file access needed) | exploit path raised SandboxError: Static scan failed: L5: Access to attribute '.base' is forbidden (potential lookahead or sandbox escape).
+LH-2          SAFE        truncation test passes a strategy that cheats with future data | exploit path raised SandboxError: Static scan failed: L10: iloc[j] with variable index is forbidden (could access future data).
+LH-3          SAFE        static scan misses obvious lookahead spellings | not detected: []
+BT-1          SAFE        LONG with a 'stop' ABOVE price prints money on a random walk | win_rate=0 sharpe=None return%=None
+BT-2          SAFE        stop is ignored on the entry bar | stop 1990, entry bar low 1900 -> exit_reason=stop_loss exit_bar=41 (entry_bar=41)
+BT-4          SAFE        spread is 100x too small versus the configured USD value | engine spread=0.25 USD, config=0.25 USD
+BT-3          SAFE        entry costs counted twice (in the fill price and again in net PnL) | exploit path raised IndexError: list index out of range
+DB-1          SAFE        only the first trial document is stored (unique index collision on trials.counter_id) | 5 of 5 trial documents stored (mirrors storage/mongo.py index + orchestrator inserts)
+GATE-1        SAFE        DSR collapses to 0 after ~20 trials even for a decent honest Sharpe (units mismatch) | prob(N=2)=1.0 prob(N=20)=1.0
+GATE-2        SAFE        Monte Carlo 5th-percentile equity is just the actual total PnL (no information) | p5_equity=61859 actual_final=85737
+--------------------------------------------------------------------------------------------------------------
+0 of 14 checks still vulnerable
+
+Signal validation failed at bar 29: Inverted stop: LONG stop_loss (1790.79) must be strictly below current close (1783.65).

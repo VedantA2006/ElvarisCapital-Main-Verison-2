@@ -99,8 +99,8 @@ def child_main(host: str, port: int, authkey: bytes):
                 for attr in dir(indicators_module):
                     if not attr.startswith("_"):
                         ns[attr] = getattr(indicators_module, attr)
-            except Exception:
-                pass
+            except (ImportError, AttributeError) as exc:
+                sys.stderr.write(f"Warning: could not inject core.indicators: {exc}\n")
 
             try:
                 code_obj = compile(code_src, "<strategy>", "exec")

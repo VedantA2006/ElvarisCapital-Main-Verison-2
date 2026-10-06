@@ -1,0 +1,110 @@
+{
+  "_id": "6ac402ca67f0fa3d35d7b560",
+  "trial_id": "trial-27cc862820b6",
+  "strategy_name": "GoldDonchianRegimeBreakout",
+  "timeframe": "1h",
+  "idea": {
+    "spec": {
+      "name": "GoldDonchianRegimeBreakout",
+      "timeframe": "1h",
+      "hypothesis": "XAUUSD exhibits persistent trending behavior driven by institutional macro flows and central bank activity. During established volatility regimes, price tends to respect Donchian channel boundaries as dynamic support/resistance zones where stop clusters accumulate. Breakouts from these channels during active London/NY sessions capture liquidity cascades from trapped counter-trend traders and breakout followers. The losing side consists of mean-reversion traders fading strong momentum and retail participants placing stops just beyond recent swing extremes.",
+      "concept_family": "trend",
+      "indicators_used": [
+        "donchian",
+        "atr",
+        "vol_regime",
+        "is_session",
+        "adx"
+      ],
+      "entry_logic": "Enter long when close breaks above Donchian upper band AND ADX > threshold AND vol_regime is 'high_vol' AND within London or NY session. Enter short when close breaks below Donchian lower band under identical regime and session conditions. Requires previous bar to be inside the channel to confirm fresh breakout.",
+      "exit_logic": "Stop loss set at max(5.0, ATR * sl_mult) USD points from entry. Take profit set at max(7.5, ATR * tp_mult) USD points from entry. Both distances are positive and validated against NaN/zero ATR.",
+      "filters": [
+        "vol_regime == 'high_vol'",
+        "ADX > adx_threshold",
+        "London or NY session active",
+        "Previous bar inside Donchian channel"
+      ],
+      "session_filter": "london_ny",
+      "direction": "both",
+      "parameters": {
+        "donchian_period": {
+          "default": 20,
+          "min": 10,
+          "max": 40
+        },
+        "atr_period": {
+          "default": 14,
+          "min": 7,
+          "max": 21
+        },
+        "adx_period": {
+          "default": 14,
+          "min": 7,
+          "max": 28
+        },
+        "adx_threshold": {
+          "default": 22.0,
+          "min": 15.0,
+          "max": 35.0
+        },
+        "sl_mult": {
+          "default": 1.8,
+          "min": 1.0,
+          "max": 3.0
+        },
+        "tp_mult": {
+          "default": 2.8,
+          "min": 1.5,
+          "max": 4.5
+        }
+      },
+      "expected_trades_per_year": 65,
+      "expected_failure_conditions": "Extended low-volatility consolidation periods where Donchian bands compress and generate false breakouts; Asian session dominance with insufficient liquidity follow-through"
+    },
+    "code": "class Strategy:\n    PARAMS = {\n        \"donchian_period\": {\"default\": 20, \"min\": 10, \"max\": 40},\n        \"atr_period\": {\"default\": 14, \"min\": 7, \"max\": 21},\n        \"adx_period\": {\"default\": 14, \"min\": 7, \"max\": 28},\n        \"adx_threshold\": {\"default\": 22.0, \"min\": 15.0, \"max\": 35.0},\n        \"sl_mult\": {\"default\": 1.8, \"min\": 1.0, \"max\": 3.0},\n        \"tp_mult\": {\"default\": 2.8, \"min\": 1.5, \"max\": 4.5}\n    }\n\n    def __init__(self, params):\n        self.params = params\n\n    def on_bar(self, bars):\n        if len(bars) < 60:\n            return None\n\n        from core.indicators import donchian, atr, adx, vol_regime, is_session\n\n        # Compute indicators\n        dc = donchian(bars, period=self.params[\"donchian_period\"])\n        atr_series = atr(bars, period=self.params[\"atr_period\"])\n        adx_res = adx(bars, period=self.params[\"adx_period\"])\n        vregime = vol_regime(bars[\"high\"], bars[\"low\"], bars[\"close\"], atr_period=self.params[\"atr_period\"], lookback=100)\n        london = is_session(bars, \"london\")\n        ny = is_session(bars, \"ny\")\n\n        # Extract current values safely\n        atr_val = float(atr_series.iloc[-1])\n        if np.isnan(atr_val) or atr_val <= 0:\n            return None\n\n        adx_val = float(adx_res.adx_line.iloc[-1])\n        if np.isnan(adx_val):\n            return None\n\n        # Regime and session filters\n        if str(vregime.iloc[-1]) != \"high_vol\":\n            return None\n        if adx_val < self.params[\"adx_threshold\"]:\n            return None\n        in_session = bool(london.iloc[-1] or ny.iloc[-1])\n        if not in_session:\n            return None\n\n        # Current and previous bar prices\n        close_curr = float(bars[\"close\"].iloc[-1])\n        close_prev = float(bars[\"close\"].iloc[-2])\n        upper_curr = float(dc.upper.iloc[-1])\n        lower_curr = float(dc.lower.iloc[-1])\n        upper_prev = float(dc.upper.iloc[-2])\n        lower_prev = float(dc.lower.iloc[-2])\n\n        # Validate band values\n        if any(np.isnan(v) for v in [upper_curr, lower_curr, upper_prev, lower_prev]):\n            return None\n\n        # Compute SL/TP distances\n        sl_dist = max(5.0, atr_val * self.params[\"sl_mult\"])\n        tp_dist = max(7.5, atr_val * self.params[\"tp_mult\"])\n\n        # Long breakout: current close > upper band AND previous close <= previous upper band\n        if close_curr > upper_curr and close_prev <= upper_prev:\n            return Signal.enter_long(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        # Short breakout: current close < lower band AND previous close >= previous lower band\n        if close_curr < lower_curr and close_prev >= lower_prev:\n            return Signal.enter_short(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        return None"
+  },
+  "source_hash": "45f054ad2d56a83d",
+  "static_scan": {
+    "passed": true,
+    "violations": [],
+    "banned_imports": [],
+    "summary": "Clean"
+  },
+  "train_gates": {
+    "all_passed": false,
+    "stopped_at": "smoke_run",
+    "robustness_score": 0.0,
+    "status": "rejected",
+    "gates": [
+      {
+        "name": "policy_scan",
+        "passed": true,
+        "category": "safety",
+        "details": {
+          "passed": true,
+          "violations": [],
+          "banned_imports": [],
+          "summary": "Clean"
+        },
+        "public_summary": "passed: policy_scan"
+      },
+      {
+        "name": "smoke_run",
+        "passed": false,
+        "category": "runtime_error",
+        "details": {
+          "error": "Strategy initialization failed: No strategy class with an 'on_bar' method found (no class).\nTraceback (most recent call last):\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\sandbox\\child.py\", line 117, in child_main\n    raise RuntimeError(\"No strategy class with an 'on_bar' method found (no class).\")\nRuntimeError: No strategy class with an 'on_bar' method found (no class).\n"
+        },
+        "public_summary": "failed: runtime_error"
+      }
+    ],
+    "candidate_data": {}
+  },
+  "status": "rejected",
+  "rejected_at": "smoke_run",
+  "started_at": "2026-10-05 19:55:54.485000",
+  "finished_at": "2026-10-05 20:04:26.812000",
+  "wall_seconds": 512.33,
+  "llm_calls": 3,
+  "llm_tokens": 0
+}

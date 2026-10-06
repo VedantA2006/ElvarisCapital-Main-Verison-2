@@ -1,0 +1,139 @@
+{
+  "_id": "6ac3cb9a1e98da606df988df",
+  "trial_id": "trial-b874acfe1665",
+  "strategy_name": "GoldHTFMicrostructureAlignment",
+  "timeframe": "1h",
+  "idea": {
+    "spec": {
+      "name": "GoldHTFMicrostructureAlignment",
+      "timeframe": "1h",
+      "hypothesis": "Institutional execution algorithms in XAUUSD often split large orders across multiple timeframes to minimize market impact. When the macro 4H trend aligns with a micro-structural Break of Structure (BOS) on the 1H chart, it indicates that institutional flow is actively defending the new price level. Retail traders who fade these initial structural breaks are trapped when momentum continues. By entering only during London and New York sessions when liquidity is deepest, we ensure our entries are backed by genuine volume rather than thin-market noise. The losing side consists of mean-reversion retail traders attempting to pick tops/bottoms against established higher-timeframe institutional flows.",
+      "concept_family": "trend",
+      "indicators_used": [
+        "htf",
+        "ema",
+        "bos",
+        "atr",
+        "is_session"
+      ],
+      "entry_logic": "Determine 4H trend using 4H EMA(20) slope over the last 3 periods. If 4H is bullish, wait for a 1H bullish Break of Structure (BOS). Enter long on the close of the 1H bar that confirms the BOS. Vice versa for shorts.",
+      "exit_logic": "Stop loss is placed at ATR(14) * sl_mult distance to allow for standard market noise. Take profit is set at a fixed Risk:Reward ratio defined by rr_ratio.",
+      "filters": [
+        "is_session(london)",
+        "is_session(ny)"
+      ],
+      "session_filter": "london_ny",
+      "direction": "both",
+      "parameters": {
+        "swing_n": {
+          "default": 5,
+          "min": 3,
+          "max": 10
+        },
+        "ema_fast": {
+          "default": 20,
+          "min": 10,
+          "max": 50
+        },
+        "atr_period": {
+          "default": 14,
+          "min": 7,
+          "max": 30
+        },
+        "sl_mult": {
+          "default": 1.5,
+          "min": 1.0,
+          "max": 3.0
+        },
+        "rr_ratio": {
+          "default": 2.0,
+          "min": 1.5,
+          "max": 4.0
+        }
+      },
+      "expected_trades_per_year": 65,
+      "expected_failure_conditions": "Protracted low-volatility summer chop or erratic news-driven whipsaws where 4H trend constantly flips without follow-through."
+    },
+    "code": "import numpy as np\nimport pandas as pd\nfrom core.indicators import htf, ema, bos, atr, is_session\n\nclass Strategy:\n    PARAMS = {\n        \"swing_n\": {\"default\": 5, \"min\": 3, \"max\": 10},\n        \"ema_fast\": {\"default\": 20, \"min\": 10, \"max\": 50},\n        \"atr_period\": {\"default\": 14, \"min\": 7, \"max\": 30},\n        \"sl_mult\": {\"default\": 1.5, \"min\": 1.0, \"max\": 3.0},\n        \"rr_ratio\": {\"default\": 2.0, \"min\": 1.5, \"max\": 4.0}\n    }\n\n    def __init__(self, params):\n        self.params = params\n        self.cooldown = 0\n        self.in_position = False\n        self.direction = None\n\n    def on_bar(self, bars: pd.DataFrame):\n        if len(bars) < 60:\n            return None\n\n        # Cooldown management\n        if self.cooldown > 0:\n            self.cooldown -= 1\n\n        # Calculate indicators\n        swing_n = int(self.params[\"swing_n\"])\n        ema_period = int(self.params[\"ema_fast\"])\n        atr_period = int(self.params[\"atr_period\"])\n\n        # HTF Trend: Resample to 4H and calculate EMA\n        ema_4h = htf(bars, \"4h\", lambda b: ema(b, ema_period))\n        \n        # 1H Market Structure\n        bull_bos, bear_bos = bos(bars, swing_n)\n        \n        # Volatility\n        atr_val = atr(bars, atr_period).iloc[-1]\n        \n        # Session Filter\n        is_london = is_session(bars, \"london\").iloc[-1]\n        is_ny = is_session(bars, \"ny\").iloc[-1]\n        valid_session = bool(is_london or is_ny)\n\n        # Safety checks\n        if np.isnan(atr_val) or atr_val <= 0:\n            return None\n        if np.isnan(ema_4h.iloc[-1]) or np.isnan(ema_4h.iloc[-2]) or np.isnan(ema_4h.iloc[-3]):\n            return None\n        if np.isnan(bull_bos.iloc[-1]) or np.isnan(bear_bos.iloc[-1]):\n            return None\n\n        # Determine 4H Trend based on EMA slope over last 3 closed 4H bars\n        htf_trend_up = (ema_4h.iloc[-1] > ema_4h.iloc[-2]) and (ema_4h.iloc[-2] > ema_4h.iloc[-3])\n        htf_trend_down = (ema_4h.iloc[-1] < ema_4h.iloc[-2]) and (ema_4h.iloc[-2] < ema_4h.iloc[-3])\n\n        curr_bull_bos = bool(bull_bos.iloc[-1])\n        curr_bear_bos = bool(bear_bos.iloc[-1])\n\n        # Exit logic via cooldown expiration (simulated TP hit or manual close not modeled here, relying on framework SL/TP)\n        # We just manage state\n        if self.in_position:\n            if self.cooldown == 0:\n                self.in_position = False\n                self.direction = None\n            return None\n\n        # Entry Logic\n        if not valid_session or self.cooldown > 0:\n            return None\n\n        sl_dist = max(5.0, float(atr_val * self.params[\"sl_mult\"]))\n        tp_dist = max(1.50, float(sl_dist * self.params[\"rr_ratio\"]))\n\n        if htf_trend_up and curr_bull_bos:\n            self.in_position = True\n            self.direction = \"long\"\n            self.cooldown = 6  # Minimum bars before next trade\n            return Signal.enter_long(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        if htf_trend_down and curr_bear_bos:\n            self.in_position = True\n            self.direction = \"short\"\n            self.cooldown = 6\n            return Signal.enter_short(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        return None"
+  },
+  "source_hash": "200b0b9dbf4dc606",
+  "static_scan": {
+    "passed": true,
+    "violations": [],
+    "banned_imports": [],
+    "summary": "Clean"
+  },
+  "train_gates": {
+    "all_passed": false,
+    "stopped_at": "signal_validity",
+    "robustness_score": 0.0,
+    "status": "rejected",
+    "gates": [
+      {
+        "name": "policy_scan",
+        "passed": true,
+        "category": "safety",
+        "details": {
+          "passed": true,
+          "violations": [],
+          "banned_imports": [],
+          "summary": "Clean"
+        },
+        "public_summary": "passed: policy_scan"
+      },
+      {
+        "name": "smoke_run",
+        "passed": true,
+        "category": "clean_load",
+        "details": {
+          "detail": "Sandbox instantiation succeeded."
+        },
+        "public_summary": "passed: smoke_run"
+      },
+      {
+        "name": "determinism",
+        "passed": true,
+        "category": "determinism",
+        "details": {
+          "passed": true,
+          "first_diverging_bar": null,
+          "first_diverging_timestamp": null,
+          "diverging_field": null,
+          "detail": "Bit-identical signal tapes produced on two independent runs with seed=42."
+        },
+        "public_summary": "passed: determinism"
+      },
+      {
+        "name": "truncation",
+        "passed": true,
+        "category": "truncation",
+        "details": {
+          "passed": true,
+          "num_cuts": 20,
+          "first_diverging_bar": null,
+          "first_diverging_timestamp": null,
+          "diverging_field": null,
+          "detail": "Verified signal identity T_c[0..c] == T_full[0..c] across 20 cut points (tolerance 1e-9)."
+        },
+        "public_summary": "passed: truncation"
+      },
+      {
+        "name": "signal_validity",
+        "passed": false,
+        "category": "signal_invalid",
+        "details": {
+          "error": "Tape error: Traceback (most recent call last):\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\core\\backtester.py\", line 284, in generate_signal_tape\n    sig = strat_obj.on_bar(bars.iloc[start_i : i + 1])\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\core\\sandbox.py\", line 61, in on_bar\n    return self._proc.on_bar(bars)\n           ^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\sandbox\\runner.py\", line 283, in on_bar\n    raise SandboxTimeoutError(\nsandbox.runner.SandboxTimeoutError: Strategy exceeded wall-clock timeout: 120.0s > 120.0s\n"
+        },
+        "public_summary": "failed: signal_invalid"
+      }
+    ],
+    "candidate_data": {}
+  },
+  "status": "rejected",
+  "rejected_at": "signal_validity",
+  "started_at": "2026-10-05 16:02:28.184000",
+  "finished_at": "2026-10-05 16:08:58.953000",
+  "wall_seconds": 390.77,
+  "llm_calls": 0,
+  "llm_tokens": 0
+}

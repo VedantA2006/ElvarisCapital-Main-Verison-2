@@ -1,0 +1,117 @@
+{
+  "_id": "6ac3fc9ac51faf07efb16e31",
+  "trial_id": "trial-0a83b6944bb3",
+  "strategy_name": "LondonNY_SessionMomentumBOS",
+  "timeframe": "1h",
+  "idea": {
+    "spec": {
+      "name": "LondonNY_SessionMomentumBOS",
+      "timeframe": "1h",
+      "hypothesis": "Gold's intraday liquidity is heavily concentrated during the London and New York sessions. Institutional order flow often establishes a directional bias early in the session, creating Break of Structure (BOS) events as stop-losses resting above/below recent swing points are triggered. Retail traders attempting to fade these initial momentum thrusts become trapped, providing fuel for continuation. By aligning ADX trend strength with confirmed market structure breaks (BOS) during active hours, we capture the institutional sweep while avoiding low-liquidity Asian chop.",
+      "concept_family": "trend",
+      "indicators_used": [
+        "bos",
+        "adx",
+        "atr",
+        "ema",
+        "is_session"
+      ],
+      "entry_logic": "Enter long if bullish BOS is confirmed, ADX > threshold, +DI > -DI, and price is above the 21 EMA. Enter short if bearish BOS is confirmed, ADX > threshold, -DI > +DI, and price is below the 21 EMA.",
+      "exit_logic": "Stop loss is placed at ATR * sl_mult distance. Take profit is placed at ATR * tp_mult distance to ensure a positive risk-reward ratio capturing the momentum extension.",
+      "filters": [
+        "Active only during London or NY sessions",
+        "ADX must be above minimum threshold",
+        "Price must be on the correct side of the 21 EMA"
+      ],
+      "session_filter": "london_ny",
+      "direction": "both",
+      "parameters": {
+        "adx_period": {
+          "default": 14,
+          "min": 7,
+          "max": 21
+        },
+        "adx_thresh": {
+          "default": 20.0,
+          "min": 15.0,
+          "max": 35.0
+        },
+        "ema_period": {
+          "default": 21,
+          "min": 10,
+          "max": 50
+        },
+        "atr_period": {
+          "default": 14,
+          "min": 7,
+          "max": 21
+        },
+        "sl_mult": {
+          "default": 1.5,
+          "min": 1.0,
+          "max": 3.0
+        },
+        "tp_mult": {
+          "default": 2.5,
+          "min": 1.5,
+          "max": 4.0
+        }
+      },
+      "expected_trades_per_year": 65,
+      "expected_failure_conditions": "Protracted low-volatility ranging environments where ADX remains depressed and structural breaks are immediately reversed (fakeouts)."
+    },
+    "code": "import numpy as np\nimport pandas as pd\n\nclass Strategy:\n    PARAMS = {\n        \"adx_period\": {\"default\": 14, \"min\": 7, \"max\": 21},\n        \"adx_thresh\": {\"default\": 20.0, \"min\": 15.0, \"max\": 35.0},\n        \"ema_period\": {\"default\": 21, \"min\": 10, \"max\": 50},\n        \"atr_period\": {\"default\": 14, \"min\": 7, \"max\": 21},\n        \"sl_mult\": {\"default\": 1.5, \"min\": 1.0, \"max\": 3.0},\n        \"tp_mult\": {\"default\": 2.5, \"min\": 1.5, \"max\": 4.0}\n    }\n\n    def __init__(self, params):\n        self.params = params\n        self.last_trade_bar = -999\n\n    def on_bar(self, bars):\n        if len(bars) < 60:\n            return None\n\n        # Cooldown to prevent overtrading and allow setups to develop\n        if len(bars) - self.last_trade_bar < 4:\n            return None\n\n        from core.indicators import bos, adx, atr, ema, is_session\n\n        # Session Filter: Only trade during high-liquidity windows\n        in_london = bool(is_session(bars, \"london\").iloc[-1])\n        in_ny = bool(is_session(bars, \"ny\").iloc[-1])\n        if not (in_london or in_ny):\n            return None\n\n        # Market Structure: Break of Structure\n        bull_bos, bear_bos = bos(bars, swing_n=2)\n        \n        # Trend Strength & Direction\n        adx_res = adx(bars, period=self.params[\"adx_period\"])\n        \n        # Volatility for Risk Management\n        atr_series = atr(bars, period=self.params[\"atr_period\"])\n        atr_val = float(atr_series.iloc[-1])\n        \n        # Baseline Trend Filter\n        ema_series = ema(bars, period=self.params[\"ema_period\"])\n\n        # Safety checks against NaN and invalid volatility\n        if np.isnan(atr_val) or atr_val <= 0:\n            return None\n\n        # Extract current values safely\n        curr_adx = float(adx_res.adx_line.iloc[-1])\n        curr_plus_di = float(adx_res.plus_di.iloc[-1])\n        curr_minus_di = float(adx_res.minus_di.iloc[-1])\n        curr_bull_bos = bool(bull_bos.iloc[-1])\n        curr_bear_bos = bool(bear_bos.iloc[-1])\n        curr_close = float(bars[\"close\"].iloc[-1])\n        curr_ema = float(ema_series.iloc[-1])\n\n        # If ADX is NaN, skip\n        if np.isnan(curr_adx):\n            return None\n\n        # Calculate distances ensuring they meet minimum requirements\n        sl_dist = max(5.0, float(atr_val * self.params[\"sl_mult\"]))\n        tp_dist = max(7.5, float(atr_val * self.params[\"tp_mult\"]))\n\n        # LONG ENTRY LOGIC\n        # Confirmed bullish break of structure + trending environment + directional bias + price above baseline\n        if curr_bull_bos and curr_adx > self.params[\"adx_thresh\"] and curr_plus_di > curr_minus_di and curr_close > curr_ema:\n            self.last_trade_bar = len(bars)\n            return Signal.enter_long(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        # SHORT ENTRY LOGIC\n        # Confirmed bearish break of structure + trending environment + directional bias + price below baseline\n        if curr_bear_bos and curr_adx > self.params[\"adx_thresh\"] and curr_minus_di > curr_plus_di and curr_close < curr_ema:\n            self.last_trade_bar = len(bars)\n            return Signal.enter_short(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        return None"
+  },
+  "source_hash": "d0b98f6183f4f336",
+  "static_scan": {
+    "passed": true,
+    "violations": [],
+    "banned_imports": [],
+    "summary": "Clean"
+  },
+  "train_gates": {
+    "all_passed": false,
+    "stopped_at": "smoke_run",
+    "robustness_score": 0.0,
+    "status": "rejected",
+    "gates": [
+      {
+        "name": "policy_scan",
+        "passed": true,
+        "category": "safety",
+        "details": {
+          "passed": true,
+          "violations": [
+            {
+              "line": 56,
+              "col": 0,
+              "pattern": "regex_match",
+              "detail": "reversed() on time series is suspicious",
+              "severity": "warning"
+            }
+          ],
+          "banned_imports": [],
+          "summary": "1 warning(s)"
+        },
+        "public_summary": "passed: policy_scan"
+      },
+      {
+        "name": "smoke_run",
+        "passed": false,
+        "category": "runtime_error",
+        "details": {
+          "error": "Strategy initialization failed: No strategy class with an 'on_bar' method found (no class).\nTraceback (most recent call last):\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\sandbox\\child.py\", line 117, in child_main\n    raise RuntimeError(\"No strategy class with an 'on_bar' method found (no class).\")\nRuntimeError: No strategy class with an 'on_bar' method found (no class).\n"
+        },
+        "public_summary": "failed: runtime_error"
+      }
+    ],
+    "candidate_data": {}
+  },
+  "status": "rejected",
+  "rejected_at": "smoke_run",
+  "started_at": "2026-10-05 19:36:10.076000",
+  "finished_at": "2026-10-05 19:38:02.310000",
+  "wall_seconds": 112.23,
+  "llm_calls": 6,
+  "llm_tokens": 0
+}

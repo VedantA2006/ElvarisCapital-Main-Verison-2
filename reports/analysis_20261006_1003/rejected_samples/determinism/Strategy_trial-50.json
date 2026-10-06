@@ -1,0 +1,90 @@
+{
+  "_id": "6ac3c429f16549edc814f52f",
+  "trial_id": "trial-5025aa77f17b",
+  "strategy_name": "Strategy_trial-50",
+  "timeframe": "1h",
+  "idea": {
+    "bb_n": {
+      "default": 20,
+      "min": 10,
+      "max": 40
+    },
+    "kc_mult": {
+      "default": 1.5,
+      "min": 1.0,
+      "max": 3.0
+    },
+    "ema_fast": {
+      "default": 20,
+      "min": 10,
+      "max": 50
+    },
+    "sl_mult": {
+      "default": 1.5,
+      "min": 1.0,
+      "max": 3.0
+    },
+    "tp_mult": {
+      "default": 3.0,
+      "min": 2.0,
+      "max": 6.0
+    }
+  },
+  "source_hash": "a5e544bcd8f49057",
+  "static_scan": {
+    "passed": true,
+    "violations": [],
+    "banned_imports": [],
+    "summary": "Clean"
+  },
+  "train_gates": {
+    "all_passed": false,
+    "stopped_at": "determinism",
+    "robustness_score": 0.0,
+    "status": "rejected",
+    "gates": [
+      {
+        "name": "policy_scan",
+        "passed": true,
+        "category": "safety",
+        "details": {
+          "passed": true,
+          "violations": [],
+          "banned_imports": [],
+          "summary": "Clean"
+        },
+        "public_summary": "passed: policy_scan"
+      },
+      {
+        "name": "smoke_run",
+        "passed": true,
+        "category": "clean_load",
+        "details": {
+          "detail": "Sandbox instantiation succeeded."
+        },
+        "public_summary": "passed: smoke_run"
+      },
+      {
+        "name": "determinism",
+        "passed": false,
+        "category": "lookahead_leak",
+        "details": {
+          "passed": false,
+          "first_diverging_bar": null,
+          "first_diverging_timestamp": null,
+          "diverging_field": null,
+          "detail": "Run 1 failed with error: Traceback (most recent call last):\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\core\\backtester.py\", line 284, in generate_signal_tape\n    sig = strat_obj.on_bar(bars.iloc[start_i : i + 1])\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\core\\sandbox.py\", line 61, in on_bar\n    return self._proc.on_bar(bars)\n           ^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\sandbox\\runner.py\", line 292, in on_bar\n    raise SandboxError(f\"Strategy error on bar {i}: {err_type}: {msg}\\n{tb}\")\nsandbox.runner.SandboxError: Strategy error on bar 59: ValueError: not enough values to unpack (expected 3, got 2)\nTraceback (most recent call last):\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\sandbox\\child.py\", line 201, in child_main\n    sig = strategy_instance.on_bar(bars_copy)\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<strategy>\", line 36, in on_bar\nValueError: not enough values to unpack (expected 3, got 2)\n\n"
+        },
+        "public_summary": "failed: lookahead_leak"
+      }
+    ],
+    "candidate_data": {}
+  },
+  "status": "rejected",
+  "rejected_at": "determinism",
+  "started_at": "2026-10-05 15:36:22.299000",
+  "finished_at": "2026-10-05 15:37:13.454000",
+  "wall_seconds": 51.16,
+  "llm_calls": 0,
+  "llm_tokens": 0
+}

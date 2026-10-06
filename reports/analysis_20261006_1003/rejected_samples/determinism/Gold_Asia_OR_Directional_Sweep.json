@@ -1,0 +1,117 @@
+{
+  "_id": "6ac3c69fd61454c414773567",
+  "trial_id": "trial-199398231e97",
+  "strategy_name": "Gold_Asia_OR_Directional_Sweep",
+  "timeframe": "1h",
+  "idea": {
+    "spec": {
+      "name": "Gold_Asia_OR_Directional_Sweep",
+      "timeframe": "1h",
+      "hypothesis": "The Asian session in XAUUSD typically establishes a tight consolidation range due to lower institutional participation. During the London and New York overlaps, macro-driven institutional flows frequently sweep one side of this range to harvest resting retail liquidity (stop losses) before reversing into the true directional move for the day. Retail traders placing breakout orders or stops just outside the Asian range are systematically trapped. By waiting for a confirmed sweep of the Asian High or Low during active Western sessions, combined with an ADX filter to ensure underlying momentum exists, we capture the high-probability reversal that institutions engineer after clearing liquidity.",
+      "concept_family": "trend",
+      "indicators_used": [
+        "opening_range",
+        "liquidity_sweep",
+        "adx",
+        "atr",
+        "is_session"
+      ],
+      "entry_logic": "Calculate the Asian opening range (first 8 bars of the UTC day). During London or NY sessions, if ADX > threshold: Enter Short if price sweeps above the Asian High (trapping breakout buyers). Enter Long if price sweeps below the Asian Low (trapping breakout sellers).",
+      "exit_logic": "Stop loss is placed beyond the recent swing using ATR multiplier (e.g., 1.5 * ATR). Take profit targets a 2.0 Risk:Reward ratio based on the ATR-derived stop distance. Minimum SL distance enforced at 5.0 USD points, minimum TP at 10.0 USD points.",
+      "filters": [
+        "London or NY session",
+        "ADX > 15 to avoid dead chop",
+        "Swing confirmation n=3"
+      ],
+      "session_filter": "london_ny",
+      "direction": "both",
+      "parameters": {
+        "asia_bars": {
+          "default": 8,
+          "min": 4,
+          "max": 12
+        },
+        "swing_n": {
+          "default": 3,
+          "min": 2,
+          "max": 6
+        },
+        "adx_thresh": {
+          "default": 15.0,
+          "min": 10.0,
+          "max": 30.0
+        },
+        "sl_mult": {
+          "default": 1.5,
+          "min": 1.0,
+          "max": 3.0
+        },
+        "rr_ratio": {
+          "default": 2.0,
+          "min": 1.5,
+          "max": 3.5
+        }
+      },
+      "expected_trades_per_year": 180,
+      "expected_failure_conditions": "Protracted low-volatility summer chop where ADX remains suppressed, or strong unidirectional news events that blow through both sides of the Asian range without reverting."
+    },
+    "code": "import numpy as np\nimport pandas as pd\nfrom core.indicators import opening_range, liquidity_sweep, adx, atr, is_session\n\nclass Strategy:\n    PARAMS = {\n        \"asia_bars\": {\"default\": 8, \"min\": 4, \"max\": 12},\n        \"swing_n\": {\"default\": 3, \"min\": 2, \"max\": 6},\n        \"adx_thresh\": {\"default\": 15.0, \"min\": 10.0, \"max\": 30.0},\n        \"sl_mult\": {\"default\": 1.5, \"min\": 1.0, \"max\": 3.0},\n        \"rr_ratio\": {\"default\": 2.0, \"min\": 1.5, \"max\": 3.5}\n    }\n\n    def __init__(self, params):\n        self.params = params\n\n    def on_bar(self, bars: pd.DataFrame):\n        # Warmup safety\n        if len(bars) < 60:\n            return None\n\n        # Only trade during London or NY sessions\n        in_london = is_session(bars, \"london\").iloc[-1]\n        in_ny = is_session(bars, \"ny\").iloc[-1]\n        if not (in_london or in_ny):\n            return None\n\n        # Get Asian Opening Range (UTC day start, first N hours)\n        asia_bars = int(self.params[\"asia_bars\"])\n        or_df = opening_range(bars, duration_bars=asia_bars)\n        if or_df is None or len(or_df) == 0:\n            return None\n\n        asia_high = float(or_df[\"high\"].iloc[-1])\n        asia_low = float(or_df[\"low\"].iloc[-1])\n\n        # Ensure valid range\n        if np.isnan(asia_high) or np.isnan(asia_low) or asia_high <= asia_low:\n            return None\n\n        # Trend/Momentum Filter: ADX\n        adx_val = float(adx(bars, 14).iloc[-1])\n        if np.isnan(adx_val) or adx_val < self.params[\"adx_thresh\"]:\n            return None\n\n        # Volatility for SL/TP\n        atr_val = float(atr(bars, 14).iloc[-1])\n        if np.isnan(atr_val) or atr_val <= 0:\n            return None\n\n        # Liquidity Sweeps of the Asian Range\n        swing_n = int(self.params[\"swing_n\"])\n        high_sweep, low_sweep = liquidity_sweep(bars, swing_n=swing_n)\n\n        swept_high = bool(high_sweep.iloc[-1])\n        swept_low = bool(low_sweep.iloc[-1])\n\n        # Calculate safe distances\n        sl_dist = max(5.0, float(atr_val * self.params[\"sl_mult\"]))\n        tp_dist = max(10.0, float(sl_dist * self.params[\"rr_ratio\"]))\n\n        close_price = float(bars[\"close\"].iloc[-1])\n\n        # SHORT LOGIC: Sweep above Asian High traps breakout buyers -> Reversal down\n        if swept_high and close_price > asia_high:\n            return Signal.enter_short(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        # LONG LOGIC: Sweep below Asian Low traps breakout sellers -> Reversal up\n        if swept_low and close_price < asia_low:\n            return Signal.enter_long(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        return None"
+  },
+  "source_hash": "5915f383e646a839",
+  "static_scan": {
+    "passed": true,
+    "violations": [],
+    "banned_imports": [],
+    "summary": "Clean"
+  },
+  "train_gates": {
+    "all_passed": false,
+    "stopped_at": "determinism",
+    "robustness_score": 0.0,
+    "status": "rejected",
+    "gates": [
+      {
+        "name": "policy_scan",
+        "passed": true,
+        "category": "safety",
+        "details": {
+          "passed": true,
+          "violations": [],
+          "banned_imports": [],
+          "summary": "Clean"
+        },
+        "public_summary": "passed: policy_scan"
+      },
+      {
+        "name": "smoke_run",
+        "passed": true,
+        "category": "clean_load",
+        "details": {
+          "detail": "Sandbox instantiation succeeded."
+        },
+        "public_summary": "passed: smoke_run"
+      },
+      {
+        "name": "determinism",
+        "passed": false,
+        "category": "lookahead_leak",
+        "details": {
+          "passed": false,
+          "first_diverging_bar": null,
+          "first_diverging_timestamp": null,
+          "diverging_field": null,
+          "detail": "Run 1 failed with error: Traceback (most recent call last):\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\core\\backtester.py\", line 284, in generate_signal_tape\n    sig = strat_obj.on_bar(bars.iloc[start_i : i + 1])\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\core\\sandbox.py\", line 61, in on_bar\n    return self._proc.on_bar(bars)\n           ^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\sandbox\\runner.py\", line 292, in on_bar\n    raise SandboxError(f\"Strategy error on bar {i}: {err_type}: {msg}\\n{tb}\")\nsandbox.runner.SandboxError: Strategy error on bar 76: TypeError: opening_range() got an unexpected keyword argument 'duration_bars'\nTraceback (most recent call last):\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\sandbox\\child.py\", line 201, in child_main\n    sig = strategy_instance.on_bar(bars_copy)\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<strategy>\", line 30, in on_bar\nTypeError: opening_range() got an unexpected keyword argument 'duration_bars'\n\n"
+        },
+        "public_summary": "failed: lookahead_leak"
+      }
+    ],
+    "candidate_data": {}
+  },
+  "status": "rejected",
+  "rejected_at": "determinism",
+  "started_at": "2026-10-05 15:47:12.436000",
+  "finished_at": "2026-10-05 15:47:43.921000",
+  "wall_seconds": 31.48,
+  "llm_calls": 0,
+  "llm_tokens": 0
+}

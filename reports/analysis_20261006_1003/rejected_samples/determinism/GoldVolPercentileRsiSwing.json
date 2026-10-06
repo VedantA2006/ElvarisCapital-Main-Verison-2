@@ -1,0 +1,117 @@
+{
+  "_id": "6ac3dbea1e98da606df9897f",
+  "trial_id": "trial-2730c7e3335e",
+  "strategy_name": "GoldVolPercentileRsiSwing",
+  "timeframe": "4h",
+  "idea": {
+    "spec": {
+      "name": "GoldVolPercentileRsiSwing",
+      "timeframe": "4h",
+      "hypothesis": "Institutional execution algorithms in XAUUSD frequently trigger volatility expansion phases following periods of compression. When realized volatility breaks above its historical percentile threshold, it signals the onset of a macro-driven or flow-driven trend rather than random noise. By combining this volatility regime filter with RSI directional momentum and confirmed swing structure (price holding above/below recent pivots), we capture the early stages of institutional trends. The losing side consists of mean-reversion retail traders who attempt to fade the initial volatility expansion, as well as late-arriving breakout traders who provide liquidity for institutions scaling into positions.",
+      "concept_family": "trend",
+      "indicators_used": [
+        "vol_percentile",
+        "rsi",
+        "swing_high",
+        "swing_low",
+        "atr"
+      ],
+      "entry_logic": "Long: vol_percentile > threshold AND RSI > 50 AND close > most recent confirmed swing_high. Short: vol_percentile > threshold AND RSI < 50 AND close < most recent confirmed swing_low.",
+      "exit_logic": "Stop loss is placed at ATR(14) * sl_mult distance. Take profit is placed at ATR(14) * tp_mult distance. Cooldown of 3 bars prevents rapid re-entry during choppy expansions.",
+      "filters": [
+        "vol_percentile > 60",
+        "RSI directional bias",
+        "Confirmed swing structure"
+      ],
+      "session_filter": "london_ny",
+      "direction": "both",
+      "parameters": {
+        "vol_thresh": {
+          "default": 60.0,
+          "min": 50.0,
+          "max": 85.0
+        },
+        "rsi_period": {
+          "default": 14,
+          "min": 7,
+          "max": 21
+        },
+        "swing_n": {
+          "default": 3,
+          "min": 2,
+          "max": 6
+        },
+        "sl_mult": {
+          "default": 1.5,
+          "min": 1.0,
+          "max": 3.0
+        },
+        "tp_mult": {
+          "default": 2.5,
+          "min": 1.5,
+          "max": 5.0
+        }
+      },
+      "expected_trades_per_year": 65,
+      "expected_failure_conditions": "Protracted low-volatility summer chop where volatility never exceeds the percentile threshold, or sudden news-driven spikes that reverse immediately before the 4h bar closes."
+    },
+    "code": "import numpy as np\nimport pandas as pd\nfrom core.indicators import vol_percentile, rsi, swing_high, swing_low, atr, is_session\n\nclass Strategy:\n    PARAMS = {\n        \"vol_thresh\": {\"default\": 60.0, \"min\": 50.0, \"max\": 85.0},\n        \"rsi_period\": {\"default\": 14, \"min\": 7, \"max\": 21},\n        \"swing_n\": {\"default\": 3, \"min\": 2, \"max\": 6},\n        \"sl_mult\": {\"default\": 1.5, \"min\": 1.0, \"max\": 3.0},\n        \"tp_mult\": {\"default\": 2.5, \"min\": 1.5, \"max\": 5.0}\n    }\n\n    def __init__(self, params):\n        self.params = params\n        self.last_trade_bar = -999\n\n    def on_bar(self, bars: pd.DataFrame):\n        if len(bars) < 60:\n            return None\n\n        current_idx = len(bars) - 1\n\n        # Enforce cooldown to prevent overtrading and ensure sample quality\n        if current_idx - self.last_trade_bar < 3:\n            return None\n\n        # Session filter: Only trade during London or NY sessions for optimal liquidity\n        sess = is_session(bars, \"london\") | is_session(bars, \"ny\")\n        if not sess.iloc[-1]:\n            return None\n\n        # Calculate indicators\n        vp = vol_percentile(bars, 14, 100)\n        rsi_vals = rsi(bars, int(self.params[\"rsi_period\"]))\n        atr_vals = atr(bars, 14)\n        sw_n = int(self.params[\"swing_n\"])\n        sh = swing_high(bars, sw_n)\n        sl_swing = swing_low(bars, sw_n)\n\n        # Extract latest values safely\n        vp_val = float(vp.iloc[-1])\n        rsi_val = float(rsi_vals.iloc[-1])\n        atr_val = float(atr_vals.iloc[-1])\n        close_val = float(bars[\"close\"].iloc[-1])\n\n        # Safety checks for NaNs\n        if np.isnan(vp_val) or np.isnan(rsi_val) or np.isnan(atr_val) or atr_val <= 0:\n            return None\n\n        # Volatility regime filter: Only trade when volatility is expanding relative to history\n        if vp_val < self.params[\"vol_thresh\"]:\n            return None\n\n        # Find last confirmed swing high\n        last_sh = np.nan\n        for i in range(len(sh) - 1, -1, -1):\n            if sh.iloc[i] and hasattr(sh.iloc[i], 'pivot_value') and sh.iloc[i].pivot_value is not None:\n                last_sh = float(sh.iloc[i].pivot_value)\n                break\n            elif sh.iloc[i] and not hasattr(sh.iloc[i], 'pivot_value'):\n                # Fallback if boolean series is returned directly\n                last_sh = float(bars[\"high\"].iloc[i])\n                break\n\n        # Find last confirmed swing low\n        last_sl = np.nan\n        for i in range(len(sl_swing) - 1, -1, -1):\n            if sl_swing.iloc[i] and hasattr(sl_swing.iloc[i], 'pivot_value') and sl_swing.iloc[i].pivot_value is not None:\n                last_sl = float(sl_swing.iloc[i].pivot_value)\n                break\n            elif sl_swing.iloc[i] and not hasattr(sl_swing.iloc[i], 'pivot_value'):\n                last_sl = float(bars[\"low\"].iloc[i])\n                break\n\n        # Distances calculation with safety bounds\n        sl_dist = max(5.0, float(atr_val * self.params[\"sl_mult\"]))\n        tp_dist = max(1.50, float(atr_val * self.params[\"tp_mult\"]))\n\n        # Long Entry Logic: Volatility expansion + Bullish Momentum + Price above confirmed swing high\n        if rsi_val > 50.0 and not np.isnan(last_sh) and close_val > last_sh:\n            self.last_trade_bar = current_idx\n            return Signal.enter_long(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        # Short Entry Logic: Volatility expansion + Bearish Momentum + Price below confirmed swing low\n        if rsi_val < 50.0 and not np.isnan(last_sl) and close_val < last_sl:\n            self.last_trade_bar = current_idx\n            return Signal.enter_short(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        return None"
+  },
+  "source_hash": "a0eff93130a07f1f",
+  "static_scan": {
+    "passed": true,
+    "violations": [],
+    "banned_imports": [],
+    "summary": "Clean"
+  },
+  "train_gates": {
+    "all_passed": false,
+    "stopped_at": "determinism",
+    "robustness_score": 0.0,
+    "status": "rejected",
+    "gates": [
+      {
+        "name": "policy_scan",
+        "passed": true,
+        "category": "safety",
+        "details": {
+          "passed": true,
+          "violations": [],
+          "banned_imports": [],
+          "summary": "Clean"
+        },
+        "public_summary": "passed: policy_scan"
+      },
+      {
+        "name": "smoke_run",
+        "passed": true,
+        "category": "clean_load",
+        "details": {
+          "detail": "Sandbox instantiation succeeded."
+        },
+        "public_summary": "passed: smoke_run"
+      },
+      {
+        "name": "determinism",
+        "passed": false,
+        "category": "lookahead_leak",
+        "details": {
+          "passed": false,
+          "first_diverging_bar": null,
+          "first_diverging_timestamp": null,
+          "diverging_field": null,
+          "detail": "Run 1 failed with error: Traceback (most recent call last):\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\core\\backtester.py\", line 284, in generate_signal_tape\n    sig = strat_obj.on_bar(bars.iloc[start_i : i + 1])\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\core\\sandbox.py\", line 61, in on_bar\n    return self._proc.on_bar(bars)\n           ^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\sandbox\\runner.py\", line 292, in on_bar\n    raise SandboxError(f\"Strategy error on bar {i}: {err_type}: {msg}\\n{tb}\")\nsandbox.runner.SandboxError: Strategy error on bar 89: AttributeError: 'SwingResult' object has no attribute 'iloc'\nTraceback (most recent call last):\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\sandbox\\child.py\", line 201, in child_main\n    sig = strategy_instance.on_bar(bars_copy)\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<strategy>\", line 58, in on_bar\nAttributeError: 'SwingResult' object has no attribute 'iloc'\n\n"
+        },
+        "public_summary": "failed: lookahead_leak"
+      }
+    ],
+    "candidate_data": {}
+  },
+  "status": "rejected",
+  "rejected_at": "determinism",
+  "started_at": "2026-10-05 17:17:39.789000",
+  "finished_at": "2026-10-05 17:18:34.499000",
+  "wall_seconds": 54.71,
+  "llm_calls": 1,
+  "llm_tokens": 0
+}

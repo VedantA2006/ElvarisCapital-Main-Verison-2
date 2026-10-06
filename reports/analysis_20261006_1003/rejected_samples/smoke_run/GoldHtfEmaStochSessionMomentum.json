@@ -1,0 +1,109 @@
+{
+  "_id": "6ac41d3767f0fa3d35d7b5ca",
+  "trial_id": "trial-ac40eb2e59ed",
+  "strategy_name": "GoldHtfEmaStochSessionMomentum",
+  "timeframe": "1h",
+  "idea": {
+    "spec": {
+      "name": "GoldHtfEmaStochSessionMomentum",
+      "timeframe": "1h",
+      "hypothesis": "XAUUSD exhibits strong intraday momentum persistence when aligned with the higher timeframe (4H) trend, particularly during London/NY overlap. Institutional flow dominates gold pricing; retail traders often fade 1H moves against the 4H trend, providing liquidity for continuation entries. This strategy exploits that misalignment by entering only on stochastic pullbacks in the direction of the confirmed 4H EMA trend during high-liquidity sessions, capturing the resumption of institutional order flow before retail re-engages.",
+      "concept_family": "trend",
+      "indicators_used": [
+        "htf",
+        "ema",
+        "stoch",
+        "atr",
+        "is_session"
+      ],
+      "entry_logic": "Long: 4H close > 4H EMA(50), 1H Stochastic Slow K crosses above Slow D from below 30, and current bar is in London or NY session. Short: 4H close < 4H EMA(50), 1H Stochastic Slow K crosses below Slow D from above 70, and current bar is in London or NY session.",
+      "exit_logic": "Stop loss set to max(5.0, ATR(14) * sl_mult). Take profit set to max(7.5, ATR(14) * tp_mult). Both distances are positive USD points.",
+      "filters": [
+        "4H trend alignment via HTF EMA",
+        "Stochastic crossover confirmation",
+        "London or NY session filter"
+      ],
+      "session_filter": "london_ny",
+      "direction": "both",
+      "parameters": {
+        "htf_ema_period": {
+          "default": 50,
+          "min": 30,
+          "max": 80
+        },
+        "stoch_k": {
+          "default": 14,
+          "min": 8,
+          "max": 21
+        },
+        "stoch_d": {
+          "default": 3,
+          "min": 2,
+          "max": 5
+        },
+        "atr_period": {
+          "default": 14,
+          "min": 10,
+          "max": 20
+        },
+        "sl_mult": {
+          "default": 1.5,
+          "min": 1.0,
+          "max": 2.5
+        },
+        "tp_mult": {
+          "default": 2.5,
+          "min": 1.8,
+          "max": 4.0
+        }
+      },
+      "expected_trades_per_year": 65,
+      "expected_failure_conditions": "Extended 4H ranging markets where HTF EMA flattens and generates false trend signals; low-volatility Asian-session-dominated weeks with insufficient session overlap triggers."
+    },
+    "code": "class Strategy:\n    PARAMS = {\n        \"htf_ema_period\": {\"default\": 50, \"min\": 30, \"max\": 80},\n        \"stoch_k\": {\"default\": 14, \"min\": 8, \"max\": 21},\n        \"stoch_d\": {\"default\": 3, \"min\": 2, \"max\": 5},\n        \"atr_period\": {\"default\": 14, \"min\": 10, \"max\": 20},\n        \"sl_mult\": {\"default\": 1.5, \"min\": 1.0, \"max\": 2.5},\n        \"tp_mult\": {\"default\": 2.5, \"min\": 1.8, \"max\": 4.0}\n    }\n\n    def __init__(self, params):\n        self.params = params\n\n    def on_bar(self, bars):\n        if len(bars) < 60:\n            return None\n\n        from core.indicators import htf, ema, stoch, atr, is_session\n        import numpy as np\n\n        # Higher timeframe trend filter: 4H EMA\n        htf_close = htf(bars, target_tf=\"4h\", func=lambda df: df[\"close\"])\n        htf_ema_val = ema(bars.assign(close=htf_close), period=self.params[\"htf_ema_period\"])\n        htf_trend_up = float(htf_close.iloc[-1]) > float(htf_ema_val.iloc[-1])\n        htf_trend_down = float(htf_close.iloc[-1]) < float(htf_ema_val.iloc[-1])\n\n        # Stochastic oscillator on 1H\n        stoch_result = stoch(bars, k_period=self.params[\"stoch_k\"], d_period=self.params[\"stoch_d\"], slowing=3)\n        slow_k = stoch_result.slow_k\n        slow_d = stoch_result.slow_d\n\n        # ATR for risk sizing\n        atr_series = atr(bars, period=self.params[\"atr_period\"])\n        atr_val = float(atr_series.iloc[-1])\n        if np.isnan(atr_val) or atr_val <= 0:\n            return None\n\n        # Session filter\n        in_london = bool(is_session(bars, \"london\").iloc[-1])\n        in_ny = bool(is_session(bars, \"ny\").iloc[-1])\n        if not (in_london or in_ny):\n            return None\n\n        # Risk distances\n        sl_dist = max(5.0, atr_val * self.params[\"sl_mult\"])\n        tp_dist = max(7.5, atr_val * self.params[\"tp_mult\"])\n\n        # Entry conditions\n        k_curr = float(slow_k.iloc[-1])\n        k_prev = float(slow_k.iloc[-2])\n        d_curr = float(slow_d.iloc[-1])\n        d_prev = float(slow_d.iloc[-2])\n\n        # Long: HTF uptrend + stochastic bullish cross from oversold\n        if htf_trend_up and k_prev <= d_prev and k_curr > d_curr and k_prev < 30:\n            return Signal.enter_long(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        # Short: HTF downtrend + stochastic bearish cross from overbought\n        if htf_trend_down and k_prev >= d_prev and k_curr < d_curr and k_prev > 70:\n            return Signal.enter_short(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        return None"
+  },
+  "source_hash": "8e84fd3ba1fb29f2",
+  "static_scan": {
+    "passed": true,
+    "violations": [],
+    "banned_imports": [],
+    "summary": "Clean"
+  },
+  "train_gates": {
+    "all_passed": false,
+    "stopped_at": "smoke_run",
+    "robustness_score": 0.0,
+    "status": "rejected",
+    "gates": [
+      {
+        "name": "policy_scan",
+        "passed": true,
+        "category": "safety",
+        "details": {
+          "passed": true,
+          "violations": [],
+          "banned_imports": [],
+          "summary": "Clean"
+        },
+        "public_summary": "passed: policy_scan"
+      },
+      {
+        "name": "smoke_run",
+        "passed": false,
+        "category": "runtime_error",
+        "details": {
+          "error": "Strategy initialization failed: No strategy class with an 'on_bar' method found (no class).\nTraceback (most recent call last):\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\sandbox\\child.py\", line 117, in child_main\n    raise RuntimeError(\"No strategy class with an 'on_bar' method found (no class).\")\nRuntimeError: No strategy class with an 'on_bar' method found (no class).\n"
+        },
+        "public_summary": "failed: runtime_error"
+      }
+    ],
+    "candidate_data": {}
+  },
+  "status": "rejected",
+  "rejected_at": "smoke_run",
+  "started_at": "2026-10-05 21:50:28.196000",
+  "finished_at": "2026-10-05 21:57:11.990000",
+  "wall_seconds": 403.79,
+  "llm_calls": 3,
+  "llm_tokens": 0
+}

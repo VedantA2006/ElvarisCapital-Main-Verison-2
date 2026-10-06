@@ -1,0 +1,121 @@
+{
+  "_id": "6ac3c6c1d61454c41477356a",
+  "trial_id": "trial-43feca95b97e",
+  "strategy_name": "Gold_Structural_Displacement_Momentum",
+  "timeframe": "4h",
+  "idea": {
+    "spec": {
+      "name": "Gold_Structural_Displacement_Momentum",
+      "timeframe": "4h",
+      "hypothesis": "Institutional order flow in XAUUSD frequently manifests as Break of Structure (BOS) events accompanied by Fair Value Gaps (FVGs), which represent aggressive displacement leaving unfilled liquidity pockets. Retail traders often fade these initial breakouts, expecting mean reversion, and place stop-losses just beyond the newly formed structural extremes. When price retraces to the FVG zone, institutional algorithms reload positions, triggering retail stops and fueling a momentum continuation phase. This strategy captures the second leg of institutional displacement by entering on confirmed BOS + FVG overlap during high-liquidity sessions, exploiting the forced liquidation of counter-trend retail participants.",
+      "concept_family": "trend",
+      "indicators_used": [
+        "bos",
+        "fvg",
+        "atr",
+        "adx",
+        "is_session"
+      ],
+      "entry_logic": "Long: ADX > threshold confirms trend regime. Bullish BOS is True AND Bullish FVG is True on the current closed bar. Session is London or NY. Enter long. Short: Bearish BOS True AND Bearish FVG True, ADX > threshold, London/NY session. Enter short.",
+      "exit_logic": "Stop loss distance is ATR(14) multiplied by sl_mult parameter, floored at 5.0 USD points. Take profit distance is SL distance multiplied by tp_rr parameter, floored at 1.50 USD points.",
+      "filters": [
+        "ADX trend regime filter",
+        "London/NY session filter"
+      ],
+      "session_filter": "london_ny",
+      "direction": "both",
+      "expected_trades_per_year": 65,
+      "expected_failure_conditions": "Protracted low-volatility summer chop where ADX decays below threshold and structural breaks fail to displace, leading to whipsaws inside ranges.",
+      "parameters": {
+        "swing_n": {
+          "default": 5,
+          "min": 3,
+          "max": 10
+        },
+        "adx_n": {
+          "default": 14,
+          "min": 7,
+          "max": 30
+        },
+        "adx_thresh": {
+          "default": 20.0,
+          "min": 10.0,
+          "max": 40.0
+        },
+        "atr_n": {
+          "default": 14,
+          "min": 7,
+          "max": 30
+        },
+        "sl_mult": {
+          "default": 1.5,
+          "min": 0.5,
+          "max": 3.0
+        },
+        "tp_rr": {
+          "default": 2.0,
+          "min": 1.0,
+          "max": 4.0
+        }
+      }
+    },
+    "code": "import numpy as np\nimport pandas as pd\nfrom core.indicators import bos, fvg, atr, adx, is_session\n\nclass Strategy:\n    PARAMS = {\n        \"swing_n\": {\"default\": 5, \"min\": 3, \"max\": 10},\n        \"adx_n\": {\"default\": 14, \"min\": 7, \"max\": 30},\n        \"adx_thresh\": {\"default\": 20.0, \"min\": 10.0, \"max\": 40.0},\n        \"atr_n\": {\"default\": 14, \"min\": 7, \"max\": 30},\n        \"sl_mult\": {\"default\": 1.5, \"min\": 0.5, \"max\": 3.0},\n        \"tp_rr\": {\"default\": 2.0, \"min\": 1.0, \"max\": 4.0}\n    }\n\n    def __init__(self, params):\n        self.params = params\n\n    def on_bar(self, bars: pd.DataFrame):\n        # Warmup safety\n        if len(bars) < 60:\n            return None\n\n        # Extract parameters\n        swing_n = int(self.params[\"swing_n\"])\n        adx_n = int(self.params[\"adx_n\"])\n        adx_thresh = float(self.params[\"adx_thresh\"])\n        atr_n = int(self.params[\"atr_n\"])\n        sl_mult = float(self.params[\"sl_mult\"])\n        tp_rr = float(self.params[\"tp_rr\"])\n\n        # Calculate indicators\n        atr_series = atr(bars, atr_n)\n        adx_series = adx(bars, adx_n)\n        bull_bos, bear_bos = bos(bars, swing_n)\n        \n        # FVG with minimum gap to ensure genuine displacement\n        bull_fvg, bear_fvg = fvg(bars, min_gap_usd=1.0)\n        \n        # Session filters\n        is_london = is_session(bars, \"london\")\n        is_ny = is_session(bars, \"ny\")\n\n        # Get latest values safely\n        atr_val = float(atr_series.iloc[-1])\n        adx_val = float(adx_series.iloc[-1])\n        bull_bos_val = bool(bull_bos.iloc[-1])\n        bear_bos_val = bool(bear_bos.iloc[-1])\n        bull_fvg_val = bool(bull_fvg.iloc[-1])\n        bear_fvg_val = bool(bear_fvg.iloc[-1])\n        is_london_val = bool(is_london.iloc[-1])\n        is_ny_val = bool(is_ny.iloc[-1])\n\n        # NaN and validity checks for Stop Loss safety\n        if np.isnan(atr_val) or atr_val <= 0:\n            return None\n        if np.isnan(adx_val):\n            return None\n\n        # Active session check (London or NY)\n        active_session = is_london_val or is_ny_val\n\n        # Trend regime check\n        trending = adx_val > adx_thresh\n\n        # Calculate distances ensuring strict positivity and minimums\n        sl_dist = max(5.0, float(atr_val * sl_mult))\n        tp_dist = max(1.50, float(sl_dist * tp_rr))\n\n        # Entry Logic\n        if active_session and trending:\n            # Long: Bullish Break of Structure coinciding with Bullish Fair Value Gap\n            if bull_bos_val and bull_fvg_val:\n                return Signal.enter_long(sl_distance=sl_dist, tp_distance=tp_dist)\n            \n            # Short: Bearish Break of Structure coinciding with Bearish Fair Value Gap\n            if bear_bos_val and bear_fvg_val:\n                return Signal.enter_short(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        return None"
+  },
+  "source_hash": "41a310b7ad776e1c",
+  "static_scan": {
+    "passed": true,
+    "violations": [],
+    "banned_imports": [],
+    "summary": "Clean"
+  },
+  "train_gates": {
+    "all_passed": false,
+    "stopped_at": "determinism",
+    "robustness_score": 0.0,
+    "status": "rejected",
+    "gates": [
+      {
+        "name": "policy_scan",
+        "passed": true,
+        "category": "safety",
+        "details": {
+          "passed": true,
+          "violations": [],
+          "banned_imports": [],
+          "summary": "Clean"
+        },
+        "public_summary": "passed: policy_scan"
+      },
+      {
+        "name": "smoke_run",
+        "passed": true,
+        "category": "clean_load",
+        "details": {
+          "detail": "Sandbox instantiation succeeded."
+        },
+        "public_summary": "passed: smoke_run"
+      },
+      {
+        "name": "determinism",
+        "passed": false,
+        "category": "lookahead_leak",
+        "details": {
+          "passed": false,
+          "first_diverging_bar": null,
+          "first_diverging_timestamp": null,
+          "diverging_field": null,
+          "detail": "Run 1 failed with error: Traceback (most recent call last):\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\core\\backtester.py\", line 284, in generate_signal_tape\n    sig = strat_obj.on_bar(bars.iloc[start_i : i + 1])\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\core\\sandbox.py\", line 61, in on_bar\n    return self._proc.on_bar(bars)\n           ^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\sandbox\\runner.py\", line 292, in on_bar\n    raise SandboxError(f\"Strategy error on bar {i}: {err_type}: {msg}\\n{tb}\")\nsandbox.runner.SandboxError: Strategy error on bar 59: AttributeError: 'tuple' object has no attribute 'iloc'\nTraceback (most recent call last):\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\sandbox\\child.py\", line 201, in child_main\n    sig = strategy_instance.on_bar(bars_copy)\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<strategy>\", line 45, in on_bar\nAttributeError: 'tuple' object has no attribute 'iloc'\n\n"
+        },
+        "public_summary": "failed: lookahead_leak"
+      }
+    ],
+    "candidate_data": {}
+  },
+  "status": "rejected",
+  "rejected_at": "determinism",
+  "started_at": "2026-10-05 15:47:45.363000",
+  "finished_at": "2026-10-05 15:48:17.090000",
+  "wall_seconds": 31.73,
+  "llm_calls": 0,
+  "llm_tokens": 0
+}

@@ -674,6 +674,23 @@ async function loadLLMStats() {
         document.getElementById('llm-total-calls').innerText = Number(data.summary?.total_calls || 0).toLocaleString();
         document.getElementById('llm-failed-calls').innerText = Number(data.summary?.failed_calls || 0).toLocaleString();
 
+        const byPurpose = data.summary?.by_purpose || {};
+        if (document.getElementById('llm-count-ideas')) {
+            document.getElementById('llm-count-ideas').innerText = Number(byPurpose.ideas || 0).toLocaleString();
+        }
+        if (document.getElementById('llm-count-improvements')) {
+            document.getElementById('llm-count-improvements').innerText = Number(byPurpose.improvements || 0).toLocaleString();
+        }
+        if (document.getElementById('llm-count-analyses')) {
+            document.getElementById('llm-count-analyses').innerText = Number(byPurpose.failure_analyses || 0).toLocaleString();
+        }
+        if (document.getElementById('llm-count-reviews')) {
+            document.getElementById('llm-count-reviews').innerText = Number(byPurpose.reviews || 0).toLocaleString();
+        }
+        if (document.getElementById('llm-count-robustness')) {
+            document.getElementById('llm-count-robustness').innerText = Number(byPurpose.robustness_analyses || 0).toLocaleString();
+        }
+
         const tbody = document.getElementById('llm-calls-tbody');
         if (tbody) {
             const calls = data.recent_calls || [];

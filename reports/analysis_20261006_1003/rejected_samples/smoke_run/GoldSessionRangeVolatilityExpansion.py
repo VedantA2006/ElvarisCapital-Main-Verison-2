@@ -1,0 +1,60 @@
+{
+  "spec": {
+    "name": "GoldSessionRangeVolatilityExpansion",
+    "timeframe": "1h",
+    "hypothesis": "XAUUSD exhibits strong intraday volatility clustering where the initial Asian/London transition range establishes a liquidity pool. Institutional algorithms accumulate positions within this range before expanding toward NY session targets. Retail traders often fade these breakouts prematurely or enter too late after exhaustion. This strategy captures the high-probability expansion phase immediately following confirmed range breaches during peak liquidity hours, exploiting the imbalance between early retail fades and sustained institutional flow.",
+    "concept_family": "trend",
+    "indicators_used": [
+      "session_range",
+      "atr",
+      "is_session",
+      "ema",
+      "vol_percentile"
+    ],
+    "entry_logic": "Enter long when price closes above Asia session high AND EMA20 > EMA50 AND ATR percentile > 40. Enter short when price closes below Asia session low AND EMA20 < EMA50 AND ATR percentile > 40. Requires confirmation bar close beyond level to avoid wick traps.",
+    "exit_logic": "Stop loss placed at 1.5x ATR from entry or opposite session boundary (whichever is tighter). Take profit at 2.5x ATR to capture full expansion move while maintaining positive expectancy.",
+    "filters": [
+      "London or NY session active",
+      "ATR percentile > 40 to avoid dead zones",
+      "EMA alignment confirms directional bias",
+      "Price must have closed beyond session range boundary"
+    ],
+    "session_filter": "london_ny",
+    "direction": "both",
+    "parameters": {
+      "ema_fast": {
+        "default": 20,
+        "min": 10,
+        "max": 30
+      },
+      "ema_slow": {
+        "default": 50,
+        "min": 30,
+        "max": 80
+      },
+      "atr_period": {
+        "default": 14,
+        "min": 10,
+        "max": 20
+      },
+      "sl_mult": {
+        "default": 1.5,
+        "min": 1.0,
+        "max": 2.5
+      },
+      "tp_mult": {
+        "default": 2.5,
+        "min": 1.8,
+        "max": 4.0
+      },
+      "vol_threshold": {
+        "default": 40,
+        "min": 20,
+        "max": 60
+      }
+    },
+    "expected_trades_per_year": 65,
+    "expected_failure_conditions": "Extended consolidation periods where session ranges remain unbroken for multiple days, or false breakouts during low-liquidity holiday sessions"
+  },
+  "code": "import numpy as np\n\nclass Strategy:\n    PARAMS = {\n        \"ema_fast\": {\"default\": 20, \"min\": 10, \"max\": 30},\n        \"ema_slow\": {\"default\": 50, \"min\": 30, \"max\": 80},\n        \"atr_period\": {\"default\": 14, \"min\": 10, \"max\": 20},\n        \"sl_mult\": {\"default\": 1.5, \"min\": 1.0, \"max\": 2.5},\n        \"tp_mult\": {\"default\": 2.5, \"min\": 1.8, \"max\": 4.0},\n        \"vol_threshold\": {\"default\": 40, \"min\": 20, \"max\": 60}\n    }\n\n    def __init__(self, params):\n        self.params = params\n\n    def on_bar(self, bars):\n        if len(bars) < 60:\n            return None\n\n        from core.indicators import ema, atr, is_session, session_range, vol_percentile\n\n        fast_ema = ema(bars, period=self.params[\"ema_fast\"])\n        slow_ema = ema(bars, period=self.params[\"ema_slow\"])\n        atr_series = atr(bars, period=self.params[\"atr_period\"])\n        vol_pct = vol_percentile(bars, lookback=100)\n        asia_range = session_range(bars, session_name=\"asia\")\n\n        atr_val = float(atr_series.iloc[-1])\n        vol_pct_val = float(vol_pct.iloc[-1])\n        fast_val = float(fast_ema.iloc[-1])\n        slow_val = float(slow_ema.iloc[-1])\n        close_val = float(bars[\"close\"].iloc[-1])\n        asia_high = float(asia_range.high.iloc[-1])\n        asia_low = float(asia_range.low.iloc[-1])\n\n        if np.isnan(atr_val) or atr_val <= 0:\n            return None\n        if np.isnan(vol_pct_val) or np.isnan(fast_val) or np.isnan(slow_val):\n            return None\n        if np.isnan(asia_high) or np.isnan(asia_low):\n            return None\n\n        london_mask = is_session(bars, \"london\")\n        ny_mask = is_session(bars, \"ny\")\n        in_london = bool(london_mask.iloc[-1])\n        in_ny = bool(ny_mask.iloc[-1])\n        if not (in_london or in_ny):\n            return None\n\n        if vol_pct_val < self.params[\"vol_threshold\"]:\n            return None\n\n        sl_dist = max(5.0, float(atr_val * self.params[\"sl_mult\"]))\n        tp_dist = max(7.5, float(atr_val * self.params[\"tp_mult\"]))\n\n        if close_val > asia_high and fast_val > slow_val:\n            return Signal.enter_long(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        if close_val < asia_low and fast_val < slow_val:\n            return Signal.enter_short(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        return None"
+}

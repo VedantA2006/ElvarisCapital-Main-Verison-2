@@ -1,0 +1,282 @@
+{
+  "_id": "6ac3dd1a1e98da606df98984",
+  "trial_id": "trial-9a60d1534204",
+  "strategy_name": "Strategy_trial-9a",
+  "timeframe": "4h",
+  "idea": {
+    "fast_ema": {
+      "default": 20,
+      "min": 5,
+      "max": 50
+    },
+    "slow_ema": {
+      "default": 50,
+      "min": 20,
+      "max": 150
+    },
+    "z_period": {
+      "default": 20,
+      "min": 10,
+      "max": 50
+    },
+    "z_thresh": {
+      "default": 1.0,
+      "min": 0.5,
+      "max": 2.5
+    },
+    "sl_mult": {
+      "default": 1.5,
+      "min": 0.5,
+      "max": 4.0
+    },
+    "tp_mult": {
+      "default": 3.0,
+      "min": 1.5,
+      "max": 8.0
+    }
+  },
+  "source_hash": "3a99947747818bd6",
+  "static_scan": {
+    "passed": true,
+    "violations": [
+      {
+        "line": 41,
+        "col": 0,
+        "pattern": "regex_match",
+        "detail": "suspicious variable/comment name",
+        "severity": "warning"
+      }
+    ],
+    "banned_imports": [],
+    "summary": "1 warning(s)"
+  },
+  "train_result": {
+    "trades": [],
+    "equity_curve_summary": {
+      "start": 100000.0,
+      "end": 100000.0,
+      "points": 4792
+    },
+    "metrics": {
+      "total_trades": 0,
+      "error": "no_trades",
+      "total_net_pnl": 0.0,
+      "total_gross_pnl": 0.0,
+      "total_costs": 0.0,
+      "cost_gross_ratio": 0.0,
+      "total_return_pct": 0.0,
+      "final_equity": 100000.0,
+      "cagr": 0.0,
+      "sharpe": 0.0,
+      "sortino": 0.0,
+      "calmar": 0.0,
+      "omega": 0.0,
+      "max_drawdown": 0.0,
+      "average_drawdown": 0.0,
+      "max_drawdown_bars": 0,
+      "max_drawdown_days": 0.0,
+      "time_under_water": 0.0,
+      "ulcer_index": 0.0,
+      "recovery_factor": 0.0,
+      "exposure_pct": 0.0,
+      "buy_and_hold_return_pct": 50.06,
+      "beta": 0.0,
+      "monthly_table": {
+        "2021": {
+          "09": 0.0,
+          "10": 0.0,
+          "11": 0.0,
+          "12": 0.0
+        },
+        "2022": {
+          "01": 0.0,
+          "02": 0.0,
+          "03": 0.0,
+          "04": 0.0,
+          "05": 0.0,
+          "06": 0.0,
+          "07": 0.0,
+          "08": 0.0,
+          "09": 0.0,
+          "10": 0.0,
+          "11": 0.0,
+          "12": 0.0
+        },
+        "2023": {
+          "01": 0.0,
+          "02": 0.0,
+          "03": 0.0,
+          "04": 0.0,
+          "05": 0.0,
+          "06": 0.0,
+          "07": 0.0,
+          "08": 0.0,
+          "09": 0.0,
+          "10": 0.0,
+          "11": 0.0,
+          "12": 0.0
+        },
+        "2024": {
+          "01": 0.0,
+          "02": 0.0,
+          "03": 0.0,
+          "04": 0.0,
+          "05": 0.0,
+          "06": 0.0,
+          "07": 0.0,
+          "08": 0.0,
+          "09": 0.0
+        }
+      },
+      "yearly_table": {
+        "2021": {
+          "return_pct": 0.0,
+          "net_pnl": 0.0
+        },
+        "2022": {
+          "return_pct": 0.0,
+          "net_pnl": 0.0
+        },
+        "2023": {
+          "return_pct": 0.0,
+          "net_pnl": 0.0
+        },
+        "2024": {
+          "return_pct": 0.0,
+          "net_pnl": 0.0
+        }
+      },
+      "yearly_pnl": {
+        "2021": 0.0,
+        "2022": 0.0,
+        "2023": 0.0,
+        "2024": 0.0
+      },
+      "status": "completed"
+    },
+    "metadata": {
+      "timeframe": "4h",
+      "split": "train",
+      "file_hash": "13cca08dbe905fc78c70785dcf1939a0bd28b5ff60490e6fddce9c9e031c6fd7",
+      "slice_hash": "da62aec838ca05daf840f3ccbef1432b5c9094a7d8f465c406182998c945d74c",
+      "total_bars": 4792,
+      "live_bars": 4792,
+      "warmup_bars": 0,
+      "skipped_min_lot": 0,
+      "skipped_margin": 0,
+      "forced_closes": 0,
+      "strategy_errors": 0,
+      "first_strategy_error": null
+    },
+    "status": "completed",
+    "wall_seconds": 0.232,
+    "created_at": "2026-10-05 17:23:38.690000"
+  },
+  "train_gates": {
+    "all_passed": false,
+    "stopped_at": "minimum_sample",
+    "robustness_score": 0.0,
+    "status": "rejected",
+    "gates": [
+      {
+        "name": "policy_scan",
+        "passed": true,
+        "category": "safety",
+        "details": {
+          "passed": true,
+          "violations": [
+            {
+              "line": 41,
+              "col": 0,
+              "pattern": "regex_match",
+              "detail": "suspicious variable/comment name",
+              "severity": "warning"
+            }
+          ],
+          "banned_imports": [],
+          "summary": "1 warning(s)"
+        },
+        "public_summary": "passed: policy_scan"
+      },
+      {
+        "name": "smoke_run",
+        "passed": true,
+        "category": "clean_load",
+        "details": {
+          "detail": "Sandbox instantiation succeeded."
+        },
+        "public_summary": "passed: smoke_run"
+      },
+      {
+        "name": "determinism",
+        "passed": true,
+        "category": "determinism",
+        "details": {
+          "passed": true,
+          "first_diverging_bar": null,
+          "first_diverging_timestamp": null,
+          "diverging_field": null,
+          "detail": "Bit-identical signal tapes produced on two independent runs with seed=42."
+        },
+        "public_summary": "passed: determinism"
+      },
+      {
+        "name": "truncation",
+        "passed": true,
+        "category": "truncation",
+        "details": {
+          "passed": true,
+          "num_cuts": 20,
+          "first_diverging_bar": null,
+          "first_diverging_timestamp": null,
+          "diverging_field": null,
+          "detail": "Verified signal identity T_c[0..c] == T_full[0..c] across 20 cut points (tolerance 1e-9)."
+        },
+        "public_summary": "passed: truncation"
+      },
+      {
+        "name": "signal_validity",
+        "passed": true,
+        "category": "signal_valid",
+        "details": {
+          "failures": []
+        },
+        "public_summary": "passed: signal_validity"
+      },
+      {
+        "name": "train_backtest",
+        "passed": true,
+        "category": "train_simulation_success",
+        "details": {
+          "trades": 0,
+          "net_pnl": 0.0
+        },
+        "public_summary": "passed: train_backtest"
+      },
+      {
+        "name": "minimum_sample",
+        "passed": false,
+        "category": "sample_size",
+        "details": {
+          "total_trades": 0,
+          "min_trades": 100,
+          "trades_per_year": 0.0,
+          "min_tpy": 15,
+          "failures": [
+            "trades=0 < 100",
+            "trades_per_year=0.0 < 15"
+          ]
+        },
+        "public_summary": "failed: sample_size"
+      }
+    ],
+    "candidate_data": {}
+  },
+  "status": "rejected",
+  "rejected_at": "minimum_sample",
+  "started_at": "2026-10-05 17:18:35.807000",
+  "finished_at": "2026-10-05 17:23:38.690000",
+  "wall_seconds": 302.88,
+  "llm_calls": 0,
+  "llm_tokens": 0
+}

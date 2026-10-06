@@ -1,0 +1,140 @@
+{
+  "_id": "6ac3bf90eb789df85c975a86",
+  "trial_id": "trial-f01f53d6007a",
+  "strategy_name": "LondonSweepDisplacement",
+  "timeframe": "1h",
+  "idea": {
+    "spec": {
+      "name": "LondonSweepDisplacement",
+      "timeframe": "1h",
+      "hypothesis": "During the transition from the Asian session to the London open, institutional order flow in XAUUSD frequently engineers liquidity sweeps of the Asian session highs or lows. Retail breakout traders and resting stop-loss orders clustered just beyond the Asian range provide the necessary liquidity for large players to accumulate positions. Once this liquidity is swept, smart money aggressively displaces price back into the range, often leaving behind Fair Value Gaps (FVGs) as a footprint of their urgency. The losing side consists of retail breakout traders who buy the Asian high sweep or sell the Asian low sweep, only to be trapped by the immediate reversal. This strategy captures the subsequent displacement move by requiring both a confirmed liquidity sweep and an FVG in the direction of the reversal, ensuring we only enter when institutional momentum has definitively shifted.",
+      "concept_family": "mean_reversion_liquidity",
+      "indicators_used": [
+        "session_range",
+        "liquidity_sweep",
+        "fvg",
+        "atr",
+        "is_session"
+      ],
+      "entry_logic": "Identify the Asian session high and low using session_range. On each 1h bar during London or NY sessions, check if liquidity_sweep(swing_n=2) triggered a high_sweep or low_sweep. If a low_sweep occurs AND a bull_fvg is printed on the same bar, enter long. If a high_sweep occurs AND a bear_fvg is printed on the same bar, enter short.",
+      "exit_logic": "Stop loss is placed at a distance of ATR(14) multiplied by sl_mult (minimum 5.0 USD points) to survive standard noise. Take profit is set at atr_val * tp_mult (minimum 1.50 USD points) to capture the mean-reversion displacement back toward the center of the range or opposite liquidity pool.",
+      "filters": [
+        "Must be within London or New York trading sessions",
+        "Requires both a liquidity sweep and a corresponding FVG on the same bar",
+        "ATR must be valid and > 0"
+      ],
+      "session_filter": "london_ny",
+      "direction": "both",
+      "parameters": {
+        "swing_n": {
+          "default": 2,
+          "min": 1,
+          "max": 5
+        },
+        "atr_period": {
+          "default": 14,
+          "min": 7,
+          "max": 30
+        },
+        "sl_mult": {
+          "default": 1.5,
+          "min": 1.0,
+          "max": 3.0
+        },
+        "tp_mult": {
+          "default": 2.5,
+          "min": 1.5,
+          "max": 5.0
+        },
+        "fvg_min_gap": {
+          "default": 1.0,
+          "min": 0.0,
+          "max": 3.0
+        }
+      },
+      "expected_trades_per_year": 85,
+      "expected_failure_conditions": "Strong macroeconomic trend days where the Asian range sweep is not a trap but the actual beginning of a massive directional move, causing the FVG to be immediately filled and price to continue sweeping further."
+    },
+    "code": "import numpy as np\nimport pandas as pd\nfrom core.indicators import session_range, liquidity_sweep, fvg, atr, is_session\n\nclass Strategy:\n    PARAMS = {\n        \"swing_n\": {\"default\": 2, \"min\": 1, \"max\": 5},\n        \"atr_period\": {\"default\": 14, \"min\": 7, \"max\": 30},\n        \"sl_mult\": {\"default\": 1.5, \"min\": 1.0, \"max\": 3.0},\n        \"tp_mult\": {\"default\": 2.5, \"min\": 1.5, \"max\": 5.0},\n        \"fvg_min_gap\": {\"default\": 1.0, \"min\": 0.0, \"max\": 3.0}\n    }\n\n    def __init__(self, params):\n        self.params = params\n\n    def on_bar(self, bars: pd.DataFrame):\n        # Warmup safety\n        if len(bars) < 60:\n            return None\n\n        # Session filter: Only trade during London or NY\n        in_london = is_session(bars, \"london\").iloc[-1]\n        in_ny = is_session(bars, \"ny\").iloc[-1]\n        if not (in_london or in_ny):\n            return None\n\n        # Calculate indicators\n        swing_n = int(self.params[\"swing_n\"])\n        atr_period = int(self.params[\"atr_period\"])\n        fvg_gap = float(self.params[\"fvg_min_gap\"])\n\n        atr_series = atr(bars, atr_period)\n        atr_val = float(atr_series.iloc[-1])\n\n        # ATR safety check\n        if np.isnan(atr_val) or atr_val <= 0:\n            return None\n\n        # Get market structure signals\n        high_sweep, low_sweep = liquidity_sweep(bars, swing_n=swing_n)\n        bull_fvg, bear_fvg = fvg(bars, min_gap_usd=fvg_gap)\n\n        # Extract current bar values safely\n        curr_high_sweep = bool(high_sweep.iloc[-1]) if not pd.isna(high_sweep.iloc[-1]) else False\n        curr_low_sweep = bool(low_sweep.iloc[-1]) if not pd.isna(low_sweep.iloc[-1]) else False\n        curr_bull_fvg = bool(bull_fvg.iloc[-1]) if not pd.isna(bull_fvg.iloc[-1]) else False\n        curr_bear_fvg = bool(bear_fvg.iloc[-1]) if not pd.isna(bear_fvg.iloc[-1]) else False\n\n        # Calculate distances\n        sl_dist = max(5.0, float(atr_val * self.params[\"sl_mult\"]))\n        tp_dist = max(1.50, float(atr_val * self.params[\"tp_mult\"]))\n\n        # Entry Logic\n        # Long: Sweep of Asian/session lows + Bullish FVG (displacement up)\n        if curr_low_sweep and curr_bull_fvg:\n            return Signal.enter_long(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        # Short: Sweep of Asian/session highs + Bearish FVG (displacement down)\n        if curr_high_sweep and curr_bear_fvg:\n            return Signal.enter_short(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        return None"
+  },
+  "source_hash": "47436f1da9219859",
+  "static_scan": {
+    "passed": true,
+    "violations": [],
+    "banned_imports": [],
+    "summary": "Clean"
+  },
+  "train_gates": {
+    "all_passed": false,
+    "stopped_at": "signal_validity",
+    "robustness_score": 0.0,
+    "status": "rejected",
+    "gates": [
+      {
+        "name": "policy_scan",
+        "passed": true,
+        "category": "safety",
+        "details": {
+          "passed": true,
+          "violations": [],
+          "banned_imports": [],
+          "summary": "Clean"
+        },
+        "public_summary": "passed: policy_scan"
+      },
+      {
+        "name": "smoke_run",
+        "passed": true,
+        "category": "clean_load",
+        "details": {
+          "detail": "Sandbox instantiation succeeded."
+        },
+        "public_summary": "passed: smoke_run"
+      },
+      {
+        "name": "determinism",
+        "passed": true,
+        "category": "determinism",
+        "details": {
+          "passed": true,
+          "first_diverging_bar": null,
+          "first_diverging_timestamp": null,
+          "diverging_field": null,
+          "detail": "Bit-identical signal tapes produced on two independent runs with seed=42."
+        },
+        "public_summary": "passed: determinism"
+      },
+      {
+        "name": "truncation",
+        "passed": true,
+        "category": "truncation",
+        "details": {
+          "passed": true,
+          "num_cuts": 20,
+          "first_diverging_bar": null,
+          "first_diverging_timestamp": null,
+          "diverging_field": null,
+          "detail": "Verified signal identity T_c[0..c] == T_full[0..c] across 20 cut points (tolerance 1e-9)."
+        },
+        "public_summary": "passed: truncation"
+      },
+      {
+        "name": "signal_validity",
+        "passed": false,
+        "category": "signal_invalid",
+        "details": {
+          "error": "Tape error: Traceback (most recent call last):\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\core\\backtester.py\", line 284, in generate_signal_tape\n    sig = strat_obj.on_bar(bars.iloc[start_i : i + 1])\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\core\\sandbox.py\", line 61, in on_bar\n    return self._proc.on_bar(bars)\n           ^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\sandbox\\runner.py\", line 292, in on_bar\n    raise SandboxError(f\"Strategy error on bar {i}: {err_type}: {msg}\\n{tb}\")\nsandbox.runner.SandboxError: Strategy error on bar 76: TypeError: int() argument must be a string, a bytes-like object or a real number, not 'dict'\nTraceback (most recent call last):\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\sandbox\\child.py\", line 195, in child_main\n    sig = strategy_instance.on_bar(bars_copy)\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<strategy>\", line 29, in on_bar\nTypeError: int() argument must be a string, a bytes-like object or a real number, not 'dict'\n\n"
+        },
+        "public_summary": "failed: signal_invalid"
+      }
+    ],
+    "candidate_data": {}
+  },
+  "status": "rejected",
+  "rejected_at": "signal_validity",
+  "started_at": "2026-10-05 15:16:13.681000",
+  "finished_at": "2026-10-05 15:17:36.836000",
+  "wall_seconds": 83.15,
+  "llm_calls": 0,
+  "llm_tokens": 0
+}

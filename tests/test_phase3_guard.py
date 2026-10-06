@@ -379,7 +379,8 @@ class TestSandbox:
     def test_code_too_long_rejected(self, base_cfg):
         from core.sandbox import Sandbox, SandboxError
         sb = Sandbox(base_cfg)
-        code = "# " + "x" * 10000 + "\nclass Strategy:\n    def on_bar(self, bars): return None"
+        max_len = sb._max_code_len
+        code = "# " + "x" * (max_len + 100) + "\nclass Strategy:\n    def on_bar(self, bars): return None"
         with pytest.raises(SandboxError, match="Static scan failed"):
             sb.load_strategy(code)
 

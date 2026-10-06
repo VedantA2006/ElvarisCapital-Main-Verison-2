@@ -64,6 +64,11 @@ class KeyManager:
         # Discover keys from environment
         self._keys: dict[str, str] = {}  # label -> secret
         self._order: list[str] = []
+        xkiro_key = os.environ.get("XKIRO_API_KEY", "").strip()
+        if xkiro_key:
+            self._keys["xkiro"] = xkiro_key
+            self._order.append("xkiro")
+
         for i in range(1, 10):
             secret = os.environ.get(f"LLM_API_KEY_{i}", "").strip()
             if secret:

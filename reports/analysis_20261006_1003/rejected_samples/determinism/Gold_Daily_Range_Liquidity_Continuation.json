@@ -1,0 +1,121 @@
+{
+  "_id": "6ac3c654d61454c414773561",
+  "trial_id": "trial-dafd0a3c9bed",
+  "strategy_name": "Gold_Daily_Range_Liquidity_Continuation",
+  "timeframe": "4h",
+  "idea": {
+    "spec": {
+      "name": "Gold_Daily_Range_Liquidity_Continuation",
+      "timeframe": "4h",
+      "hypothesis": "XAUUSD exhibits persistent intraday and interday range expansion following confirmed liquidity sweeps of the previous day's high or low during active trading sessions. Institutional order flow often uses prior daily extremes as reference points for stop clustering and breakout validation. When price sweeps these levels with momentum (confirmed via ADX) and maintains direction on close, it signals genuine institutional participation rather than fakeouts. Retail traders fading these sweeps become the losing side, providing fuel for continuation.",
+      "concept_family": "trend",
+      "indicators_used": [
+        "previous_day_hl",
+        "liquidity_sweep",
+        "adx",
+        "atr"
+      ],
+      "entry_logic": "Enter long when current bar closes above previous day high AND liquidity_sweep high_sweep is True on current bar AND ADX > threshold AND session is London or NY. Enter short when current bar closes below previous day low AND liquidity_sweep low_sweep is True on current bar AND ADX > threshold AND session is London or NY.",
+      "exit_logic": "Stop loss distance = max(5.0, ATR * sl_mult). Take profit distance = max(1.5, ATR * tp_mult). Both distances are positive USD points derived from current ATR.",
+      "filters": [
+        "ADX > adx_thresh to confirm trending regime",
+        "Session filter: London or NY only",
+        "ATR must be valid and positive"
+      ],
+      "session_filter": "london_ny",
+      "direction": "both",
+      "parameters": {
+        "swing_n": {
+          "default": 3,
+          "min": 2,
+          "max": 6
+        },
+        "adx_n": {
+          "default": 14,
+          "min": 8,
+          "max": 30
+        },
+        "adx_thresh": {
+          "default": 22.0,
+          "min": 15.0,
+          "max": 35.0
+        },
+        "atr_n": {
+          "default": 14,
+          "min": 8,
+          "max": 30
+        },
+        "sl_mult": {
+          "default": 1.5,
+          "min": 1.0,
+          "max": 3.0
+        },
+        "tp_mult": {
+          "default": 2.5,
+          "min": 1.5,
+          "max": 4.0
+        }
+      },
+      "expected_trades_per_year": 75,
+      "expected_failure_conditions": "Extended Asian-session-dominated consolidation with no daily range expansion; prolonged low-ADX environments where sweeps fail to follow through."
+    },
+    "code": "class Strategy:\n    PARAMS = {\n        \"swing_n\": {\"default\": 3, \"min\": 2, \"max\": 6},\n        \"adx_n\": {\"default\": 14, \"min\": 8, \"max\": 30},\n        \"adx_thresh\": {\"default\": 22.0, \"min\": 15.0, \"max\": 35.0},\n        \"atr_n\": {\"default\": 14, \"min\": 8, \"max\": 30},\n        \"sl_mult\": {\"default\": 1.5, \"min\": 1.0, \"max\": 3.0},\n        \"tp_mult\": {\"default\": 2.5, \"min\": 1.5, \"max\": 4.0}\n    }\n\n    def __init__(self, params):\n        self.params = params\n\n    def on_bar(self, bars):\n        if len(bars) < 60:\n            return None\n\n        # Compute indicators\n        adx_val = adx(bars, self.params[\"adx_n\"])\n        atr_val = atr(bars, self.params[\"atr_n\"])\n        prev_day = previous_day_hl(bars)\n        sweep = liquidity_sweep(bars, swing_n=self.params[\"swing_n\"])\n        sess = is_session(bars, \"london\") | is_session(bars, \"ny\")\n\n        # Safety checks\n        if np.isnan(adx_val.iloc[-1]) or np.isnan(atr_val.iloc[-1]):\n            return None\n        if atr_val.iloc[-1] <= 0:\n            return None\n\n        # Current bar values\n        curr_adx = float(adx_val.iloc[-1])\n        curr_atr = float(atr_val.iloc[-1])\n        in_session = bool(sess.iloc[-1])\n        high_sweep = bool(sweep.high_sweep.iloc[-1])\n        low_sweep = bool(sweep.low_sweep.iloc[-1])\n        prev_high = float(prev_day.high.iloc[-1])\n        prev_low = float(prev_day.low.iloc[-1])\n        close_price = float(bars.close.iloc[-1])\n\n        # Filter: session and ADX regime\n        if not in_session or curr_adx < self.params[\"adx_thresh\"]:\n            return None\n\n        # Entry logic\n        sl_dist = max(5.0, curr_atr * self.params[\"sl_mult\"])\n        tp_dist = max(1.5, curr_atr * self.params[\"tp_mult\"])\n\n        if high_sweep and close_price > prev_high:\n            return Signal.enter_long(sl_distance=sl_dist, tp_distance=tp_dist)\n        elif low_sweep and close_price < prev_low:\n            return Signal.enter_short(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        return None"
+  },
+  "source_hash": "78fc46a91bec1490",
+  "static_scan": {
+    "passed": true,
+    "violations": [],
+    "banned_imports": [],
+    "summary": "Clean"
+  },
+  "train_gates": {
+    "all_passed": false,
+    "stopped_at": "determinism",
+    "robustness_score": 0.0,
+    "status": "rejected",
+    "gates": [
+      {
+        "name": "policy_scan",
+        "passed": true,
+        "category": "safety",
+        "details": {
+          "passed": true,
+          "violations": [],
+          "banned_imports": [],
+          "summary": "Clean"
+        },
+        "public_summary": "passed: policy_scan"
+      },
+      {
+        "name": "smoke_run",
+        "passed": true,
+        "category": "clean_load",
+        "details": {
+          "detail": "Sandbox instantiation succeeded."
+        },
+        "public_summary": "passed: smoke_run"
+      },
+      {
+        "name": "determinism",
+        "passed": false,
+        "category": "lookahead_leak",
+        "details": {
+          "passed": false,
+          "first_diverging_bar": null,
+          "first_diverging_timestamp": null,
+          "diverging_field": null,
+          "detail": "Run 1 failed with error: Traceback (most recent call last):\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\core\\backtester.py\", line 284, in generate_signal_tape\n    sig = strat_obj.on_bar(bars.iloc[start_i : i + 1])\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\core\\sandbox.py\", line 61, in on_bar\n    return self._proc.on_bar(bars)\n           ^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\sandbox\\runner.py\", line 292, in on_bar\n    raise SandboxError(f\"Strategy error on bar {i}: {err_type}: {msg}\\n{tb}\")\nsandbox.runner.SandboxError: Strategy error on bar 59: AttributeError: 'tuple' object has no attribute 'iloc'\nTraceback (most recent call last):\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\sandbox\\child.py\", line 201, in child_main\n    sig = strategy_instance.on_bar(bars_copy)\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<strategy>\", line 26, in on_bar\nAttributeError: 'tuple' object has no attribute 'iloc'\n\n"
+        },
+        "public_summary": "failed: lookahead_leak"
+      }
+    ],
+    "candidate_data": {}
+  },
+  "status": "rejected",
+  "rejected_at": "determinism",
+  "started_at": "2026-10-05 15:46:07.865000",
+  "finished_at": "2026-10-05 15:46:28.735000",
+  "wall_seconds": 20.87,
+  "llm_calls": 0,
+  "llm_tokens": 0
+}

@@ -1,0 +1,119 @@
+{
+  "_id": "6ac3b80092a4e7b10476cb00",
+  "trial_id": "trial-64322441f9c4",
+  "strategy_name": "unnamed",
+  "timeframe": "1h",
+  "idea": {
+    "spec": {
+      "name": "LondonNY_LiquiditySweepChoCH",
+      "timeframe": "1h",
+      "hypothesis": "During the London and New York sessions, institutional market makers frequently engineer liquidity sweeps below/above recent swing lows/highs to trigger retail stop-loss clusters and induce breakout traders. Once this liquidity is absorbed, price aggressively reverses, confirmed by a Change of Character (ChoCH) in market structure. The losing side consists of retail breakout traders who enter on the false sweep and short-term hedgers whose stops are being hunted. Gold's high volatility and deep liquidity pools make it particularly susceptible to these engineered sweeps during peak volume hours.",
+      "concept_family": "mean_reversion_structure",
+      "indicators_used": [
+        "liquidity_sweep",
+        "choch",
+        "is_session",
+        "atr",
+        "swing_high",
+        "swing_low"
+      ],
+      "entry_logic": "Enter long if a liquidity sweep of a recent swing low occurs AND a bullish ChoCH is confirmed within the lookback window. Enter short if a liquidity sweep of a recent swing high occurs AND a bearish ChoCH is confirmed. Both require the current bar to be within the London or NY session.",
+      "exit_logic": "Stop loss is placed at ATR(14) * sl_atr_mult distance from entry. Take profit is placed at ATR(14) * tp_atr_mult distance from entry, targeting the opposing liquidity pool.",
+      "filters": [
+        "is_session(df, 'london') | is_session(df, 'ny')"
+      ],
+      "session_filter": "london_ny",
+      "direction": "both",
+      "parameters": {
+        "swing_n": {
+          "default": 5,
+          "min": 3,
+          "max": 10
+        },
+        "structure_lookback": {
+          "default": 24,
+          "min": 10,
+          "max": 48
+        },
+        "atr_period": {
+          "default": 14,
+          "min": 7,
+          "max": 21
+        },
+        "sl_atr_mult": {
+          "default": 1.5,
+          "min": 1.0,
+          "max": 3.0
+        },
+        "tp_atr_mult": {
+          "default": 3.0,
+          "min": 2.0,
+          "max": 6.0
+        }
+      },
+      "expected_trades_per_year": 85,
+      "expected_failure_conditions": "Strong macroeconomic trending days where sweeps do not reverse but instead accelerate into genuine breakouts, or Asian session drift that lacks the volume to trigger clean structural shifts."
+    },
+    "code": "class Strategy:\n    PARAMS = {\n        \"swing_n\": {\"default\": 5, \"min\": 3, \"max\": 10},\n        \"structure_lookback\": {\"default\": 24, \"min\": 10, \"max\": 48},\n        \"atr_period\": {\"default\": 14, \"min\": 7, \"max\": 21},\n        \"sl_atr_mult\": {\"default\": 1.5, \"min\": 1.0, \"max\": 3.0},\n        \"tp_atr_mult\": {\"default\": 3.0, \"min\": 2.0, \"max\": 6.0}\n    }\n\n    def __init__(self, params):\n        self.swing_n = int(params.get(\"swing_n\", self.PARAMS[\"swing_n\"][\"default\"]))\n        self.structure_lookback = int(params.get(\"structure_lookback\", self.PARAMS[\"structure_lookback\"][\"default\"]))\n        self.atr_period = int(params.get(\"atr_period\", self.PARAMS[\"atr_period\"][\"default\"]))\n        self.sl_atr_mult = float(params.get(\"sl_atr_mult\", self.PARAMS[\"sl_atr_mult\"][\"default\"]))\n        self.tp_atr_mult = float(params.get(\"tp_atr_mult\", self.PARAMS[\"tp_atr_mult\"][\"default\"]))\n\n    def on_bar(self, bars):\n        # Need enough history for swings + lookback + right-side confirmation\n        required_bars = self.swing_n * 2 + self.structure_lookback + 5\n        if len(bars) < required_bars:\n            return None\n\n        # Session filter: only trade during London or New York sessions\n        in_london = is_session(bars, \"london\").iloc[-1]\n        in_ny = is_session(bars, \"ny\").iloc[-1]\n        if not (in_london or in_ny):\n            return None\n\n        # Calculate indicators on closed bars\n        sweeps = liquidity_sweep(bars, self.swing_n)\n        chochs = choch(bars.iloc[-self.structure_lookback:], self.swing_n)\n        atr_vals = atr(bars[\"high\"], bars[\"low\"], bars[\"close\"], self.atr_period)\n\n        current_atr = atr_vals.iloc[-1]\n        if pd.isna(current_atr) or current_atr <= 0:\n            return None\n\n        sl_dist = current_atr * self.sl_atr_mult\n        tp_dist = current_atr * self.tp_atr_mult\n\n        # Check for Long Setup: Bearish sweep followed by Bullish ChoCH\n        # Look for a sweep in the recent past (within structure_lookback)\n        # and a bullish choch occurring after or concurrently\n        recent_sweeps = sweeps.iloc[-self.structure_lookback:]\n        recent_chochs = chochs.iloc[-self.structure_lookback:]\n\n        # Find last bearish sweep (sweep of swing low)\n        bearish_sweep_idx = None\n        for i in range(len(recent_sweeps) - 1, -1, -1):\n            val = recent_sweeps.iloc[i]\n            if val == -1:  # Assuming -1 indicates bearish sweep (low swept)\n                bearish_sweep_idx = recent_sweeps.index[i]\n                break\n\n        # Find last bullish choch\n        bullish_choch_idx = None\n        for i in range(len(recent_chochs) - 1, -1, -1):\n            val = recent_chochs.iloc[i]\n            if val == 1:  # Assuming 1 indicates bullish choch\n                bullish_choch_idx = recent_chochs.index[i]\n                break\n\n        # Long condition: sweep happened, then choch confirmed it\n        if bearish_sweep_idx is not None and bullish_choch_idx is not None:\n            if bullish_choch_idx >= bearish_sweep_idx:\n                # Ensure the choch is recent (within last 3 bars to act on it now)\n                bars_since_choch = len(bars) - bars.index.get_loc(bullish_choch_idx) - 1\n                if 0 <= bars_since_choch <= 3:\n                    return Signal.enter_long(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        # Find last bullish sweep (sweep of swing high)\n        bullish_sweep_idx = None\n        for i in range(len(recent_sweeps) - 1, -1, -1):\n            val = recent_sweeps.iloc[i]\n            if val == 1:  # Assuming 1 indicates bullish sweep (high swept)\n                bullish_sweep_idx = recent_sweeps.index[i]\n                break\n\n        # Find last bearish choch\n        bearish_choch_idx = None\n        for i in range(len(recent_chochs) - 1, -1, -1):\n            val = recent_chochs.iloc[i]\n            if val == -1:  # Assuming -1 indicates bearish choch\n                bearish_choch_idx = recent_chochs.index[i]\n                break\n\n        # Short condition: sweep happened, then choch confirmed it\n        if bullish_sweep_idx is not None and bearish_choch_idx is not None:\n            if bearish_choch_idx >= bullish_sweep_idx:\n                bars_since_choch = len(bars) - bars.index.get_loc(bearish_choch_idx) - 1\n                if 0 <= bars_since_choch <= 3:\n                    return Signal.enter_short(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        return None"
+  },
+  "source_hash": "bd52ae08f96a2cfe",
+  "static_scan": {
+    "passed": true,
+    "violations": [
+      {
+        "line": 50,
+        "col": 0,
+        "pattern": "regex_match",
+        "detail": "suspicious variable/comment name",
+        "severity": "warning"
+      }
+    ],
+    "banned_imports": [],
+    "summary": "1 warning(s)"
+  },
+  "train_gates": {
+    "all_passed": false,
+    "stopped_at": "smoke_run",
+    "robustness_score": 0.0,
+    "status": "rejected",
+    "gates": [
+      {
+        "name": "policy_scan",
+        "passed": true,
+        "category": "safety",
+        "details": {
+          "passed": true,
+          "violations": [
+            {
+              "line": 50,
+              "col": 0,
+              "pattern": "regex_match",
+              "detail": "suspicious variable/comment name",
+              "severity": "warning"
+            }
+          ],
+          "banned_imports": [],
+          "summary": "1 warning(s)"
+        },
+        "public_summary": "passed: policy_scan"
+      },
+      {
+        "name": "smoke_run",
+        "passed": false,
+        "category": "runtime_error",
+        "details": {
+          "error": "Strategy initialization failed: Import of 'core.indicators' blocked by sandbox audit hook.\nTraceback (most recent call last):\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\sandbox\\child.py\", line 99, in child_main\n    exec(code_obj, ns)\n  File \"<strategy>\", line 2, in <module>\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\sandbox\\policy.py\", line 597, in _safe_import\n    return __import__(name, *args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\sandbox\\policy.py\", line 523, in audit_hook\n    raise PermissionError(f\"Import of '{mod_name}' blocked by sandbox audit hook.\")\nPermissionError: Import of 'core.indicators' blocked by sandbox audit hook.\n"
+        },
+        "public_summary": "failed: runtime_error"
+      }
+    ],
+    "candidate_data": {}
+  },
+  "status": "rejected",
+  "rejected_at": "smoke_run",
+  "started_at": "2026-10-05 14:44:12.394000",
+  "finished_at": "2026-10-05 14:45:20.146000",
+  "wall_seconds": 67.75,
+  "llm_calls": 0,
+  "llm_tokens": 0
+}

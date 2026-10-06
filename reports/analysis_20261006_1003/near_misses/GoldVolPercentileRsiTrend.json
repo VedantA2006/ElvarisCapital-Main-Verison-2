@@ -1,0 +1,479 @@
+{
+  "_id": "6ac4125a67f0fa3d35d7b5a0",
+  "trial_id": "trial-58a35d588c4f",
+  "strategy_name": "GoldVolPercentileRsiTrend",
+  "timeframe": "1h",
+  "idea": {
+    "spec": {
+      "name": "GoldVolPercentileRsiTrend",
+      "timeframe": "1h",
+      "hypothesis": "Institutional gold flows are characterized by periods of volatility compression followed by aggressive directional expansion. When realized volatility drops to historical lows (bottom 30th percentile), market makers and institutions accumulate positions quietly. The subsequent breakout, confirmed by RSI momentum crossing the neutral 50-line, represents the initiation of institutional order flow. Retail traders who fade these breakouts during low-volatility regimes become trapped, providing liquidity for the trend continuation. By filtering entries through a volatility percentile threshold and confirming with ADX trend strength, we isolate high-probability institutional footprints while avoiding false breakouts in already-expanded volatility environments.",
+      "concept_family": "trend",
+      "indicators_used": [
+        "vol_percentile",
+        "rsi",
+        "ema",
+        "atr",
+        "adx",
+        "is_session"
+      ],
+      "entry_logic": "Long: Volatility percentile < threshold, RSI crosses above 50, price > EMA(21), ADX > 20. Short: Volatility percentile < threshold, RSI crosses below 50, price < EMA(21), ADX > 20.",
+      "exit_logic": "Stop loss set at max(5.0, ATR * sl_mult). Take profit set at max(7.5, ATR * tp_mult). Cooldown of 4 bars after any trade signal to prevent rapid re-entries.",
+      "filters": [
+        "London or New York session active",
+        "ADX > 20 to ensure underlying trend presence",
+        "Volatility percentile filter to avoid noisy high-vol regimes"
+      ],
+      "session_filter": "london_ny",
+      "direction": "both",
+      "parameters": {
+        "vol_lookback": {
+          "default": 100,
+          "min": 50,
+          "max": 200
+        },
+        "vol_thresh": {
+          "default": 30.0,
+          "min": 15.0,
+          "max": 50.0
+        },
+        "rsi_period": {
+          "default": 14,
+          "min": 7,
+          "max": 21
+        },
+        "ema_period": {
+          "default": 21,
+          "min": 10,
+          "max": 50
+        },
+        "sl_mult": {
+          "default": 1.5,
+          "min": 1.0,
+          "max": 3.0
+        },
+        "tp_mult": {
+          "default": 2.5,
+          "min": 1.5,
+          "max": 4.0
+        }
+      },
+      "expected_trades_per_year": 65,
+      "expected_failure_conditions": "Extended trending markets where volatility never compresses below the threshold, or sudden macroeconomic shocks causing gaps that blow past ATR-based stop losses."
+    },
+    "code": "import numpy as np\nimport pandas as pd\nfrom core.indicators import vol_percentile, rsi, ema, atr, adx, is_session\n\nclass Strategy:\n    PARAMS = {\n        \"vol_lookback\": {\"default\": 100, \"min\": 50, \"max\": 200},\n        \"vol_thresh\": {\"default\": 30.0, \"min\": 15.0, \"max\": 50.0},\n        \"rsi_period\": {\"default\": 14, \"min\": 7, \"max\": 21},\n        \"ema_period\": {\"default\": 21, \"min\": 10, \"max\": 50},\n        \"sl_mult\": {\"default\": 1.5, \"min\": 1.0, \"max\": 3.0},\n        \"tp_mult\": {\"default\": 2.5, \"min\": 1.5, \"max\": 4.0}\n    }\n\n    def __init__(self, params):\n        self.params = params\n        self.last_trade_bar = -10\n\n    def on_bar(self, bars):\n        if len(bars) < 60:\n            return None\n\n        # Cooldown to prevent overtrading and ensure sample quality\n        if len(bars) - self.last_trade_bar < 4:\n            return None\n\n        # Session Filter: London or NY\n        in_london = bool(is_session(bars, \"london\").iloc[-1])\n        in_ny = bool(is_session(bars, \"ny\").iloc[-1])\n        if not (in_london or in_ny):\n            return None\n\n        # Indicators\n        vp = vol_percentile(bars, lookback=int(self.params[\"vol_lookback\"]))\n        r = rsi(bars, period=int(self.params[\"rsi_period\"]))\n        e = ema(bars, period=int(self.params[\"ema_period\"]))\n        a = atr(bars, period=14)\n        adx_res = adx(bars, period=14)\n\n        # Current and previous values\n        vp_val = float(vp.iloc[-1])\n        r_curr = float(r.iloc[-1])\n        r_prev = float(r.iloc[-2])\n        e_curr = float(e.iloc[-1])\n        close_curr = float(bars[\"close\"].iloc[-1])\n        atr_val = float(a.iloc[-1])\n        adx_val = float(adx_res.adx_line.iloc[-1])\n\n        # Safety checks for NaNs\n        if np.isnan(vp_val) or np.isnan(r_curr) or np.isnan(r_prev) or np.isnan(e_curr) or np.isnan(atr_val) or np.isnan(adx_val):\n            return None\n        if atr_val <= 0:\n            return None\n\n        # Core Logic Filters\n        # 1. Volatility must be compressed (below threshold)\n        if vp_val >= self.params[\"vol_thresh\"]:\n            return None\n\n        # 2. Must have some baseline trend structure to avoid pure chop\n        if adx_val < 20.0:\n            return None\n\n        # Distance calculations\n        sl_dist = max(5.0, float(atr_val * self.params[\"sl_mult\"]))\n        tp_dist = max(7.5, float(atr_val * self.params[\"tp_mult\"]))\n\n        # Long Entry: RSI crosses above 50, Price > EMA\n        if r_curr > 50.0 and r_prev <= 50.0 and close_curr > e_curr:\n            self.last_trade_bar = len(bars)\n            return Signal.enter_long(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        # Short Entry: RSI crosses below 50, Price < EMA\n        if r_curr < 50.0 and r_prev >= 50.0 and close_curr < e_curr:\n            self.last_trade_bar = len(bars)\n            return Signal.enter_short(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        return None"
+  },
+  "source_hash": "62e4d678d885e0bf",
+  "static_scan": {
+    "passed": true,
+    "violations": [],
+    "banned_imports": [],
+    "summary": "Clean"
+  },
+  "train_result": {
+    "trades": [
+      {
+        "trade_id": 0,
+        "entry_bar_idx": 146,
+        "exit_bar_idx": 152,
+        "entry_time": "2021-10-04T08:00:00+00:00",
+        "exit_time": "2021-10-04T14:00:00+00:00",
+        "direction": "SHORT",
+        "lots": 1.55,
+        "entry_price": 1753.1740725,
+        "exit_price": 1759.4385148572733,
+        "gross_pnl": -854.6717,
+        "spread_cost": 38.75,
+        "slippage_cost": 77.5668,
+        "commission": 10.85,
+        "swap_cost": -0.0,
+        "net_pnl": -981.8385,
+        "bars_held": 6,
+        "exit_reason": "stop_loss",
+        "tag": "",
+        "pnl_r": -0.9833,
+        "mae": 2720.39,
+        "mfe": 823.99,
+        "initial_sl_distance": 5.9779
+      },
+      {
+        "trade_id": 1,
+        "entry_bar_idx": 514,
+        "exit_bar_idx": 519,
+        "entry_time": "2021-10-26T08:00:00+00:00",
+        "exit_time": "2021-10-26T13:00:00+00:00",
+        "direction": "SHORT",
+        "lots": 1.83,
+        "entry_price": 1800.40012,
+        "exit_price": 1792.206479935575,
+        "gross_pnl": 1572.2482,
+        "spread_cost": 45.75,
+        "slippage_cost": 27.062,
+        "commission": 12.81,
+        "swap_cost": -0.0,
+        "net_pnl": 1486.6262,
+        "bars_held": 5,
+        "exit_reason": "take_profit",
+        "tag": "",
+        "pnl_r": 1.505,
+        "mae": 799.32,
+        "mfe": 2121.36,
+        "initial_sl_distance": 5.0
+      },
+      {
+        "trade_id": 2,
+        "entry_bar_idx": 882,
+        "exit_bar_idx": 896,
+        "entry_time": "2021-11-17T09:00:00+00:00",
+        "exit_time": "2021-11-18T00:00:00+00:00",
+        "direction": "LONG",
+        "lots": 1.6,
+        "entry_price": 1860.4882675,
+        "exit_price": 1870.1451522462762,
+        "gross_pnl": 1620.9844,
+        "spread_cost": 40.0,
+        "slippage_cost": 35.8828,
+        "commission": 11.2,
+        "swap_cost": 16.8,
+        "net_pnl": 1517.1016,
+        "bars_held": 14,
+        "exit_reason": "take_profit",
+        "tag": "",
+        "pnl_r": 1.5126,
+        "mae": 419.72,
+        "mfe": 1652.12,
+        "initial_sl_distance": 5.7941
+      },
+      {
+        "trade_id": 3,
+        "entry_bar_idx": 1132,
+        "exit_bar_idx": 1133,
+        "entry_time": "2021-12-02T13:00:00+00:00",
+        "exit_time": "2021-12-02T14:00:00+00:00",
+        "direction": "LONG",
+        "lots": 1.45,
+        "entry_price": 1779.938235,
+        "exit_price": 1773.0962923036082,
+        "gross_pnl": -886.8372,
+        "spread_cost": 36.25,
+        "slippage_cost": 68.9944,
+        "commission": 10.15,
+        "swap_cost": -0.0,
+        "net_pnl": -1002.2316,
+        "bars_held": 1,
+        "exit_reason": "stop_loss",
+        "tag": "",
+        "pnl_r": -0.9879,
+        "mae": 2418.63,
+        "mfe": 14.47,
+        "initial_sl_distance": 6.5564
+      },
+      {
+        "trade_id": 4,
+        "entry_bar_idx": 1795,
+        "exit_bar_idx": 1798,
+        "entry_time": "2022-01-13T09:00:00+00:00",
+        "exit_time": "2022-01-13T12:00:00+00:00",
+        "direction": "SHORT",
+        "lots": 1.86,
+        "entry_price": 1820.86744,
+        "exit_price": 1826.06973,
+        "gross_pnl": -854.3798,
+        "spread_cost": 46.5,
+        "slippage_cost": 66.7461,
+        "commission": 13.02,
+        "swap_cost": -0.0,
+        "net_pnl": -980.6459,
+        "bars_held": 3,
+        "exit_reason": "stop_loss",
+        "tag": "",
+        "pnl_r": -0.9752,
+        "mae": 979.58,
+        "mfe": 316.1,
+        "initial_sl_distance": 5.0
+      }
+    ],
+    "equity_curve_summary": {
+      "start": 100000.0,
+      "end": 100039.01,
+      "points": 17720
+    },
+    "metrics": {
+      "total_trades": 5,
+      "winners": 2,
+      "losers": 3,
+      "win_rate": 0.4,
+      "total_net_pnl": 39.01,
+      "total_gross_pnl": 597.34,
+      "total_costs": 558.33,
+      "spread_cost_total": 207.25,
+      "slippage_cost_total": 276.25,
+      "commission_total": 58.03,
+      "swap_cost_total": 16.8,
+      "cost_gross_ratio": 0.1748,
+      "profit_factor": 1.0132,
+      "expectancy": 7.8,
+      "expectancy_usd": 7.8,
+      "expectancy_r": 0.0142,
+      "avg_win": 1501.86,
+      "avg_loss": -988.24,
+      "payoff": 1.5197,
+      "payoff_ratio": 1.5197,
+      "largest_win": 1517.1,
+      "largest_loss": -1002.23,
+      "max_consecutive_wins": 2,
+      "max_consecutive_losses": 2,
+      "avg_holding_bars": 5.8,
+      "avg_holding_hours": 6.0,
+      "exposure_pct": 0.0016,
+      "trades_per_month": 0.14,
+      "trades_per_year": 1.7,
+      "years_covered": 2.998,
+      "long_trades": 2,
+      "short_trades": 3,
+      "long_win_rate": 0.5,
+      "short_win_rate": 0.3333,
+      "profit_concentration_top5pct": 0.5051,
+      "yearly_pnl": {
+        "2021": 1019.66,
+        "2022": -980.65,
+        "2023": 0.0,
+        "2024": 0.0
+      },
+      "total_return_pct": 0.04,
+      "final_equity": 100039.01,
+      "cagr": 0.01,
+      "sharpe": 0.0146,
+      "sortino": 0.0012,
+      "calmar": 0.0063,
+      "omega": 1.024,
+      "max_drawdown": 0.0206,
+      "average_drawdown": 0.0182,
+      "max_drawdown_bars": 16588,
+      "max_drawdown_days": 1025.0,
+      "time_under_water": 0.9779,
+      "ulcer_index": 0.0187,
+      "recovery_factor": 0.0188,
+      "long_breakdown": {
+        "trades": 2,
+        "win_rate": 0.5,
+        "net_pnl": 514.87,
+        "profit_factor": 1.5137
+      },
+      "short_breakdown": {
+        "trades": 3,
+        "win_rate": 0.3333,
+        "net_pnl": -475.86,
+        "profit_factor": 0.7575
+      },
+      "exit_reasons": {
+        "stop_loss": {
+          "count": 3,
+          "net_pnl": -2964.72,
+          "pct_of_trades": 0.6
+        },
+        "take_profit": {
+          "count": 2,
+          "net_pnl": 3003.73,
+          "pct_of_trades": 0.4
+        }
+      },
+      "avg_mae": 1467.53,
+      "avg_mfe": 985.61,
+      "monthly_table": {
+        "2021": {
+          "09": 0.0,
+          "10": 0.5,
+          "11": 1.51,
+          "12": -0.98
+        },
+        "2022": {
+          "01": -0.97,
+          "02": 0.0,
+          "03": 0.0,
+          "04": 0.0,
+          "05": 0.0,
+          "06": 0.0,
+          "07": 0.0,
+          "08": 0.0,
+          "09": 0.0,
+          "10": 0.0,
+          "11": 0.0,
+          "12": 0.0
+        },
+        "2023": {
+          "01": 0.0,
+          "02": 0.0,
+          "03": 0.0,
+          "04": 0.0,
+          "05": 0.0,
+          "06": 0.0,
+          "07": 0.0,
+          "08": 0.0,
+          "09": 0.0,
+          "10": 0.0,
+          "11": 0.0,
+          "12": 0.0
+        },
+        "2024": {
+          "01": 0.0,
+          "02": 0.0,
+          "03": 0.0,
+          "04": 0.0,
+          "05": 0.0,
+          "06": 0.0,
+          "07": 0.0,
+          "08": 0.0,
+          "09": 0.0
+        }
+      },
+      "average_monthly_return_pct": 0.0,
+      "median_monthly_return_pct": 0.0,
+      "best_month_pct": 1.51,
+      "worst_month_pct": -0.98,
+      "pct_profitable_months": 0.0541,
+      "avg_winning_month_pct": 1.01,
+      "avg_losing_month_pct": -0.98,
+      "average_monthly_max_drawdown": 0.0012,
+      "yearly_table": {
+        "2021": {
+          "return_pct": 1.02,
+          "net_pnl": 1019.66,
+          "trades": 4
+        },
+        "2022": {
+          "return_pct": -0.97,
+          "net_pnl": -980.65,
+          "trades": 1
+        },
+        "2023": {
+          "return_pct": 0.0,
+          "net_pnl": 0.0
+        },
+        "2024": {
+          "return_pct": 0.0,
+          "net_pnl": 0.0
+        }
+      },
+      "buy_and_hold_return_pct": 50.06,
+      "beta": 0.0,
+      "status": "completed"
+    },
+    "metadata": {
+      "timeframe": "1h",
+      "split": "train",
+      "file_hash": "2959682a19a528cdb8674ef61a9174aa4a9006d87ad4aa4d6d7010f2287e5ee1",
+      "slice_hash": "42a0ec00ad82e627aaaf92be13edc325178d07db31db7fb2d95181da445eca73",
+      "total_bars": 17720,
+      "live_bars": 17720,
+      "warmup_bars": 0,
+      "skipped_min_lot": 0,
+      "skipped_margin": 0,
+      "forced_closes": 0,
+      "strategy_errors": 0,
+      "first_strategy_error": null
+    },
+    "status": "completed",
+    "wall_seconds": 0.761,
+    "created_at": "2026-10-05 21:10:50.574000"
+  },
+  "train_gates": {
+    "all_passed": false,
+    "stopped_at": "minimum_sample",
+    "robustness_score": 0.0,
+    "status": "rejected",
+    "gates": [
+      {
+        "name": "policy_scan",
+        "passed": true,
+        "category": "safety",
+        "details": {
+          "passed": true,
+          "violations": [],
+          "banned_imports": [],
+          "summary": "Clean"
+        },
+        "public_summary": "passed: policy_scan"
+      },
+      {
+        "name": "smoke_run",
+        "passed": true,
+        "category": "clean_load",
+        "details": {
+          "detail": "Sandbox instantiation succeeded."
+        },
+        "public_summary": "passed: smoke_run"
+      },
+      {
+        "name": "determinism",
+        "passed": true,
+        "category": "determinism",
+        "details": {
+          "passed": true,
+          "first_diverging_bar": null,
+          "first_diverging_timestamp": null,
+          "diverging_field": null,
+          "detail": "Bit-identical signal tapes produced on two independent runs with seed=42."
+        },
+        "public_summary": "passed: determinism"
+      },
+      {
+        "name": "truncation",
+        "passed": true,
+        "category": "truncation",
+        "details": {
+          "passed": true,
+          "num_cuts": 20,
+          "first_diverging_bar": null,
+          "first_diverging_timestamp": null,
+          "diverging_field": null,
+          "detail": "Verified signal identity T_c[0..c] == T_full[0..c] across 20 cut points (tolerance 1e-9)."
+        },
+        "public_summary": "passed: truncation"
+      },
+      {
+        "name": "signal_validity",
+        "passed": true,
+        "category": "signal_valid",
+        "details": {
+          "failures": []
+        },
+        "public_summary": "passed: signal_validity"
+      },
+      {
+        "name": "train_backtest",
+        "passed": true,
+        "category": "train_simulation_success",
+        "details": {
+          "trades": 5,
+          "net_pnl": 39.01
+        },
+        "public_summary": "passed: train_backtest"
+      },
+      {
+        "name": "minimum_sample",
+        "passed": false,
+        "category": "sample_size",
+        "details": {
+          "total_trades": 5,
+          "min_trades": 100,
+          "trades_per_year": 1.7,
+          "min_tpy": 30,
+          "failures": [
+            "trades=5 < 100",
+            "trades_per_year=1.7 < 30"
+          ]
+        },
+        "public_summary": "failed: sample_size"
+      }
+    ],
+    "candidate_data": {}
+  },
+  "status": "rejected",
+  "rejected_at": "minimum_sample",
+  "started_at": "2026-10-05 21:06:44.636000",
+  "finished_at": "2026-10-05 21:10:50.574000",
+  "wall_seconds": 245.94,
+  "llm_calls": 0,
+  "llm_tokens": 0
+}

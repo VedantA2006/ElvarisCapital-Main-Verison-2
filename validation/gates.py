@@ -160,21 +160,8 @@ def gate_determinism(source: str, df: pd.DataFrame, cfg: dict, seed: int = 42) -
     det_res = run_determinism_test(source, test_df, cfg, seed=seed)
     passed = det_res.passed
 
-    # Distinguish runtime errors from actual lookahead leaks.
-    # If the detail contains "failed with error" it means the strategy crashed
-    # during execution — that's a runtime_error, NOT a lookahead leak.
-    detail_str = det_res.detail or ""
-    is_runtime_error = "failed with error" in detail_str.lower()
-
-    if passed:
-        category = "determinism"
-        summary = "passed: determinism"
-    elif is_runtime_error:
-        category = "runtime_error"
-        summary = "failed: runtime_error"
-    else:
-        category = "lookahead_leak"
-        summary = "failed: lookahead_leak"
+    category = "determinism" if passed else "lookahead_leak"
+    summary = "passed: determinism" if passed else "failed: lookahead_leak"
 
     return GateResult(
         name="determinism",

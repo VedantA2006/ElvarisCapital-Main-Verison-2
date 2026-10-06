@@ -1,0 +1,154 @@
+{
+  "_id": "6ac3f0f5d18a7b04b14106cf",
+  "strategy_name": "GoldSessionORB_TrendContinuation",
+  "timeframe": "1h",
+  "source_hash": "0c12503a3fbafd71",
+  "idea": {
+    "spec": {
+      "name": "GoldSessionORB_TrendContinuation",
+      "timeframe": "1h",
+      "hypothesis": "Gold exhibits strong intraday momentum driven by institutional macro flows that establish direction during the London open and accelerate during the New York overlap. By identifying the 4-hour trend bias via HTF EMA slope and waiting for a confirmed Break of Structure (BOS) in that direction, we capture the expansion phase of the daily move. The losing side consists of retail mean-reversion traders fading the initial breakout without structural confirmation, as well as late entrants who buy after the liquidity has already been absorbed. Institutional order flow uses the London session to accumulate positions, and the NY session to distribute or drive price to targets.",
+      "concept_family": "trend",
+      "indicators_used": [
+        "htf",
+        "ema",
+        "bos",
+        "atr",
+        "is_session",
+        "swing_high",
+        "swing_low"
+      ],
+      "entry_logic": "1. Determine 4H trend bias using the slope of the 4H 20-period EMA. 2. Confirm a Break of Structure (BOS) on the 1H timeframe in the direction of the 4H bias (bull_bos for longs, bear_bos for shorts). 3. Ensure the current bar falls within the London or New York sessions. 4. Enter in the direction of the BOS and HTF trend.",
+      "exit_logic": "Stop loss is placed at a multiple of the 14-period ATR below/above entry to allow for normal volatility breathing room. Take profit is set at a fixed Risk:Reward ratio defined by the tp_rr parameter. A cooldown of 4 bars prevents immediate re-entry on consecutive BOS signals.",
+      "filters": [
+        "London or NY session active",
+        "4H EMA trending",
+        "1H Break of Structure confirmed"
+      ],
+      "session_filter": "london_ny",
+      "direction": "both",
+      "parameters": {
+        "swing_n": {
+          "default": 5,
+          "min": 3,
+          "max": 10
+        },
+        "sl_mult": {
+          "default": 1.5,
+          "min": 1.0,
+          "max": 3.0
+        },
+        "tp_rr": {
+          "default": 2.0,
+          "min": 1.5,
+          "max": 4.0
+        },
+        "cooldown": {
+          "default": 4,
+          "min": 2,
+          "max": 8
+        }
+      },
+      "expected_trades_per_year": 65,
+      "expected_failure_conditions": "Protracted low-volatility summer chop or sudden news-driven whipsaws that trigger false BOS signals followed by immediate reversals."
+    },
+    "code": "import numpy as np\nimport pandas as pd\nfrom core.indicators import htf, ema, bos, atr, is_session, swing_high, swing_low\n\nclass Strategy:\n    PARAMS = {\n        \"swing_n\": {\"default\": 5, \"min\": 3, \"max\": 10},\n        \"sl_mult\": {\"default\": 1.5, \"min\": 1.0, \"max\": 3.0},\n        \"tp_rr\": {\"default\": 2.0, \"min\": 1.5, \"max\": 4.0},\n        \"cooldown\": {\"default\": 4, \"min\": 2, \"max\": 8}\n    }\n\n    def __init__(self, params):\n        self.params = params\n        self.last_trade_bar = -999\n\n    def on_bar(self, bars: pd.DataFrame):\n        # Warmup safety\n        if len(bars) < 60:\n            return None\n\n        curr_idx = len(bars) - 1\n\n        # Cooldown enforcement\n        if (curr_idx - self.last_trade_bar) < self.params[\"cooldown\"]:\n            return None\n\n        # Session filter: London or New York\n        in_london = is_session(bars, \"london\").iloc[-1]\n        in_ny = is_session(bars, \"ny\").iloc[-1]\n        if not (in_london or in_ny):\n            return None\n\n        # 4H Trend Bias via HTF EMA slope\n        try:\n            htf_ema = htf(bars, \"4h\", lambda x: ema(x, 20))\n            if htf_ema is None or len(htf_ema) < 3:\n                return None\n            # Ensure no NaNs in recent values\n            if np.isnan(htf_ema.iloc[-1]) or np.isnan(htf_ema.iloc[-2]):\n                return None\n            htf_slope = htf_ema.iloc[-1] - htf_ema.iloc[-2]\n        except Exception:\n            return None\n\n        # 1H Break of Structure\n        swing_n = int(self.params[\"swing_n\"])\n        bull_bos, bear_bos = bos(bars, swing_n)\n\n        if bull_bos is None or bear_bos is None:\n            return None\n        if len(bull_bos) == 0 or len(bear_bos) == 0:\n            return None\n\n        last_bull = bool(bull_bos.iloc[-1])\n        last_bear = bool(bear_bos.iloc[-1])\n\n        # ATR for dynamic stop loss\n        atr_series = atr(bars, 14)\n        if atr_series is None or len(atr_series) == 0:\n            return None\n        atr_val = float(atr_series.iloc[-1])\n        if np.isnan(atr_val) or atr_val <= 0:\n            return None\n\n        sl_dist = max(5.0, float(atr_val * self.params[\"sl_mult\"]))\n        tp_dist = max(1.50, float(sl_dist * self.params[\"tp_rr\"]))\n\n        # Entry Logic\n        if htf_slope > 0 and last_bull:\n            self.last_trade_bar = curr_idx\n            return Signal.enter_long(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        elif htf_slope < 0 and last_bear:\n            self.last_trade_bar = curr_idx\n            return Signal.enter_short(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        return None"
+  },
+  "status": "rejected",
+  "rejected_at": "minimum_sample",
+  "train_gates": {
+    "all_passed": false,
+    "stopped_at": "minimum_sample",
+    "robustness_score": 0.0,
+    "status": "rejected",
+    "gates": [
+      {
+        "name": "policy_scan",
+        "passed": true,
+        "category": "safety",
+        "details": {
+          "passed": true,
+          "violations": [],
+          "banned_imports": [],
+          "summary": "Clean"
+        },
+        "public_summary": "passed: policy_scan"
+      },
+      {
+        "name": "smoke_run",
+        "passed": true,
+        "category": "clean_load",
+        "details": {
+          "detail": "Sandbox instantiation succeeded."
+        },
+        "public_summary": "passed: smoke_run"
+      },
+      {
+        "name": "determinism",
+        "passed": true,
+        "category": "determinism",
+        "details": {
+          "passed": true,
+          "first_diverging_bar": null,
+          "first_diverging_timestamp": null,
+          "diverging_field": null,
+          "detail": "Bit-identical signal tapes produced on two independent runs with seed=42."
+        },
+        "public_summary": "passed: determinism"
+      },
+      {
+        "name": "truncation",
+        "passed": true,
+        "category": "truncation",
+        "details": {
+          "passed": true,
+          "num_cuts": 20,
+          "first_diverging_bar": null,
+          "first_diverging_timestamp": null,
+          "diverging_field": null,
+          "detail": "Verified signal identity T_c[0..c] == T_full[0..c] across 20 cut points (tolerance 1e-9)."
+        },
+        "public_summary": "passed: truncation"
+      },
+      {
+        "name": "signal_validity",
+        "passed": true,
+        "category": "signal_valid",
+        "details": {
+          "failures": []
+        },
+        "public_summary": "passed: signal_validity"
+      },
+      {
+        "name": "train_backtest",
+        "passed": true,
+        "category": "train_simulation_success",
+        "details": {
+          "trades": 18,
+          "net_pnl": -8927.51
+        },
+        "public_summary": "passed: train_backtest"
+      },
+      {
+        "name": "minimum_sample",
+        "passed": false,
+        "category": "sample_size",
+        "details": {
+          "total_trades": 18,
+          "min_trades": 100,
+          "trades_per_year": 6.0,
+          "min_tpy": 30,
+          "failures": [
+            "trades=18 < 100",
+            "trades_per_year=6.0 < 30"
+          ]
+        },
+        "public_summary": "failed: sample_size"
+      }
+    ],
+    "candidate_data": {}
+  },
+  "started_at": "2026-10-05 18:48:21.426000",
+  "is_rerun": true,
+  "original_rejected_at": "minimum_sample"
+}

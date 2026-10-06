@@ -1,0 +1,275 @@
+# QuantForge Configuration
+# All thresholds, costs, and operational settings in one place.
+# Never hardcode values in Python — read them from here.
+
+# ─── Data ───────────────────────────────────────────────────────────────────
+data:
+  base_dir: "../data"                 # relative to the quantforge/ folder
+  symbol: "XAUUSD"
+  files:
+    "5m":  "XAUUSD_M5.csv"
+    "15m": "XAUUSD_M15.csv"
+    "1h":  "XAUUSD_H1.csv"
+    "4h":  "XAUUSD_H4.csv"
+  all_timeframes: ["5m", "15m", "1h", "4h"]
+  enabled_timeframes: ["1h", "4h"]   # 5m/15m DISABLED until approved (Section 0C)
+  # Timezone of the raw CSV timestamps. EMPIRICALLY VERIFIED as UTC:
+  # weekly open is Sun 22:00 UTC in US summer / 23:00 UTC in US winter and the
+  # daily break is 20:55->22:00 (summer) / 21:55->23:00 (winter), i.e. the
+  # feed follows New-York-close in UTC. Do not change without re-running
+  # `python main.py verify-data` and checking the market_hours report.
+  broker_tz: "UTC"
+  timestamp_format: "%Y-%m-%d %H:%M:%S"
+
+# ─── Session Map ─────────────────────────────────────────────────────────
+# Defined in each market's LOCAL time and converted to UTC per bar, so DST is
+# handled correctly. The resulting UTC hours (summer/winter) are stored in
+# Mongo (`session_map`) and shown on the data-quality report.
+sessions:
+  asia:
+    tz: "Asia/Tokyo"
+    start: 8     # 08:00 Tokyo (no DST) = 23:00 UTC
+    end: 17      # 17:00 Tokyo          = 08:00 UTC
+  london:
+    tz: "Europe/London"
+    start: 8     # 08:00 London local
+    end: 17
+  new_york:
+    tz: "America/New_York"
+    start: 8     # 08:00 New York local
+    end: 17      # 17:00 NY = daily rollover
+  # overlap_london_ny is derived: bars where london AND new_york are both open.
+
+# Market hours model (used to classify expected gaps). XAUUSD trades
+# Sun 18:00 -> Fri 17:00 New York time with a daily break at 17:00 NY.
+market_hours:
+  tz: "America/New_York"
+  daily_break_hour: 17          # 17:00 NY local
+  daily_break_max_minutes: 75   # break up to 75 min is expected
+  weekend_max_hours: 72         # Fri close -> Sun open gap allowed up to 72h
+
+# ─── Data Validation ──────────────────────────────────────────────────────
+validation:
+  max_gap_multiplier: 3.0    # gap > N * expected_interval → flag
+  spike_atr_threshold: 10.0  # price move > N * ATR(20) → flag
+  atr_period: 20
+  critical_errors_halt: true # halt on critical errors (duplicates, NaN, etc.)
+
+# ─── Data Splits ──────────────────────────────────────────────────────────
+splits:
+  train_ratio: 0.60
+  validation_ratio: 0.20
+  holdout_ratio: 0.20
+  embargo_days: 7            # gap between splits
+
+# ─── Costs ────────────────────────────────────────────────────────────────
+costs:
+  # Spread in pips (1 pip = 0.01 for gold, i.e. 10 cents)
+  spread:
+    default: 0.25            # 25 cents = $0.25 per oz
+    asia: 0.35
+    rollover: 0.50
+    news: 0.60
+    # Rollover window in New York local time. 16:00-19:00 NY = 20:00-23:00 UTC
+    # (summer) / 21:00-00:00 UTC (winter). This deliberately covers the spec's
+    # 21:00-23:00 UTC in BOTH DST seasons (conservative = wider).
+    rollover_tz: "America/New_York"
+    rollover_start_local: 16
+    rollover_end_local: 19
+  slippage:
+    base_fraction_of_atr: 0.05   # 5% of ATR
+    stop_multiplier: 1.5         # stops get 1.5x slippage
+    news_multiplier: 2.0
+  commission_per_lot: 7.0        # $ per standard lot (100 oz) round trip
+  swap:
+    long_per_lot_per_night: -3.50   # $ (negative = pay)
+    short_per_lot_per_night: 0.80   # $ (positive = earn)
+    triple_day: "wednesday"         # triple swap day
+
+# ─── Contract Spec ────────────────────────────────────────────────────────
+contract:
+  symbol: "XAUUSD"
+  contract_size: 100          # 1 lot = 100 oz
+  lot_step: 0.01
+  min_lot: 0.01
+  max_lot: 50.0
+  leverage: 100
+  currency: "USD"
+  pip_value: 0.01             # 1 pip = $0.01 price move per oz
+
+# ─── Position Sizing ─────────────────────────────────────────────────────
+sizing:
+  risk_per_trade: 0.01        # 1% of equity
+  initial_equity: 100000.0
+  max_leverage: 100
+  pyramiding: false           # one position at a time
+
+# ─── Strategy Constraints ────────────────────────────────────────────────
+strategy:
+  max_tunable_parameters: 6
+  max_code_length: 15000      # characters
+  allowed_imports:
+    - numpy
+    - pandas
+    - numba
+    - math
+    - random
+
+# ─── Signals Contract & Validation (Phase F2.2) ──────────────────────────
+signals:
+  min_sl_usd: 1.0
+  min_sl_atr_multiple: 0.3
+  max_sl_usd: 1000.0
+  min_tp_spread_multiple: 3.0
+  min_tp_usd: 0.50
+
+# ─── Train Gates (Section 7, gates 1-3) ──────────────────────────────────
+gates:
+  min_trades:
+    default: 100
+    "4h": 80
+  min_trades_per_year: 30
+  train:
+    min_profit_factor: 1.25
+    min_sharpe: 0.80
+    max_drawdown: 0.25         # 25%
+    min_expectancy: 0.0
+  cost_gross_ratio_max: 0.40   # reject if costs > 40% of gross profit
+
+  # ─── Baseline Gates ────────────────────────────────────────────────────
+  random_baseline_runs: 1000
+  random_baseline_percentile: 95
+
+  # ─── Parameter Sensitivity (Gate 4) ────────────────────────────────────
+  sensitivity:
+    perturbations: [0.10, 0.20, 0.30]  # ±10%, ±20%, ±30%
+    min_profitable_neighbors_pct: 0.70
+    min_sharpe_ratio_of_baseline: 0.50
+
+  # ─── Walk-Forward (Gate 5) ─────────────────────────────────────────────
+  walk_forward:
+    in_sample_months: 12
+    out_of_sample_months: 3
+    min_profitable_windows_pct: 0.65
+    min_efficiency: 0.50
+
+  # ─── Monte Carlo (Gate 6) ──────────────────────────────────────────────
+  monte_carlo:
+    runs: 5000
+    drop_pct: 0.10
+    min_5th_percentile_positive: true
+    max_95th_percentile_dd: 0.30
+
+  # ─── Year/Regime (Gate 7) ──────────────────────────────────────────────
+  regime:
+    max_profit_concentration_pct: 0.60  # from one year or regime
+
+  # ─── Validation Gate (Gate 8) ──────────────────────────────────────────
+  validation:
+    min_sharpe_ratio_of_train: 0.50
+    min_profit_factor: 1.15
+
+  # ─── DSR (Gate 9) ─────────────────────────────────────────────────────
+  dsr:
+    min_probability: 0.95
+
+  # ─── PBO (Gate 10) ────────────────────────────────────────────────────
+  pbo:
+    max_pbo: 0.50
+
+  # ─── Holdout (Gate 12) ────────────────────────────────────────────────
+  holdout:
+    min_sharpe_ratio_of_train: 0.50
+
+  # ─── Suspicion Rules (Section 6F) ─────────────────────────────────────
+  suspicion:
+    max_sharpe_1h_4h: 3.0
+    max_profit_factor: 3.0
+    max_win_rate: 0.85
+    profit_concentration_top5_pct: 0.70  # top 5% of trades
+
+  # ─── Delay Test ───────────────────────────────────────────────────────
+  delay:
+    max_sharpe_drop_1bar: 0.60  # 60% Sharpe drop at 1-bar delay
+    reject_on_5m_15m: true
+
+  # ─── Truncation Test ─────────────────────────────────────────────────
+  truncation:
+    num_cut_points: 20
+
+# ─── Diversity ────────────────────────────────────────────────────────────
+diversity:
+  fingerprint_cosine_threshold: 0.88
+  behavior_correlation_threshold: 0.70
+  trade_overlap_threshold: 0.70
+  code_structure_threshold: 0.85
+  semantic_similarity_threshold: 0.80
+  coverage_map:
+    max_consecutive_failures: 5
+    cooling_cycles: 20
+    exploration_rate: 0.20
+
+# ─── LLM ─────────────────────────────────────────────────────────────────
+llm:
+  timeout_seconds: 120
+  max_json_repair_attempts: 2
+  max_code_fix_attempts: 3
+  max_lookahead_fix_attempts: 3
+  max_improve_rounds: 5
+  ideation_temperature: 0.9
+  code_fix_temperature: 0.2
+  alternate_keys: false       # round-robin key usage
+  cooldown_default_seconds: 60
+
+  # ─── Budget Caps ──────────────────────────────────────────────────────
+  max_calls_per_day: 500
+  max_tokens_per_day: 2000000
+  max_trials_per_day: 50
+
+# ─── Forward Test ─────────────────────────────────────────────────────────
+forward:
+  min_days: 60                # hard floor, config cannot go below
+  min_trades: 50              # hard floor
+  decay_band_sigma: 2.0       # lower confidence band = mean - N*sigma
+  decay_consecutive_trades: 10
+
+# ─── Sandbox ──────────────────────────────────────────────────────────────
+sandbox:
+  cpu_time_limit: 60          # seconds
+  memory_limit_mb: 2048
+  wall_clock_timeout: 120     # seconds
+  use_docker: false
+
+# ─── Robustness Score Weights (0 to 100, spec F8 & GATE-7) ────────────────
+robustness_weights:
+  dsr: 15
+  walk_forward: 15
+  parameter_plateau: 15
+  monte_carlo: 15
+  regime_breadth: 10
+  cost_resilience: 10
+  delay_resilience: 10
+  beat_random: 10
+
+# ─── MongoDB ──────────────────────────────────────────────────────────────
+mongo:
+  database: "quantforge"
+  test_database: "quantforge_test"   # pytest uses this; never production
+
+# ─── Dashboard ────────────────────────────────────────────────────────────
+dashboard:
+  web_host: "127.0.0.1"
+  web_port: 8000
+  auto_refresh_seconds: 5
+
+# ─── Logging ──────────────────────────────────────────────────────────────
+logging:
+  level: "INFO"
+  jsonl_dir: "logs"
+  max_file_size_mb: 50
+  rotate_count: 5
+
+# ─── Cross-asset (feature-flagged) ───────────────────────────────────────
+cross_asset:
+  enabled: false
+  assets: ["XAGUSD", "DXY"]

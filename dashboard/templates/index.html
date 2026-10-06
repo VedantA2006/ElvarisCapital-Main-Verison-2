@@ -248,6 +248,52 @@
 
         <!-- ════════════════ PAGE: LLM & TOKENS ════════════════ -->
         <section id="page-llm" class="page-view">
+            <!-- Pipeline Demonstration Banner (Section 98) -->
+            <div class="card" style="margin-bottom: 20px; background: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9)); border: 1px solid rgba(59, 130, 246, 0.3);">
+                <div class="card-title" style="color: var(--color-blue); font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em;">Autonomous Scientific Research Loop</div>
+                <div style="display: flex; align-items: center; justify-content: space-around; padding: 12px 0; font-family: var(--font-mono); font-size: 14px; font-weight: 700;">
+                    <span style="color: #60a5fa;">IDEATE</span>
+                    <span style="color: var(--text-muted);">➔</span>
+                    <span style="color: #a78bfa;">BACKTEST</span>
+                    <span style="color: var(--text-muted);">➔</span>
+                    <span style="color: #f59e0b;">DIAGNOSE</span>
+                    <span style="color: var(--text-muted);">➔</span>
+                    <span style="color: #10b981;">IMPROVE</span>
+                    <span style="color: var(--text-muted);">➔</span>
+                    <span style="color: #38bdf8;">RETEST</span>
+                </div>
+            </div>
+
+            <!-- Role / Purpose Breakdown Counters (Section 59, 98) -->
+            <div class="card-title" style="margin-bottom: 10px;">LLM Scientific Role Telemetry</div>
+            <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 20px;">
+                <div class="card" style="padding: 14px; border-top: 3px solid #60a5fa;">
+                    <div class="card-title">Ideas</div>
+                    <div id="llm-count-ideas" class="card-value mono" style="font-size: 24px;">0</div>
+                    <div class="card-meta">Hypothesis & Strategy Gen</div>
+                </div>
+                <div class="card" style="padding: 14px; border-top: 3px solid #10b981;">
+                    <div class="card-title">Improvements</div>
+                    <div id="llm-count-improvements" class="card-value mono" style="font-size: 24px; color: var(--color-green);">0</div>
+                    <div class="card-meta">Guided Strategy Refinements</div>
+                </div>
+                <div class="card" style="padding: 14px; border-top: 3px solid #f59e0b;">
+                    <div class="card-title">Failure Analyses</div>
+                    <div id="llm-count-analyses" class="card-value mono" style="font-size: 24px; color: var(--color-amber);">0</div>
+                    <div class="card-meta">Autopsy Diagnostics</div>
+                </div>
+                <div class="card" style="padding: 14px; border-top: 3px solid #a78bfa;">
+                    <div class="card-title">Reviews</div>
+                    <div id="llm-count-reviews" class="card-value mono" style="font-size: 24px;">0</div>
+                    <div class="card-meta">Code & Logic Integrity</div>
+                </div>
+                <div class="card" style="padding: 14px; border-top: 3px solid #ec4899;">
+                    <div class="card-title">Robustness Analyses</div>
+                    <div id="llm-count-robustness" class="card-value mono" style="font-size: 24px;">0</div>
+                    <div class="card-meta">Stress & Sensitivity Review</div>
+                </div>
+            </div>
+
             <div class="grid-cols-4">
                 <div class="card">
                     <div class="card-title">Total Tokens Consumed</div>

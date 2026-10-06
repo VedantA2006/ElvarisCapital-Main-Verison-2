@@ -261,6 +261,42 @@ def get_trial_count() -> int:
     return int(doc["count"])
 
 
+def verify_counters() -> dict[str, Any]:
+    """Verify consistency between global counter and stored runs documents."""
+    recorded_count = get_trial_count()
+    actual_runs = col_runs().count_documents({"trial_id": {"$exists": True}})
+    synced = (recorded_count == actual_runs)
+    return {
+        "recorded_counter": recorded_count,
+        "actual_runs": actual_runs,
+        "synced": synced,
+        "discrepancy": recorded_count - actual_runs,
+    }
+
+
+def repair_counters(confirm: str = "") -> dict[str, Any]:
+    """Rebuild the global trial counter from source-of-truth runs records.
+
+    Requires explicit confirmation: confirm='REPAIR COUNTERS'.
+    """
+    if confirm != "REPAIR COUNTERS":
+        raise ValueError(
+            "Explicit confirmation required to repair database counters. "
+            "Pass confirmation string: 'REPAIR COUNTERS'"
+        )
+    actual_runs = col_runs().count_documents({"trial_id": {"$exists": True}})
+    col_counters().replace_one(
+        {"counter_id": "global"},
+        {"counter_id": "global", "count": actual_runs, "updated_at": utcnow()},
+        upsert=True,
+    )
+    return {
+        "status": "repaired",
+        "new_counter_value": actual_runs,
+        "timestamp": utcnow().isoformat(),
+    }
+
+
 def record_holdout_access(strategy_id: str, *, timeframe: str = "", purpose: str = "",
                           file_hash: str = "") -> None:
     """Record a holdout access. Raises PermissionError on a second attempt.

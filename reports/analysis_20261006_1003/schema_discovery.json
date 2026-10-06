@@ -1,0 +1,600 @@
+{
+  "database_name": "quantforge",
+  "discovery_time_utc": "2026-10-06T04:33:01.043732+00:00",
+  "collections": {
+    "audit_logs": {
+      "document_count": 1,
+      "sample_document": {
+        "_id": "6ac3b633730e3b108c4f9baa",
+        "action": "start",
+        "requested_by": "dashboard_ui",
+        "timestamp": 1791211059.74193,
+        "iso_time": "2026-10-05T14:37:39.741930+00:00",
+        "details": {}
+      }
+    },
+    "backtests": {
+      "document_count": 0,
+      "sample_document": null
+    },
+    "counters": {
+      "document_count": 1,
+      "sample_document": {
+        "_id": "6ac3b7ff5ecb14c08477d361",
+        "counter_id": "global",
+        "count": 156
+      }
+    },
+    "coverage_map": {
+      "document_count": 0,
+      "sample_document": null
+    },
+    "cycles": {
+      "document_count": 5523,
+      "sample_document": {
+        "_id": "cycle_1791211106362",
+        "artefacts": {},
+        "cycle_id": "cycle_1791211106362",
+        "stage": "pick_target",
+        "status": "completed",
+        "strategy_name": "",
+        "timeframe": "1h",
+        "updated_at": 1791211106.4593656,
+        "version": 1
+      }
+    },
+    "data_reports": {
+      "document_count": 21,
+      "sample_document": {
+        "_id": "6ac219f4901095ef664f23eb",
+        "timeframe": "5m",
+        "total_rows": 354025,
+        "critical_errors": [],
+        "warnings": [
+          {
+            "type": "unexplained_gaps",
+            "count": 54,
+            "note": "holidays / early closes / feed outages; NOT filled",
+            "largest": [
+              {
+                "after": "2021-12-23 21:55:00+00:00",
+                "before": "2021-12-26 23:00:00+00:00",
+                "gap_hours": 73.08,
+                "missing_bars": 876
+              },
+              {
+                "after": "2022-04-14 20:55:00+00:00",
+                "before": "2022-04-17 22:00:00+00:00",
+                "gap_hours": 73.08,
+                "missing_bars": 876
+              },
+              {
+                "after": "2022-12-23 21:55:00+00:00",
+                "before": "2022-12-26 23:00:00+00:00",
+                "gap_hours": 73.08,
+                "missing_bars": 876
+              },
+              {
+                "after": "2022-12-30 21:55:00+00:00",
+                "before": "2023-01-02 23:00:00+00:00",
+                "gap_hours": 73.08,
+                "missing_bars": 876
+              },
+              {
+                "after": "2023-04-06 20:55:00+00:00",
+                "before": "2023-04-09 22:00:00+00:00",
+                "gap_hours": 73.08,
+                "missing_bars": 876
+              }
+            ]
+          },
+          {
+            "type": "price_spikes",
+            "threshold_atr_multiple": 10.0,
+            "close_jump_count": 57,
+            "isolated_wick_count": 14,
+            "examples": [
+              {
+                "timestamp": "2021-11-10 13:30:00+00:00",
+                "kind": "close_jump",
+                "close": 1839.538,
+                "high": 1841.918,
+                "low": 1822.168,
+                "prior_atr": 1.0333
+              },
+              {
+                "timestamp": "2022-02-04 13:30:00+00:00",
+                "kind": "close_jump",
+                "close": 1801.0,
+                "high": 1813.408,
+                "low": 1801.0,
+                "prior_atr": 1.0694
+              },
+              {
+                "timestamp": "2022-02-27 23:00:00+00:00",
+                "kind": "close_jump",
+                "close": 1920.538,
+                "high": 1930.948,
+                "low": 1915.658,
+                "prior_atr": 1.0051
+              },
+              {
+                "timestamp": "2022-06-26 22:00:00+00:00",
+                "kind": "close_jump",
+                "close": 1835.663,
+                "high": 1839.363,
+                "low": 1831.078,
+                "prior_atr": 0.6933
+              },
+              {
+                "timestamp": "2022-07-13 12:30:00+00:00",
+                "kind": "close_jump",
+                "close": 1715.998,
+                "high": 1729.475,
+                "low": 1712.364,
+                "prior_atr": 1.0258
+              }
+            ]
+          }
+        ],
+        "info": {
+          "gaps": {
+            "daily_break": 992,
+            "weekend": 251,
+            "unexplained": 54
+          },
+          "price_min": 1615.728,
+          "price_max": 5587.628,
+          "volume_median": 0.1244,
+          "years_covered": 4.997
+        },
+        "date_range_start": "2021-09-24 00:00:00+00:00",
+        "date_range_end": "2026-09-22 23:55:00+00:00",
+        "passed": true,
+        "file_hash": "c85b150c5dc81fac4ca471dad468c23a62b676f54e9a7e003598b9a201874e72",
+        "file_name": "XAUUSD_M5.csv",
+        "broker_tz": "UTC",
+        "created_at": "2026-10-04 09:18:44.200000",
+        "enabled": false
+      }
+    },
+    "engine_control": {
+      "document_count": 1,
+      "sample_document": {
+        "_id": "engine_control",
+        "desired_state": "running",
+        "force_kill_at": null,
+        "requested_at": 1791229325.9873483,
+        "requested_by": "cli_autostart"
+      }
+    },
+    "engine_counters": {
+      "document_count": 1,
+      "sample_document": {
+        "_id": "6ac3b7e35ecb14c08477d35d",
+        "counter_id": "llm_usage",
+        "by_day": {
+          "2026-10-05": {
+            "calls": 206,
+            "total_tokens": "[REDACTED/TRUNCATED]"
+          }
+        },
+        "by_key": "[REDACTED/TRUNCATED]",
+        "by_model": {
+          "qwen/qwen3": {
+            "8-max:free": {
+              "calls": 206,
+              "total_tokens": "[REDACTED/TRUNCATED]"
+            }
+          }
+        },
+        "by_purpose": {
+          "ideate": {
+            "calls": 206,
+            "total_tokens": "[REDACTED/TRUNCATED]"
+          }
+        },
+        "completion_tokens": "[REDACTED/TRUNCATED]",
+        "last_call_at": "2026-10-05 22:51:02.017000",
+        "prompt_tokens": "[REDACTED/TRUNCATED]",
+        "total_calls": 206,
+        "total_tokens": "[REDACTED/TRUNCATED]"
+      }
+    },
+    "engine_state": {
+      "document_count": 1,
+      "sample_document": {
+        "_id": "current_state",
+        "last_heartbeat": 1791240809.9824276,
+        "reason": "",
+        "state": "RUNNING",
+        "updated_at": 1791240809.9824276,
+        "worker_id": "worker_default"
+      }
+    },
+    "forward_trades": {
+      "document_count": 0,
+      "sample_document": null
+    },
+    "gate_results": {
+      "document_count": 0,
+      "sample_document": null
+    },
+    "holdout_access": {
+      "document_count": 0,
+      "sample_document": null
+    },
+    "key_status": {
+      "document_count": 2,
+      "sample_document": {
+        "_id": "6ac3b1d6bc6e75db9cf1e4e8",
+        "label": "key_1",
+        "status": "active",
+        "reset_at": null,
+        "calls_today": 201,
+        "tokens_today": "[REDACTED/TRUNCATED]",
+        "date": "2026-10-05",
+        "consecutive_errors": 0,
+        "last_used_at": "2026-10-05 22:51:02.017000",
+        "updated_at": "2026-10-05 22:51:02.017000"
+      }
+    },
+    "leaderboard": {
+      "document_count": 0,
+      "sample_document": null
+    },
+    "llm_calls": {
+      "document_count": 206,
+      "sample_document": {
+        "_id": "6ac3b7e492a4e7b10476cafe",
+        "timestamp": "2026-10-05 14:44:12.394000",
+        "key_label": "[REDACTED/TRUNCATED]",
+        "model": "qwen/qwen3.8-max:free",
+        "purpose": "ideate",
+        "strategy_id": null,
+        "cycle_id": null,
+        "prompt_tokens": "[REDACTED/TRUNCATED]",
+        "completion_tokens": "[REDACTED/TRUNCATED]",
+        "total_tokens": "[REDACTED/TRUNCATED]",
+        "latency_ms": 39855,
+        "status": "success",
+        "error_class": null,
+        "estimated": false,
+        "cost_usd": null
+      }
+    },
+    "logs": {
+      "document_count": 6,
+      "sample_document": {
+        "_id": "6ac219f2901095ef664f23ea",
+        "timestamp": "2026-10-04 09:18:42.899000",
+        "level": "INFO",
+        "message": "verify-data start (config_hash=14bc208ccb0a)",
+        "cycle_id": null,
+        "stage": "verify_data",
+        "strategy_id": null
+      }
+    },
+    "runs": {
+      "document_count": 181,
+      "sample_document": {
+        "_id": "6ac3b80092a4e7b10476cb00",
+        "trial_id": "trial-64322441f9c4",
+        "strategy_name": "unnamed",
+        "timeframe": "1h",
+        "idea": {
+          "spec": {
+            "name": "LondonNY_LiquiditySweepChoCH",
+            "timeframe": "1h",
+            "hypothesis": "During the London and New York sessions, institutional market makers frequently engineer liquidity sweeps below/above recent swing lows/highs to trigger retail stop-loss clusters and induce breakout t... [TRUNCATED]",
+            "concept_family": "mean_reversion_structure",
+            "indicators_used": [
+              "liquidity_sweep",
+              "choch",
+              "is_session",
+              "atr",
+              "swing_high"
+            ],
+            "entry_logic": "Enter long if a liquidity sweep of a recent swing low occurs AND a bullish ChoCH is confirmed within the lookback window. Enter short if a liquidity sweep of a recent swing high occurs AND a bearish C... [TRUNCATED]",
+            "exit_logic": "Stop loss is placed at ATR(14) * sl_atr_mult distance from entry. Take profit is placed at ATR(14) * tp_atr_mult distance from entry, targeting the opposing liquidity pool.",
+            "filters": [
+              "is_session(df, 'london') | is_session(df, 'ny')"
+            ],
+            "session_filter": "london_ny",
+            "direction": "both",
+            "parameters": {
+              "swing_n": {
+                "default": 5,
+                "min": 3,
+                "max": 10
+              },
+              "structure_lookback": {
+                "default": 24,
+                "min": 10,
+                "max": 48
+              },
+              "atr_period": {
+                "default": 14,
+                "min": 7,
+                "max": 21
+              },
+              "sl_atr_mult": {
+                "default": 1.5,
+                "min": 1.0,
+                "max": 3.0
+              },
+              "tp_atr_mult": {
+                "default": 3.0,
+                "min": 2.0,
+                "max": 6.0
+              }
+            },
+            "expected_trades_per_year": 85,
+            "expected_failure_conditions": "Strong macroeconomic trending days where sweeps do not reverse but instead accelerate into genuine breakouts, or Asian session drift that lacks the volume to trigger clean structural shifts."
+          },
+          "code": "[REDACTED/TRUNCATED]"
+        },
+        "source_code": "[REDACTED/TRUNCATED]",
+        "source_hash": "bd52ae08f96a2cfe",
+        "static_scan": {
+          "passed": true,
+          "violations": [
+            {
+              "line": 50,
+              "col": 0,
+              "pattern": "regex_match",
+              "detail": "suspicious variable/comment name",
+              "severity": "warning"
+            }
+          ],
+          "banned_imports": [],
+          "summary": "1 warning(s)"
+        },
+        "train_gates": {
+          "all_passed": false,
+          "stopped_at": "smoke_run",
+          "robustness_score": 0.0,
+          "status": "rejected",
+          "gates": [
+            {
+              "name": "policy_scan",
+              "passed": true,
+              "category": "safety",
+              "details": {
+                "passed": true,
+                "violations": [
+                  {
+                    "line": 50,
+                    "col": 0,
+                    "pattern": "regex_match",
+                    "detail": "suspicious variable/comment name",
+                    "severity": "warning"
+                  }
+                ],
+                "banned_imports": [],
+                "summary": "1 warning(s)"
+              },
+              "public_summary": "passed: policy_scan"
+            },
+            {
+              "name": "smoke_run",
+              "passed": false,
+              "category": "runtime_error",
+              "details": {
+                "error": "Strategy initialization failed: Import of 'core.indicators' blocked by sandbox audit hook.\nTraceback (most recent call last):\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\sandbox\\chi... [TRUNCATED]"
+              },
+              "public_summary": "failed: runtime_error"
+            }
+          ],
+          "candidate_data": {}
+        },
+        "status": "rejected",
+        "rejected_at": "smoke_run",
+        "started_at": "2026-10-05 14:44:12.394000",
+        "finished_at": "2026-10-05 14:45:20.146000",
+        "wall_seconds": 67.75,
+        "llm_calls": 0,
+        "llm_tokens": "[REDACTED/TRUNCATED]"
+      }
+    },
+    "session_map": {
+      "document_count": 1,
+      "sample_document": {
+        "_id": "current",
+        "summer": {
+          "asia": {
+            "start_utc": "23:00",
+            "end_utc": "08:00"
+          },
+          "london": {
+            "start_utc": "07:00",
+            "end_utc": "16:00"
+          },
+          "new_york": {
+            "start_utc": "12:00",
+            "end_utc": "21:00"
+          }
+        },
+        "winter": {
+          "asia": {
+            "start_utc": "23:00",
+            "end_utc": "08:00"
+          },
+          "london": {
+            "start_utc": "08:00",
+            "end_utc": "17:00"
+          },
+          "new_york": {
+            "start_utc": "13:00",
+            "end_utc": "22:00"
+          }
+        },
+        "note": "Sessions are evaluated per bar in local market time; US and EU DST switch on different dates, so in Mar/Oct-Nov the overlap shifts by 1h."
+      }
+    },
+    "split_boundaries": {
+      "document_count": 1,
+      "sample_document": {
+        "_id": "XAUUSD",
+        "data_start": "2021-09-24 00:00:00",
+        "train_start": "2021-09-24 00:00:00",
+        "train_end": "2024-09-23 00:00:00",
+        "validation_start": "2024-09-30 00:00:00",
+        "validation_end": "2025-09-23 00:00:00",
+        "holdout_start": "2025-09-30 00:00:00",
+        "holdout_end": "2026-09-23 00:00:00",
+        "train_ratio": 0.6,
+        "validation_ratio": 0.2,
+        "holdout_ratio": 0.2,
+        "embargo_days": 7.0,
+        "frozen_at": "2026-10-04 09:27:46.562000"
+      }
+    },
+    "strategies": {
+      "document_count": 0,
+      "sample_document": null
+    },
+    "trials": {
+      "document_count": 155,
+      "sample_document": {
+        "_id": "6ac3be2316d84ea56d84a206",
+        "trial_id": "trial-a664bbba271a",
+        "strategy_name": "LondonNY_LiquiditySweep_CHOCH",
+        "timeframe": "1h",
+        "idea": {
+          "spec": {
+            "name": "LondonNY_LiquiditySweep_CHOCH",
+            "timeframe": "1h",
+            "hypothesis": "Gold is heavily manipulated by institutional algorithms that hunt retail stop-losses clustered around obvious swing highs and lows before reversing direction. Retail traders place tight stops just bey... [TRUNCATED]",
+            "concept_family": "market_structure",
+            "indicators_used": [
+              "liquidity_sweep",
+              "choch",
+              "atr",
+              "is_session",
+              "swing_high"
+            ],
+            "entry_logic": "Long: A liquidity sweep of a swing low occurs within the last 3 bars, AND a bullish CHOCH is confirmed on the current bar, AND the current hour falls within the London or NY session. Short: Inverse lo... [TRUNCATED]",
+            "exit_logic": "Stop loss is placed at a dynamic distance based on 14-period ATR multiplied by a tunable parameter (minimum $5.00). Take profit is set at a fixed Risk:Reward ratio defined by a tunable parameter (mini... [TRUNCATED]",
+            "filters": [
+              "London/NY Session Filter",
+              "Liquidity Sweep Confirmation",
+              "CHOCH Structural Confirmation"
+            ],
+            "session_filter": "london_ny",
+            "direction": "both",
+            "parameters": {
+              "atr_period": {
+                "default": 14,
+                "min": 7,
+                "max": 30
+              },
+              "sl_mult": {
+                "default": 1.5,
+                "min": 1.0,
+                "max": 3.0
+              },
+              "tp_rr": {
+                "default": 2.0,
+                "min": 1.5,
+                "max": 4.0
+              },
+              "swing_n": {
+                "default": 5,
+                "min": 3,
+                "max": 15
+              },
+              "sweep_lookback": {
+                "default": 3,
+                "min": 1,
+                "max": 6
+              },
+              "min_sl_dist": {
+                "default": 5.0,
+                "min": 3.0,
+                "max": 10.0
+              }
+            },
+            "expected_trades_per_year": 85,
+            "expected_failure_conditions": "Protracted low-volatility Asian-session chop where sweeps occur without follow-through, or strong unidirectional trending days where sweeps lead to continuation rather than reversal."
+          },
+          "code": "[REDACTED/TRUNCATED]"
+        },
+        "source_code": "[REDACTED/TRUNCATED]",
+        "source_hash": "46900bd73a574eb9",
+        "static_scan": {
+          "passed": true,
+          "violations": [
+            {
+              "line": 47,
+              "col": 0,
+              "pattern": "regex_match",
+              "detail": "iloc[i+N] may access future data",
+              "severity": "warning"
+            }
+          ],
+          "banned_imports": [],
+          "summary": "1 warning(s)"
+        },
+        "train_gates": {
+          "all_passed": false,
+          "stopped_at": "determinism",
+          "robustness_score": 0.0,
+          "status": "rejected",
+          "gates": [
+            {
+              "name": "policy_scan",
+              "passed": true,
+              "category": "safety",
+              "details": {
+                "passed": true,
+                "violations": [
+                  {
+                    "line": 47,
+                    "col": 0,
+                    "pattern": "regex_match",
+                    "detail": "iloc[i+N] may access future data",
+                    "severity": "warning"
+                  }
+                ],
+                "banned_imports": [],
+                "summary": "1 warning(s)"
+              },
+              "public_summary": "passed: policy_scan"
+            },
+            {
+              "name": "smoke_run",
+              "passed": true,
+              "category": "clean_load",
+              "details": {
+                "detail": "Sandbox instantiation succeeded."
+              },
+              "public_summary": "passed: smoke_run"
+            },
+            {
+              "name": "determinism",
+              "passed": false,
+              "category": "lookahead_leak",
+              "details": {
+                "passed": false,
+                "first_diverging_bar": null,
+                "first_diverging_timestamp": null,
+                "diverging_field": null,
+                "detail": "Run 1 failed with error: Traceback (most recent call last):\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\core\\backtester.py\", line 284, in generate_signal_tape\n    sig = strat_obj.on... [TRUNCATED]"
+              },
+              "public_summary": "failed: lookahead_leak"
+            }
+          ],
+          "candidate_data": {}
+        },
+        "status": "rejected",
+        "rejected_at": "determinism",
+        "started_at": "2026-10-05 15:10:59.916000",
+        "finished_at": "2026-10-05 15:11:31.607000",
+        "wall_seconds": 31.69,
+        "llm_calls": 0,
+        "llm_tokens": "[REDACTED/TRUNCATED]"
+      }
+    }
+  }
+}

@@ -76,13 +76,8 @@ def create_app(db: Any = None, cfg: dict | None = None, token: str | None = None
         query_token = request.query_params.get("token")
 
         req_token = cookie_token or bearer_token or query_token
-        client_host = request.client.host if request.client else ""
-        is_loopback = client_host in ("127.0.0.1", "localhost", "::1", "testclient")
-
         if req_token and secrets.compare_digest(req_token, dashboard_token):
             return req_token
-        if is_loopback:
-            return dashboard_token
 
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -652,14 +647,29 @@ def create_app(db: Any = None, cfg: dict | None = None, token: str | None = None
         total_calls = doc.get("total_calls", 0)
         failed_calls = doc.get("failed_calls", 0)
 
-        # Aggregate dynamically from llm_calls if global summary is empty
-        if total_calls == 0 and calls:
-            all_calls = list(database["llm_calls"].find({}, {"total_tokens": 1, "prompt_tokens": 1, "completion_tokens": 1, "status": 1}))
-            total_tok = sum(c.get("total_tokens", 0) for c in all_calls)
-            prompt_tok = sum(c.get("prompt_tokens", 0) for c in all_calls)
-            comp_tok = sum(c.get("completion_tokens", 0) for c in all_calls)
-            total_calls = len(all_calls)
-            failed_calls = sum(1 for c in all_calls if c.get("status") != "success")
+        # Aggregate purpose counters (Section 59, 98)
+        by_purpose = {
+            "ideas": 0,
+            "improvements": 0,
+            "failure_analyses": 0,
+            "reviews": 0,
+            "robustness_analyses": 0,
+            "other": 0,
+        }
+        for c in database["llm_calls"].find({}, {"purpose": 1}):
+            p = str(c.get("purpose", "")).lower()
+            if "ideat" in p:
+                by_purpose["ideas"] += 1
+            elif any(w in p for w in ("improv", "fix", "rethink")):
+                by_purpose["improvements"] += 1
+            elif any(w in p for w in ("analy", "autopsy", "diagnos")):
+                by_purpose["failure_analyses"] += 1
+            elif "review" in p:
+                by_purpose["reviews"] += 1
+            elif "robust" in p:
+                by_purpose["robustness_analyses"] += 1
+            else:
+                by_purpose["other"] += 1
 
         return {
             "summary": {
@@ -668,6 +678,7 @@ def create_app(db: Any = None, cfg: dict | None = None, token: str | None = None
                 "completion_tokens": comp_tok,
                 "total_calls": total_calls,
                 "failed_calls": failed_calls,
+                "by_purpose": by_purpose,
             },
             "recent_calls": calls,
         }

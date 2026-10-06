@@ -1,0 +1,118 @@
+{
+  "_id": "6ac3bee2efee584eeac05aa2",
+  "trial_id": "trial-15dd063029c7",
+  "strategy_name": "GoldLiquidityReclaim",
+  "timeframe": "1h",
+  "idea": {
+    "spec": {
+      "name": "GoldLiquidityReclaim",
+      "timeframe": "1h",
+      "hypothesis": "XAUUSD exhibits persistent mean-reversion behavior following liquidity sweeps of confirmed swing points during active sessions. Institutional algorithms often trigger retail stop clusters beyond recent highs/lows to accumulate positions, causing temporary overshoots that revert once liquidity is absorbed. The losing side consists of breakout traders and late-stop runners who enter on the sweep itself rather than the reclaim.",
+      "concept_family": "mean_reversion",
+      "indicators_used": [
+        "liquidity_sweep",
+        "swing_high",
+        "swing_low",
+        "atr",
+        "is_session",
+        "vol_percentile"
+      ],
+      "entry_logic": "Enter long when a liquidity sweep of a confirmed swing low occurs AND price closes back above that swing low within the same bar or next bar, during London/NY session, with volatility above 30th percentile. Enter short on symmetric sweep-and-reclaim of swing high.",
+      "exit_logic": "Stop loss placed at ATR multiple beyond the sweep extreme (to allow for retest). Take profit at fixed USD distance targeting the opposing swing point or 2x risk.",
+      "filters": [
+        "London or NY session only",
+        "Volatility percentile > 30 to avoid dead zones",
+        "Sweep must be of a confirmed swing (n=5 bars)"
+      ],
+      "session_filter": "london_ny",
+      "direction": "both",
+      "parameters": {
+        "swing_lookback": {
+          "default": 5,
+          "min": 3,
+          "max": 10
+        },
+        "atr_period": {
+          "default": 14,
+          "min": 10,
+          "max": 30
+        },
+        "sl_atr_mult": {
+          "default": 1.5,
+          "min": 1.0,
+          "max": 3.0
+        },
+        "tp_usd": {
+          "default": 12.0,
+          "min": 6.0,
+          "max": 25.0
+        },
+        "vol_percentile_min": {
+          "default": 30,
+          "min": 10,
+          "max": 50
+        }
+      },
+      "expected_trades_per_year": 65,
+      "expected_failure_conditions": "Strong directional trend days where sweeps are followed by continuation instead of reversal; Asian session false signals filtered out but may miss early London reversals"
+    },
+    "code": "class Strategy:\n    PARAMS = {\n        \"swing_lookback\": {\"default\": 5, \"min\": 3, \"max\": 10},\n        \"atr_period\": {\"default\": 14, \"min\": 10, \"max\": 30},\n        \"sl_atr_mult\": {\"default\": 1.5, \"min\": 1.0, \"max\": 3.0},\n        \"tp_usd\": {\"default\": 12.0, \"min\": 6.0, \"max\": 25.0},\n        \"vol_percentile_min\": {\"default\": 30, \"min\": 10, \"max\": 50}\n    }\n\n    def __init__(self, params):\n        self.params = params\n        self.last_signal_bar = -1\n\n    def on_bar(self, bars):\n        if len(bars) < 60:\n            return None\n\n        # Avoid duplicate signals on same bar\n        current_bar_idx = len(bars) - 1\n        if current_bar_idx == self.last_signal_bar:\n            return None\n\n        # Session filter\n        if not is_session(bars, \"london_ny\").iloc[-1]:\n            return None\n\n        # Volatility filter\n        vol_pct = vol_percentile(\n            bars[\"high\"], bars[\"low\"], bars[\"close\"],\n            atr_n=self.params[\"atr_period\"],\n            lookback=100\n        ).iloc[-1]\n        if np.isnan(vol_pct) or vol_pct < self.params[\"vol_percentile_min\"]:\n            return None\n\n        # ATR for stop distance\n        atr_val = atr(\n            bars[\"high\"], bars[\"low\"], bars[\"close\"],\n            n=self.params[\"atr_period\"]\n        ).iloc[-1]\n        if np.isnan(atr_val) or atr_val <= 0:\n            return None\n\n        swing_n = int(self.params[\"swing_lookback\"])\n\n        # Detect liquidity sweeps\n        sweep_df = liquidity_sweep(bars, swing_n=swing_n)\n        last_sweep = sweep_df.iloc[-1]\n\n        # Check if sweep occurred in last 2 bars (current or previous closed bar)\n        sweep_recency = current_bar_idx - last_sweep.name\n        if sweep_recency > 1:\n            return None\n\n        close_price = bars[\"close\"].iloc[-1]\n        sl_mult = float(self.params[\"sl_atr_mult\"])\n        tp_dist = float(self.params[\"tp_usd\"])\n\n        # Long setup: sweep of swing low + reclaim\n        if last_sweep[\"type\"] == \"low\":\n            swing_level = last_sweep[\"level\"]\n            # Reclaim: current close > swept swing low\n            if close_price > swing_level:\n                sl_dist = max(5.0, float(atr_val * sl_mult))\n                self.last_signal_bar = current_bar_idx\n                return Signal.enter_long(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        # Short setup: sweep of swing high + reclaim\n        elif last_sweep[\"type\"] == \"high\":\n            swing_level = last_sweep[\"level\"]\n            # Reclaim: current close < swept swing high\n            if close_price < swing_level:\n                sl_dist = max(5.0, float(atr_val * sl_mult))\n                self.last_signal_bar = current_bar_idx\n                return Signal.enter_short(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        return None"
+  },
+  "source_hash": "099869d13c192f95",
+  "static_scan": {
+    "passed": true,
+    "violations": [],
+    "banned_imports": [],
+    "summary": "Clean"
+  },
+  "train_gates": {
+    "all_passed": false,
+    "stopped_at": "determinism",
+    "robustness_score": 0.0,
+    "status": "rejected",
+    "gates": [
+      {
+        "name": "policy_scan",
+        "passed": true,
+        "category": "safety",
+        "details": {
+          "passed": true,
+          "violations": [],
+          "banned_imports": [],
+          "summary": "Clean"
+        },
+        "public_summary": "passed: policy_scan"
+      },
+      {
+        "name": "smoke_run",
+        "passed": true,
+        "category": "clean_load",
+        "details": {
+          "detail": "Sandbox instantiation succeeded."
+        },
+        "public_summary": "passed: smoke_run"
+      },
+      {
+        "name": "determinism",
+        "passed": false,
+        "category": "lookahead_leak",
+        "details": {
+          "passed": false,
+          "first_diverging_bar": null,
+          "first_diverging_timestamp": null,
+          "diverging_field": null,
+          "detail": "Run 1 failed with error: Traceback (most recent call last):\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\core\\backtester.py\", line 284, in generate_signal_tape\n    sig = strat_obj.on_bar(bars.iloc[start_i : i + 1])\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\core\\sandbox.py\", line 61, in on_bar\n    return self._proc.on_bar(bars)\n           ^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\sandbox\\runner.py\", line 292, in on_bar\n    raise SandboxError(f\"Strategy error on bar {i}: {err_type}: {msg}\\n{tb}\")\nsandbox.runner.SandboxError: Strategy error on bar 59: NameError: name 'is_session' is not defined\nTraceback (most recent call last):\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\sandbox\\child.py\", line 187, in child_main\n    sig = strategy_instance.on_bar(bars_copy)\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<strategy>\", line 24, in on_bar\nNameError: name 'is_session' is not defined\n\n"
+        },
+        "public_summary": "failed: lookahead_leak"
+      }
+    ],
+    "candidate_data": {}
+  },
+  "status": "rejected",
+  "rejected_at": "determinism",
+  "started_at": "2026-10-05 15:14:19.431000",
+  "finished_at": "2026-10-05 15:14:42.730000",
+  "wall_seconds": 23.3,
+  "llm_calls": 0,
+  "llm_tokens": 0
+}

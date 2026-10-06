@@ -1,0 +1,74 @@
+{
+  "timeframes": {
+    "5m": {
+      "file": "XAUUSD_M5.csv",
+      "sha256": "c85b150c5dc81fac4ca471dad468c23a62b676f54e9a7e003598b9a201874e72",
+      "total_rows": 354025,
+      "start": "2021-09-24T00:00:00",
+      "end": "2026-09-22T23:55:00",
+      "median_bars_per_day": 276.0,
+      "gaps_count": 1292,
+      "max_gap_hours": 73.1,
+      "train_rows": 160787,
+      "train_years": 2.26,
+      "bars_per_year": 71098.6,
+      "train_buy_and_hold_return_pct": 18.14,
+      "train_avg_atr_usd": 1.23
+    },
+    "15m": {
+      "file": "XAUUSD_M15.csv",
+      "sha256": "57a4a921af41859b3095ed3f1cdce8010c953d4f23b0b1bc8a8eeb264646ccf4",
+      "total_rows": 118015,
+      "start": "2021-09-24T00:00:00",
+      "end": "2026-09-22T23:45:00",
+      "median_bars_per_day": 92.0,
+      "gaps_count": 1290,
+      "max_gap_hours": 73.2,
+      "train_rows": 53596,
+      "train_years": 2.26,
+      "bars_per_year": 23699.7,
+      "train_buy_and_hold_return_pct": 18.08,
+      "train_avg_atr_usd": 2.19
+    },
+    "1h": {
+      "file": "XAUUSD_H1.csv",
+      "sha256": "2959682a19a528cdb8674ef61a9174aa4a9006d87ad4aa4d6d7010f2287e5ee1",
+      "total_rows": 29544,
+      "start": "2021-09-24T00:00:00",
+      "end": "2026-09-22T23:00:00",
+      "median_bars_per_day": 23.0,
+      "gaps_count": 297,
+      "max_gap_hours": 74.0,
+      "train_rows": 13406,
+      "train_years": 2.26,
+      "bars_per_year": 5928.0,
+      "train_buy_and_hold_return_pct": 17.99,
+      "train_avg_atr_usd": 4.51
+    },
+    "4h": {
+      "file": "XAUUSD_H4.csv",
+      "sha256": "13cca08dbe905fc78c70785dcf1939a0bd28b5ff60490e6fddce9c9e031c6fd7",
+      "total_rows": 7989,
+      "start": "2021-09-24T00:00:00",
+      "end": "2026-09-22T20:00:00",
+      "median_bars_per_day": 6.0,
+      "gaps_count": 265,
+      "max_gap_hours": 72.0,
+      "train_rows": 3625,
+      "train_years": 2.26,
+      "bars_per_year": 1602.9,
+      "train_buy_and_hold_return_pct": 17.72,
+      "train_avg_atr_usd": 8.81
+    }
+  },
+  "splits": {
+    "train_start": "None",
+    "train_end": "None",
+    "embargo_days": null,
+    "validation_start": "None",
+    "validation_end": "None",
+    "holdout_start": "None",
+    "holdout_end": "None",
+    "splits_by_tf": {}
+  }
+}

@@ -96,8 +96,16 @@ class LLMClient:
         usage_tracker: UsageTracker | None = None,
     ):
         self._cfg = cfg.get("llm", {})
-        self._base_url = (os.environ.get("LLM_BASE_URL", "") or self._cfg.get("base_url", "")).rstrip("/")
-        self._model = os.environ.get("LLM_MODEL", "") or self._cfg.get("model", "qwen-plus")
+        self._base_url = (
+            os.environ.get("XKIRO_BASE_URL", "")
+            or os.environ.get("LLM_BASE_URL", "")
+            or self._cfg.get("base_url", "")
+        ).rstrip("/")
+        self._model = (
+            os.environ.get("XKIRO_MODEL", "")
+            or os.environ.get("LLM_MODEL", "")
+            or self._cfg.get("model", "qwen-3.8-max")
+        )
         self._timeout = self._cfg.get("timeout_seconds", 120)
         self._max_retries = self._cfg.get("backoff_max_retries", 3)
         self._supports_json_mode = self._cfg.get("supports_json_mode", False)

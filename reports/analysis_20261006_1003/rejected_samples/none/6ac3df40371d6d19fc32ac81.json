@@ -1,0 +1,15 @@
+{
+  "_id": "6ac3df40371d6d19fc32ac81",
+  "trial_id": "trial-9712f0ea482c",
+  "strategy_name": "",
+  "timeframe": "1h",
+  "idea": {},
+  "source_hash": "",
+  "status": "error",
+  "error_message": "ServerSelectionTimeoutError: No primary available for writes, Timeout: 10.0s, Topology Description: <TopologyDescription id: 6ac3def6371d6d19fc32ac7e, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('ac-jfr1lhi-shard-00-00.0t2y1z3.mongodb.net', 27017) server_type: RSSecondary, rtt: 0.16413228800019256>, <ServerDescription ('ac-jfr1lhi-shard-00-01.0t2y1z3.mongodb.net', 27017) server_type: RSSecondary, rtt: 0.4660323200014234>, <ServerDescription ('ac-jfr1lhi-shard-00-02.0t2y1z3.mongodb.net', 27017) server_type: Unknown, rtt: None, error=NetworkTimeout('ac-jfr1lhi-shard-00-02.0t2y1z3.mongodb.net:27017: timed out (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms)')>]>",
+  "started_at": "2026-10-05 17:31:48.845000",
+  "finished_at": "2026-10-05 17:32:48.572000",
+  "wall_seconds": 59.73,
+  "llm_calls": 0,
+  "llm_tokens": 0
+}

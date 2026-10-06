@@ -35,7 +35,7 @@ CORE ARCHITECTURE & CONTRACT RULES:
     - `sl_distance` must be a POSITIVE point distance (e.g., `sl_dist = max(5.0, float(atr_val * self.params["sl_mult"]))`). Never pass NaN or <= 0!
     - If `tp_distance` is used, ensure it is >= 1.50 USD points (or leave as None).
 11. TRADE FREQUENCY & SAMPLE SIZE:
-    - Institutional validation strictly enforces Gate 7 (Minimum Sample): total trades >= 150 (at least 30-50 trades per year).
+    - Institutional screening strictly enforces Gate 7 (Minimum Sample): total trades >= 150 (at least 30-50 trades per year).
     - Ensure your entry criteria are not excessively restrictive. The strategy must actively participate during valid market conditions to generate sufficient trade observations for Monte Carlo and Walk-Forward statistical significance.
 """
 
@@ -153,7 +153,7 @@ TARGET RESEARCH FOCUS (Coverage Map Target):
 - Regime Bias: {{ target_cell.get('regime_bias', 'any') }}
 {% endif %}
 
-CRITICAL VALIDATION CRITERIA (GATE 7 - MINIMUM SAMPLE SIZE):
+CRITICAL SCREENING CRITERIA (GATE 7 - MINIMUM SAMPLE SIZE):
 - The strategy MUST generate at least 40-80 trades per year (total trades >= 150-200 across the 3-year train dataset).
 - Avoid ultra-rare confluence setups (like requiring 4 simultaneous indicators or strict 1-hour windows) that generate fewer than 30 trades per year.
 - Use clean, frequent entry triggers (e.g., EMA crossovers, Donchian channel breakouts, RSI momentum pullbacks, or Session range breakouts) with reasonable cooldown (e.g., 2 to 6 bars).
@@ -307,7 +307,7 @@ Return the complete revised strategy JSON with "spec" and "code".
 """)
 
 _REPAIR_JSON_TEMPLATE = Template("""
-Your previous response failed schema validation:
+Your previous response failed schema check:
 {{ error }}
 
 Correct the error and output ONLY the complete, valid JSON object matching the required schema.
@@ -391,10 +391,10 @@ def render_ideation_prompt(
 
     user_content = _render()
     while len(user_content) > max_chars and (accepted or rejected):
-        if accepted:
-            accepted.pop(0)
-        else:
+        if rejected:
             rejected.pop(0)
+        elif accepted:
+            accepted.pop(0)
         user_content = _render()
     return [
         {"role": "system", "content": SYSTEM_PROMPT},

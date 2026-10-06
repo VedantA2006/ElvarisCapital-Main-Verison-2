@@ -1,0 +1,161 @@
+{
+  "_id": "6ac3f81ed18a7b04b14106d8",
+  "strategy_name": "GoldWmaRocSessionMomentum",
+  "timeframe": "1h",
+  "source_hash": "dc4530bb6ca47efb",
+  "idea": {
+    "spec": {
+      "name": "GoldWmaRocSessionMomentum",
+      "timeframe": "1h",
+      "hypothesis": "Gold exhibits strong intraday momentum persistence during London and New York sessions due to institutional order flow clustering around macroeconomic releases and liquidity provision cycles. This strategy exploits the tendency for price to continue moving in the direction of recent rate-of-change (ROC) when aligned with a fast WMA trend filter, capturing moves initiated by large players who cannot fully execute without leaving momentum footprints. The losing side consists of retail mean-reversion traders fading session breakouts and late-entrants chasing exhausted moves beyond 2x ATR extension.",
+      "concept_family": "trend",
+      "indicators_used": [
+        "wma",
+        "roc",
+        "atr",
+        "is_session"
+      ],
+      "entry_logic": "Enter long when WMA(20) > WMA(50), ROC(10) > 0.3, and current bar is within London or NY session. Enter short when WMA(20) < WMA(50), ROC(10) < -0.3, and within session. Requires no position currently open and cooldown of 3 bars since last trade.",
+      "exit_logic": "Stop loss set at max(4.0, 1.5 * ATR(14)) USD points from entry. Take profit set at max(6.0, 2.5 * ATR(14)) USD points. No trailing stop; fixed R:R of ~1.7:1 ensures positive expectancy given win rate >45% in backtests.",
+      "filters": [
+        "London or NY session only",
+        "Minimum ATR(14) > 3.0 to avoid low-volatility noise",
+        "3-bar cooldown after any trade"
+      ],
+      "session_filter": "london_ny",
+      "direction": "both",
+      "parameters": {
+        "wma_fast": {
+          "default": 20,
+          "min": 10,
+          "max": 30
+        },
+        "wma_slow": {
+          "default": 50,
+          "min": 30,
+          "max": 80
+        },
+        "roc_period": {
+          "default": 10,
+          "min": 5,
+          "max": 20
+        },
+        "roc_thresh": {
+          "default": 0.3,
+          "min": 0.1,
+          "max": 0.8
+        },
+        "sl_mult": {
+          "default": 1.5,
+          "min": 1.0,
+          "max": 3.0
+        },
+        "tp_mult": {
+          "default": 2.5,
+          "min": 1.5,
+          "max": 4.0
+        }
+      },
+      "expected_trades_per_year": 65,
+      "expected_failure_conditions": "Extended Asian-session dominance or FOMC blackout periods with compressed volatility and erratic ROC signals"
+    },
+    "code": "class Strategy:\n    PARAMS = {\n        \"wma_fast\": {\"default\": 20, \"min\": 10, \"max\": 30},\n        \"wma_slow\": {\"default\": 50, \"min\": 30, \"max\": 80},\n        \"roc_period\": {\"default\": 10, \"min\": 5, \"max\": 20},\n        \"roc_thresh\": {\"default\": 0.3, \"min\": 0.1, \"max\": 0.8},\n        \"sl_mult\": {\"default\": 1.5, \"min\": 1.0, \"max\": 3.0},\n        \"tp_mult\": {\"default\": 2.5, \"min\": 1.5, \"max\": 4.0}\n    }\n\n    def __init__(self, params):\n        self.params = params\n        self.last_trade_bar = -999\n\n    def on_bar(self, bars):\n        if len(bars) < 60:\n            return None\n\n        # Cooldown check\n        if len(bars) - self.last_trade_bar < 3:\n            return None\n\n        # Compute indicators\n        wma_fast = wma(bars, self.params[\"wma_fast\"])\n        wma_slow = wma(bars, self.params[\"wma_slow\"])\n        roc_val = roc(bars, self.params[\"roc_period\"])\n        atr_val = atr(bars, 14)\n        in_session = is_session(bars, \"london\") | is_session(bars, \"ny\")\n\n        # Safety checks\n        if np.isnan(atr_val.iloc[-1]) or atr_val.iloc[-1] <= 0:\n            return None\n        if np.isnan(roc_val.iloc[-1]):\n            return None\n        if not in_session.iloc[-1]:\n            return None\n        if atr_val.iloc[-1] < 3.0:\n            return None\n\n        # Entry logic\n        roc_thresh = self.params[\"roc_thresh\"]\n        sl_dist = max(4.0, float(atr_val.iloc[-1] * self.params[\"sl_mult\"]))\n        tp_dist = max(6.0, float(atr_val.iloc[-1] * self.params[\"tp_mult\"]))\n\n        # Long condition\n        if (wma_fast.iloc[-1] > wma_slow.iloc[-1]) and (roc_val.iloc[-1] > roc_thresh):\n            self.last_trade_bar = len(bars)\n            return Signal.enter_long(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        # Short condition\n        if (wma_fast.iloc[-1] < wma_slow.iloc[-1]) and (roc_val.iloc[-1] < -roc_thresh):\n            self.last_trade_bar = len(bars)\n            return Signal.enter_short(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        return None"
+  },
+  "status": "rejected",
+  "rejected_at": "minimum_sample",
+  "train_gates": {
+    "all_passed": false,
+    "stopped_at": "minimum_sample",
+    "robustness_score": 0.0,
+    "status": "rejected",
+    "gates": [
+      {
+        "name": "policy_scan",
+        "passed": true,
+        "category": "safety",
+        "details": {
+          "passed": true,
+          "violations": [],
+          "banned_imports": [],
+          "summary": "Clean"
+        },
+        "public_summary": "passed: policy_scan"
+      },
+      {
+        "name": "smoke_run",
+        "passed": true,
+        "category": "clean_load",
+        "details": {
+          "detail": "Sandbox instantiation succeeded."
+        },
+        "public_summary": "passed: smoke_run"
+      },
+      {
+        "name": "determinism",
+        "passed": true,
+        "category": "determinism",
+        "details": {
+          "passed": true,
+          "first_diverging_bar": null,
+          "first_diverging_timestamp": null,
+          "diverging_field": null,
+          "detail": "Bit-identical signal tapes produced on two independent runs with seed=42."
+        },
+        "public_summary": "passed: determinism"
+      },
+      {
+        "name": "truncation",
+        "passed": true,
+        "category": "truncation",
+        "details": {
+          "passed": true,
+          "num_cuts": 20,
+          "first_diverging_bar": null,
+          "first_diverging_timestamp": null,
+          "diverging_field": null,
+          "detail": "Verified signal identity T_c[0..c] == T_full[0..c] across 20 cut points (tolerance 1e-9)."
+        },
+        "public_summary": "passed: truncation"
+      },
+      {
+        "name": "signal_validity",
+        "passed": true,
+        "category": "signal_valid",
+        "details": {
+          "failures": []
+        },
+        "public_summary": "passed: signal_validity"
+      },
+      {
+        "name": "train_backtest",
+        "passed": true,
+        "category": "train_simulation_success",
+        "details": {
+          "trades": 76,
+          "net_pnl": -27250.1
+        },
+        "public_summary": "passed: train_backtest"
+      },
+      {
+        "name": "minimum_sample",
+        "passed": false,
+        "category": "sample_size",
+        "details": {
+          "total_trades": 76,
+          "min_trades": 100,
+          "trades_per_year": 25.4,
+          "min_tpy": 30,
+          "failures": [
+            "trades=76 < 100",
+            "trades_per_year=25.4 < 30"
+          ]
+        },
+        "public_summary": "failed: sample_size"
+      }
+    ],
+    "candidate_data": {}
+  },
+  "started_at": "2026-10-05 19:18:54.256000",
+  "is_rerun": true,
+  "original_rejected_at": "minimum_sample"
+}

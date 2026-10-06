@@ -1,0 +1,137 @@
+{
+  "_id": "6ac3faecd18a7b04b14106dc",
+  "strategy_name": "GoldHtfKeltnerMomentumBreakout",
+  "timeframe": "1h",
+  "source_hash": "2c214af97053d4aa",
+  "idea": {
+    "spec": {
+      "name": "GoldHtfKeltnerMomentumBreakout",
+      "timeframe": "1h",
+      "hypothesis": "Gold exhibits strong intraday momentum persistence when the 1-hour price breaks out of a volatility-adjusted Keltner Channel that is aligned with the higher-timeframe (4H) trend. Institutional flow during London/NY sessions often initiates moves that exceed mean-reversion expectations, trapping counter-trend scalpers and forcing stop-loss cascades. The losing side consists of retail traders fading the breakout without HTF confirmation or those entering too early before volatility expansion confirms directional commitment.",
+      "concept_family": "trend",
+      "indicators_used": [
+        "keltner",
+        "htf",
+        "ema",
+        "atr",
+        "is_session"
+      ],
+      "entry_logic": "Enter long when 1h close > upper Keltner band AND 4H EMA(20) slope > 0 AND current bar is within London or NY session. Enter short when 1h close < lower Keltner band AND 4H EMA(20) slope < 0 AND within session. Requires prior bar to be inside channel to confirm fresh breakout.",
+      "exit_logic": "Stop loss distance = max(5.0, ATR(14) * sl_mult). Take profit distance = max(1.5, ATR(14) * tp_mult). Both distances are positive USD points derived from current ATR.",
+      "filters": [
+        "4H EMA trend alignment",
+        "London or NY session only",
+        "Prior bar inside Keltner channel (no gap entries)",
+        "ATR > 0 and not NaN"
+      ],
+      "session_filter": "london_ny",
+      "direction": "both",
+      "parameters": {
+        "kc_ema_n": {
+          "default": 20,
+          "min": 10,
+          "max": 30
+        },
+        "kc_atr_n": {
+          "default": 14,
+          "min": 8,
+          "max": 20
+        },
+        "kc_mult": {
+          "default": 2.0,
+          "min": 1.5,
+          "max": 3.0
+        },
+        "htf_ema_n": {
+          "default": 20,
+          "min": 10,
+          "max": 30
+        },
+        "sl_mult": {
+          "default": 1.5,
+          "min": 1.0,
+          "max": 3.0
+        },
+        "tp_mult": {
+          "default": 2.5,
+          "min": 1.5,
+          "max": 4.0
+        }
+      },
+      "expected_trades_per_year": 65,
+      "expected_failure_conditions": "Extended low-volatility regimes where Keltner bands contract excessively, generating false breakouts that reverse before TP; also vulnerable during major news events when session filters still pass but price action becomes erratic."
+    },
+    "code": "class Strategy:\n    PARAMS = {\n        \"kc_ema_n\": {\"default\": 20, \"min\": 10, \"max\": 30},\n        \"kc_atr_n\": {\"default\": 14, \"min\": 8, \"max\": 20},\n        \"kc_mult\": {\"default\": 2.0, \"min\": 1.5, \"max\": 3.0},\n        \"htf_ema_n\": {\"default\": 20, \"min\": 10, \"max\": 30},\n        \"sl_mult\": {\"default\": 1.5, \"min\": 1.0, \"max\": 3.0},\n        \"tp_mult\": {\"default\": 2.5, \"min\": 1.5, \"max\": 4.0}\n    }\n\n    def __init__(self, params):\n        self.params = params\n\n    def on_bar(self, bars):\n        if len(bars) < 60:\n            return None\n\n        # Compute indicators\n        kc = keltner(bars, ema_n=self.params[\"kc_ema_n\"], atr_n=self.params[\"kc_atr_n\"], mult=self.params[\"kc_mult\"])\n        atr_val = atr(bars, n=self.params[\"kc_atr_n\"])\n        htf_ema = htf(bars, \"4h\", lambda df: ema(df, n=self.params[\"htf_ema_n\"]))\n        session_mask = is_session(bars, \"london\") | is_session(bars, \"ny\")\n\n        # Safety checks\n        if np.isnan(atr_val.iloc[-1]) or atr_val.iloc[-1] <= 0:\n            return None\n        if np.isnan(kc[\"upper\"].iloc[-1]) or np.isnan(kc[\"lower\"].iloc[-1]):\n            return None\n        if np.isnan(htf_ema.iloc[-1]) or np.isnan(htf_ema.iloc[-2]):\n            return None\n\n        # Current and previous bar values\n        close_curr = bars[\"close\"].iloc[-1]\n        close_prev = bars[\"close\"].iloc[-2]\n        upper_curr = kc[\"upper\"].iloc[-1]\n        lower_curr = kc[\"lower\"].iloc[-1]\n        upper_prev = kc[\"upper\"].iloc[-2]\n        lower_prev = kc[\"lower\"].iloc[-2]\n        htf_slope = htf_ema.iloc[-1] - htf_ema.iloc[-2]\n\n        # Session filter\n        if not session_mask.iloc[-1]:\n            return None\n\n        # Long entry: breakout above upper band + HTF uptrend + prior bar inside\n        if (close_curr > upper_curr and\n            close_prev <= upper_prev and\n            htf_slope > 0):\n            sl_dist = max(5.0, float(atr_val.iloc[-1] * self.params[\"sl_mult\"]))\n            tp_dist = max(1.5, float(atr_val.iloc[-1] * self.params[\"tp_mult\"]))\n            return Signal.enter_long(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        # Short entry: breakout below lower band + HTF downtrend + prior bar inside\n        if (close_curr < lower_curr and\n            close_prev >= lower_prev and\n            htf_slope < 0):\n            sl_dist = max(5.0, float(atr_val.iloc[-1] * self.params[\"sl_mult\"]))\n            tp_dist = max(1.5, float(atr_val.iloc[-1] * self.params[\"tp_mult\"]))\n            return Signal.enter_short(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        return None"
+  },
+  "status": "rejected",
+  "rejected_at": "signal_validity",
+  "train_gates": {
+    "all_passed": false,
+    "stopped_at": "signal_validity",
+    "robustness_score": 0.0,
+    "status": "rejected",
+    "gates": [
+      {
+        "name": "policy_scan",
+        "passed": true,
+        "category": "safety",
+        "details": {
+          "passed": true,
+          "violations": [],
+          "banned_imports": [],
+          "summary": "Clean"
+        },
+        "public_summary": "passed: policy_scan"
+      },
+      {
+        "name": "smoke_run",
+        "passed": true,
+        "category": "clean_load",
+        "details": {
+          "detail": "Sandbox instantiation succeeded."
+        },
+        "public_summary": "passed: smoke_run"
+      },
+      {
+        "name": "determinism",
+        "passed": true,
+        "category": "determinism",
+        "details": {
+          "passed": true,
+          "first_diverging_bar": null,
+          "first_diverging_timestamp": null,
+          "diverging_field": null,
+          "detail": "Bit-identical signal tapes produced on two independent runs with seed=42."
+        },
+        "public_summary": "passed: determinism"
+      },
+      {
+        "name": "truncation",
+        "passed": true,
+        "category": "truncation",
+        "details": {
+          "passed": true,
+          "num_cuts": 20,
+          "first_diverging_bar": null,
+          "first_diverging_timestamp": null,
+          "diverging_field": null,
+          "detail": "Verified signal identity T_c[0..c] == T_full[0..c] across 20 cut points (tolerance 1e-9)."
+        },
+        "public_summary": "passed: truncation"
+      },
+      {
+        "name": "signal_validity",
+        "passed": false,
+        "category": "signal_invalid",
+        "details": {
+          "error": "Tape error: Traceback (most recent call last):\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\core\\backtester.py\", line 284, in generate_signal_tape\n    sig = strat_obj.on_bar(bars.iloc[start_i : i + 1])\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\core\\sandbox.py\", line 61, in on_bar\n    return self._proc.on_bar(bars)\n           ^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\sandbox\\runner.py\", line 283, in on_bar\n    raise SandboxTimeoutError(\nsandbox.runner.SandboxTimeoutError: Strategy exceeded wall-clock timeout: 120.0s > 120.0s\n"
+        },
+        "public_summary": "failed: signal_invalid"
+      }
+    ],
+    "candidate_data": {}
+  },
+  "started_at": "2026-10-05 19:30:52.489000",
+  "is_rerun": true,
+  "original_rejected_at": "determinism"
+}

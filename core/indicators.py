@@ -145,8 +145,8 @@ class MacdResult(IndicatorTuple):
             arg = code[f.f_lasti + 1]
             if op == dis.opmap.get("UNPACK_SEQUENCE") and arg == 2:
                 return iter([self.macd, self.signal])
-        except Exception:
-            pass
+        except (AttributeError, ValueError, KeyError, IndexError) as exc:
+            _log.debug("Unpack sequence inspect fallback: %s", exc)
         return super().__iter__()
 
     def __getitem__(self, item):
@@ -404,8 +404,8 @@ class BollingerResult(IndicatorTuple):
                     return iter([self[0], self[2]])
                 elif arg == 3:
                     return iter([self[0], self[1], self[2]])
-        except Exception:
-            pass
+        except (AttributeError, ValueError, KeyError, IndexError) as exc:
+            _log.debug("Unpack sequence inspect fallback: %s", exc)
         return super().__iter__()
 
     def __getitem__(self, item):
@@ -628,8 +628,8 @@ class SupertrendResult(tuple):
                     return iter([self.st, self.direction, self.upper])
                 elif arg == 4:
                     return iter([self.st, self.direction, self.upper, self.lower])
-        except Exception:
-            pass
+        except (AttributeError, ValueError, KeyError, IndexError) as exc:
+            _log.debug("Unpack sequence inspect fallback: %s", exc)
         return super().__iter__()
 
     def __getitem__(self, item):
@@ -759,8 +759,8 @@ class BandResult(tuple):
             arg = code[f.f_lasti + 1]
             if op == dis.opmap.get("UNPACK_SEQUENCE") and arg == 2:
                 return iter([self.upper, self.lower])
-        except Exception:
-            pass
+        except (AttributeError, ValueError, KeyError, IndexError) as exc:
+            _log.debug("Unpack sequence inspect fallback: %s", exc)
         return super().__iter__()
 
     def __getitem__(self, item):
@@ -1340,7 +1340,8 @@ def htf(
 
     try:
         htf_values = func(htf_df)
-    except Exception:
+    except Exception as exc:
+        _log.warning("htf func evaluation failed: %s; falling back to close", exc)
         htf_values = htf_df["close"]
 
     if isinstance(htf_values, (tuple, list, IndicatorTuple)):

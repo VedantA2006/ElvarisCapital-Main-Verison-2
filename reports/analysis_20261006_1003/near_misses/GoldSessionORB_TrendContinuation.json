@@ -1,0 +1,470 @@
+{
+  "_id": "6ac3e127c72fa0ee28b29aae",
+  "trial_id": "trial-9a9ae6033e7f",
+  "strategy_name": "GoldSessionORB_TrendContinuation",
+  "timeframe": "1h",
+  "idea": {
+    "spec": {
+      "name": "GoldSessionORB_TrendContinuation",
+      "timeframe": "1h",
+      "hypothesis": "Gold exhibits strong intraday momentum driven by institutional macro flows that establish direction during the London open and accelerate during the New York overlap. By identifying the 4-hour trend bias via HTF EMA slope and waiting for a confirmed Break of Structure (BOS) in that direction, we capture the expansion phase of the daily move. The losing side consists of retail mean-reversion traders fading the initial breakout without structural confirmation, as well as late entrants who buy after the liquidity has already been absorbed. Institutional order flow uses the London session to accumulate positions, and the NY session to distribute or drive price to targets.",
+      "concept_family": "trend",
+      "indicators_used": [
+        "htf",
+        "ema",
+        "bos",
+        "atr",
+        "is_session",
+        "swing_high",
+        "swing_low"
+      ],
+      "entry_logic": "1. Determine 4H trend bias using the slope of the 4H 20-period EMA. 2. Confirm a Break of Structure (BOS) on the 1H timeframe in the direction of the 4H bias (bull_bos for longs, bear_bos for shorts). 3. Ensure the current bar falls within the London or New York sessions. 4. Enter in the direction of the BOS and HTF trend.",
+      "exit_logic": "Stop loss is placed at a multiple of the 14-period ATR below/above entry to allow for normal volatility breathing room. Take profit is set at a fixed Risk:Reward ratio defined by the tp_rr parameter. A cooldown of 4 bars prevents immediate re-entry on consecutive BOS signals.",
+      "filters": [
+        "London or NY session active",
+        "4H EMA trending",
+        "1H Break of Structure confirmed"
+      ],
+      "session_filter": "london_ny",
+      "direction": "both",
+      "parameters": {
+        "swing_n": {
+          "default": 5,
+          "min": 3,
+          "max": 10
+        },
+        "sl_mult": {
+          "default": 1.5,
+          "min": 1.0,
+          "max": 3.0
+        },
+        "tp_rr": {
+          "default": 2.0,
+          "min": 1.5,
+          "max": 4.0
+        },
+        "cooldown": {
+          "default": 4,
+          "min": 2,
+          "max": 8
+        }
+      },
+      "expected_trades_per_year": 65,
+      "expected_failure_conditions": "Protracted low-volatility summer chop or sudden news-driven whipsaws that trigger false BOS signals followed by immediate reversals."
+    },
+    "code": "import numpy as np\nimport pandas as pd\nfrom core.indicators import htf, ema, bos, atr, is_session, swing_high, swing_low\n\nclass Strategy:\n    PARAMS = {\n        \"swing_n\": {\"default\": 5, \"min\": 3, \"max\": 10},\n        \"sl_mult\": {\"default\": 1.5, \"min\": 1.0, \"max\": 3.0},\n        \"tp_rr\": {\"default\": 2.0, \"min\": 1.5, \"max\": 4.0},\n        \"cooldown\": {\"default\": 4, \"min\": 2, \"max\": 8}\n    }\n\n    def __init__(self, params):\n        self.params = params\n        self.last_trade_bar = -999\n\n    def on_bar(self, bars: pd.DataFrame):\n        # Warmup safety\n        if len(bars) < 60:\n            return None\n\n        curr_idx = len(bars) - 1\n\n        # Cooldown enforcement\n        if (curr_idx - self.last_trade_bar) < self.params[\"cooldown\"]:\n            return None\n\n        # Session filter: London or New York\n        in_london = is_session(bars, \"london\").iloc[-1]\n        in_ny = is_session(bars, \"ny\").iloc[-1]\n        if not (in_london or in_ny):\n            return None\n\n        # 4H Trend Bias via HTF EMA slope\n        try:\n            htf_ema = htf(bars, \"4h\", lambda x: ema(x, 20))\n            if htf_ema is None or len(htf_ema) < 3:\n                return None\n            # Ensure no NaNs in recent values\n            if np.isnan(htf_ema.iloc[-1]) or np.isnan(htf_ema.iloc[-2]):\n                return None\n            htf_slope = htf_ema.iloc[-1] - htf_ema.iloc[-2]\n        except Exception:\n            return None\n\n        # 1H Break of Structure\n        swing_n = int(self.params[\"swing_n\"])\n        bull_bos, bear_bos = bos(bars, swing_n)\n\n        if bull_bos is None or bear_bos is None:\n            return None\n        if len(bull_bos) == 0 or len(bear_bos) == 0:\n            return None\n\n        last_bull = bool(bull_bos.iloc[-1])\n        last_bear = bool(bear_bos.iloc[-1])\n\n        # ATR for dynamic stop loss\n        atr_series = atr(bars, 14)\n        if atr_series is None or len(atr_series) == 0:\n            return None\n        atr_val = float(atr_series.iloc[-1])\n        if np.isnan(atr_val) or atr_val <= 0:\n            return None\n\n        sl_dist = max(5.0, float(atr_val * self.params[\"sl_mult\"]))\n        tp_dist = max(1.50, float(sl_dist * self.params[\"tp_rr\"]))\n\n        # Entry Logic\n        if htf_slope > 0 and last_bull:\n            self.last_trade_bar = curr_idx\n            return Signal.enter_long(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        elif htf_slope < 0 and last_bear:\n            self.last_trade_bar = curr_idx\n            return Signal.enter_short(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        return None"
+  },
+  "source_hash": "0c12503a3fbafd71",
+  "static_scan": {
+    "passed": true,
+    "violations": [],
+    "banned_imports": [],
+    "summary": "Clean"
+  },
+  "train_result": {
+    "trades": [
+      {
+        "trade_id": 0,
+        "entry_bar_idx": 859,
+        "exit_bar_idx": 863,
+        "entry_time": "2021-11-16T09:00:00+00:00",
+        "exit_time": "2021-11-16T13:00:00+00:00",
+        "direction": "LONG",
+        "lots": 1.56,
+        "entry_price": 1872.4141650000001,
+        "exit_price": 1866.214074970804,
+        "gross_pnl": -857.0063,
+        "spread_cost": 39.0,
+        "slippage_cost": 71.2078,
+        "commission": 10.92,
+        "swap_cost": -0.0,
+        "net_pnl": -978.1341,
+        "bars_held": 4,
+        "exit_reason": "stop_loss",
+        "tag": "",
+        "pnl_r": -0.9819,
+        "mae": 1100.76,
+        "mfe": 733.8,
+        "initial_sl_distance": 5.9398
+      },
+      {
+        "trade_id": 1,
+        "entry_bar_idx": 928,
+        "exit_bar_idx": 928,
+        "entry_time": "2021-11-19T09:00:00+00:00",
+        "exit_time": "2021-11-19T09:00:00+00:00",
+        "direction": "SHORT",
+        "lots": 1.76,
+        "entry_price": 1853.5584900000001,
+        "exit_price": 1858.9945445304784,
+        "gross_pnl": -833.7612,
+        "spread_cost": 44.0,
+        "slippage_cost": 78.9844,
+        "commission": 12.32,
+        "swap_cost": -0.0,
+        "net_pnl": -969.0656,
+        "bars_held": 0,
+        "exit_reason": "stop_loss",
+        "tag": "",
+        "pnl_r": -0.9839,
+        "mae": 1898.25,
+        "mfe": 330.97,
+        "initial_sl_distance": 5.1668
+      },
+      {
+        "trade_id": 2,
+        "entry_bar_idx": 974,
+        "exit_bar_idx": 978,
+        "entry_time": "2021-11-23T09:00:00+00:00",
+        "exit_time": "2021-11-23T13:00:00+00:00",
+        "direction": "SHORT",
+        "lots": 1.15,
+        "entry_price": 1800.4780075,
+        "exit_price": 1784.6548051691059,
+        "gross_pnl": 1882.9174,
+        "spread_cost": 28.75,
+        "slippage_cost": 34.4991,
+        "commission": 8.05,
+        "swap_cost": -0.0,
+        "net_pnl": 1811.6183,
+        "bars_held": 4,
+        "exit_reason": "take_profit",
+        "tag": "",
+        "pnl_r": 1.8617,
+        "mae": 305.9,
+        "mfe": 1856.1,
+        "initial_sl_distance": 7.9116
+      },
+      {
+        "trade_id": 3,
+        "entry_bar_idx": 1293,
+        "exit_bar_idx": 1293,
+        "entry_time": "2021-12-13T13:00:00+00:00",
+        "exit_time": "2021-12-13T13:00:00+00:00",
+        "direction": "LONG",
+        "lots": 1.85,
+        "entry_price": 1790.2264575,
+        "exit_price": 1785.0442712499998,
+        "gross_pnl": -856.2804,
+        "spread_cost": 46.25,
+        "slippage_cost": 56.1741,
+        "commission": 12.95,
+        "swap_cost": -0.0,
+        "net_pnl": -971.6545,
+        "bars_held": 0,
+        "exit_reason": "stop_loss",
+        "tag": "",
+        "pnl_r": -0.9778,
+        "mae": 1531.51,
+        "mfe": 0.0,
+        "initial_sl_distance": 5.0
+      },
+      {
+        "trade_id": 4,
+        "entry_bar_idx": 1657,
+        "exit_bar_idx": 1661,
+        "entry_time": "2022-01-05T09:00:00+00:00",
+        "exit_time": "2022-01-05T13:00:00+00:00",
+        "direction": "LONG",
+        "lots": 1.82,
+        "entry_price": 1817.121985,
+        "exit_price": 1827.121985,
+        "gross_pnl": 1896.0733,
+        "spread_cost": 45.5,
+        "slippage_cost": 30.5733,
+        "commission": 12.74,
+        "swap_cost": -0.0,
+        "net_pnl": 1807.26,
+        "bars_held": 4,
+        "exit_reason": "take_profit",
+        "tag": "",
+        "pnl_r": 1.8328,
+        "mae": 404.77,
+        "mfe": 1947.77,
+        "initial_sl_distance": 5.0
+      }
+    ],
+    "equity_curve_summary": {
+      "start": 100000.0,
+      "end": 100700.02,
+      "points": 17720
+    },
+    "metrics": {
+      "total_trades": 5,
+      "winners": 2,
+      "losers": 3,
+      "win_rate": 0.4,
+      "total_net_pnl": 700.02,
+      "total_gross_pnl": 1231.94,
+      "total_costs": 531.92,
+      "spread_cost_total": 203.5,
+      "slippage_cost_total": 271.44,
+      "commission_total": 56.98,
+      "swap_cost_total": 0.0,
+      "cost_gross_ratio": 0.1408,
+      "profit_factor": 1.2398,
+      "expectancy": 140.0,
+      "expectancy_usd": 140.0,
+      "expectancy_r": 0.1502,
+      "avg_win": 1809.44,
+      "avg_loss": -972.95,
+      "payoff": 1.8597,
+      "payoff_ratio": 1.8597,
+      "largest_win": 1811.62,
+      "largest_loss": -978.13,
+      "max_consecutive_wins": 1,
+      "max_consecutive_losses": 2,
+      "avg_holding_bars": 2.4,
+      "avg_holding_hours": 2.4,
+      "exposure_pct": 0.0007,
+      "trades_per_month": 0.14,
+      "trades_per_year": 1.7,
+      "years_covered": 2.998,
+      "long_trades": 3,
+      "short_trades": 2,
+      "long_win_rate": 0.3333,
+      "short_win_rate": 0.5,
+      "profit_concentration_top5pct": 0.5006,
+      "yearly_pnl": {
+        "2021": -1107.24,
+        "2022": 1807.26,
+        "2023": 0.0,
+        "2024": 0.0
+      },
+      "total_return_pct": 0.7,
+      "final_equity": 100700.02,
+      "cagr": 0.23,
+      "sharpe": 0.1251,
+      "sortino": 0.013,
+      "calmar": 0.1076,
+      "omega": 1.2544,
+      "max_drawdown": 0.0216,
+      "average_drawdown": 0.0004,
+      "max_drawdown_bars": 800,
+      "max_drawdown_days": 49.4,
+      "time_under_water": 0.0451,
+      "ulcer_index": 0.0024,
+      "recovery_factor": 0.3226,
+      "long_breakdown": {
+        "trades": 3,
+        "win_rate": 0.3333,
+        "net_pnl": -142.53,
+        "profit_factor": 0.9269
+      },
+      "short_breakdown": {
+        "trades": 2,
+        "win_rate": 0.5,
+        "net_pnl": 842.55,
+        "profit_factor": 1.8694
+      },
+      "exit_reasons": {
+        "stop_loss": {
+          "count": 3,
+          "net_pnl": -2918.85,
+          "pct_of_trades": 0.6
+        },
+        "take_profit": {
+          "count": 2,
+          "net_pnl": 3618.88,
+          "pct_of_trades": 0.4
+        }
+      },
+      "avg_mae": 1048.24,
+      "avg_mfe": 973.73,
+      "monthly_table": {
+        "2021": {
+          "09": 0.0,
+          "10": 0.0,
+          "11": -0.14,
+          "12": -0.97
+        },
+        "2022": {
+          "01": 1.83,
+          "02": 0.0,
+          "03": 0.0,
+          "04": 0.0,
+          "05": 0.0,
+          "06": 0.0,
+          "07": 0.0,
+          "08": 0.0,
+          "09": 0.0,
+          "10": 0.0,
+          "11": 0.0,
+          "12": 0.0
+        },
+        "2023": {
+          "01": 0.0,
+          "02": 0.0,
+          "03": 0.0,
+          "04": 0.0,
+          "05": 0.0,
+          "06": 0.0,
+          "07": 0.0,
+          "08": 0.0,
+          "09": 0.0,
+          "10": 0.0,
+          "11": 0.0,
+          "12": 0.0
+        },
+        "2024": {
+          "01": 0.0,
+          "02": 0.0,
+          "03": 0.0,
+          "04": 0.0,
+          "05": 0.0,
+          "06": 0.0,
+          "07": 0.0,
+          "08": 0.0,
+          "09": 0.0
+        }
+      },
+      "average_monthly_return_pct": 0.02,
+      "median_monthly_return_pct": 0.0,
+      "best_month_pct": 1.83,
+      "worst_month_pct": -0.97,
+      "pct_profitable_months": 0.027,
+      "avg_winning_month_pct": 1.83,
+      "avg_losing_month_pct": -0.55,
+      "average_monthly_max_drawdown": 0.0009,
+      "yearly_table": {
+        "2021": {
+          "return_pct": -1.11,
+          "net_pnl": -1107.24,
+          "trades": 4
+        },
+        "2022": {
+          "return_pct": 1.83,
+          "net_pnl": 1807.26,
+          "trades": 1
+        },
+        "2023": {
+          "return_pct": 0.0,
+          "net_pnl": 0.0
+        },
+        "2024": {
+          "return_pct": 0.0,
+          "net_pnl": 0.0
+        }
+      },
+      "buy_and_hold_return_pct": 50.06,
+      "beta": -0.0017,
+      "status": "completed"
+    },
+    "metadata": {
+      "timeframe": "1h",
+      "split": "train",
+      "file_hash": "2959682a19a528cdb8674ef61a9174aa4a9006d87ad4aa4d6d7010f2287e5ee1",
+      "slice_hash": "42a0ec00ad82e627aaaf92be13edc325178d07db31db7fb2d95181da445eca73",
+      "total_bars": 17720,
+      "live_bars": 17720,
+      "warmup_bars": 0,
+      "skipped_min_lot": 0,
+      "skipped_margin": 0,
+      "forced_closes": 0,
+      "strategy_errors": 0,
+      "first_strategy_error": null
+    },
+    "status": "completed",
+    "wall_seconds": 0.758,
+    "created_at": "2026-10-05 17:40:55.890000"
+  },
+  "train_gates": {
+    "all_passed": false,
+    "stopped_at": "minimum_sample",
+    "robustness_score": 0.0,
+    "status": "rejected",
+    "gates": [
+      {
+        "name": "policy_scan",
+        "passed": true,
+        "category": "safety",
+        "details": {
+          "passed": true,
+          "violations": [],
+          "banned_imports": [],
+          "summary": "Clean"
+        },
+        "public_summary": "passed: policy_scan"
+      },
+      {
+        "name": "smoke_run",
+        "passed": true,
+        "category": "clean_load",
+        "details": {
+          "detail": "Sandbox instantiation succeeded."
+        },
+        "public_summary": "passed: smoke_run"
+      },
+      {
+        "name": "determinism",
+        "passed": true,
+        "category": "determinism",
+        "details": {
+          "passed": true,
+          "first_diverging_bar": null,
+          "first_diverging_timestamp": null,
+          "diverging_field": null,
+          "detail": "Bit-identical signal tapes produced on two independent runs with seed=42."
+        },
+        "public_summary": "passed: determinism"
+      },
+      {
+        "name": "truncation",
+        "passed": true,
+        "category": "truncation",
+        "details": {
+          "passed": true,
+          "num_cuts": 20,
+          "first_diverging_bar": null,
+          "first_diverging_timestamp": null,
+          "diverging_field": null,
+          "detail": "Verified signal identity T_c[0..c] == T_full[0..c] across 20 cut points (tolerance 1e-9)."
+        },
+        "public_summary": "passed: truncation"
+      },
+      {
+        "name": "signal_validity",
+        "passed": true,
+        "category": "signal_valid",
+        "details": {
+          "failures": []
+        },
+        "public_summary": "passed: signal_validity"
+      },
+      {
+        "name": "train_backtest",
+        "passed": true,
+        "category": "train_simulation_success",
+        "details": {
+          "trades": 5,
+          "net_pnl": 700.02
+        },
+        "public_summary": "passed: train_backtest"
+      },
+      {
+        "name": "minimum_sample",
+        "passed": false,
+        "category": "sample_size",
+        "details": {
+          "total_trades": 5,
+          "min_trades": 200,
+          "trades_per_year": 1.7,
+          "min_tpy": 30,
+          "failures": [
+            "trades=5 < 200",
+            "trades_per_year=1.7 < 30"
+          ]
+        },
+        "public_summary": "failed: sample_size"
+      }
+    ],
+    "candidate_data": {}
+  },
+  "status": "rejected",
+  "rejected_at": "minimum_sample",
+  "started_at": "2026-10-05 17:38:50.660000",
+  "finished_at": "2026-10-05 17:40:55.890000",
+  "wall_seconds": 125.23,
+  "llm_calls": 0,
+  "llm_tokens": 0
+}

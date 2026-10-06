@@ -1,0 +1,292 @@
+{
+  "_id": "6ac3e268c72fa0ee28b29ab1",
+  "trial_id": "trial-6082d98a4d84",
+  "strategy_name": "GoldVolatilityAdaptiveTrend",
+  "timeframe": "4h",
+  "idea": {
+    "spec": {
+      "name": "GoldVolatilityAdaptiveTrend",
+      "timeframe": "4h",
+      "hypothesis": "XAUUSD exhibits persistent trending behavior driven by macro flows and central bank activity, but standard trend strategies fail during low-volatility compression phases due to whipsaws. This strategy uses volatility percentile regimes to gate entries only when realized vol is expanding or sufficiently elevated, ensuring participation in genuine institutional moves while avoiding choppy accumulation periods. The losing side consists of mean-reversion traders fading breakouts during vol expansion and breakout traders entering during compressed, low-conviction regimes.",
+      "concept_family": "trend",
+      "indicators_used": [
+        "ema",
+        "macd",
+        "vol_percentile",
+        "atr",
+        "is_session"
+      ],
+      "entry_logic": "Long: EMA fast > EMA slow AND MACD histogram > 0 AND vol_percentile > threshold AND London/NY session active. Short: inverse conditions. Requires no position currently open.",
+      "exit_logic": "Stop loss = ATR * sl_mult (floored at 5.0 USD). Take profit = ATR * tp_mult (floored at 1.50 USD). Both distances are positive USD point values derived from current bar's ATR.",
+      "filters": [
+        "vol_percentile > min_vol_pct",
+        "is_session(london_ny)"
+      ],
+      "session_filter": "london_ny",
+      "direction": "both",
+      "parameters": {
+        "ema_fast": {
+          "default": 21,
+          "min": 10,
+          "max": 50
+        },
+        "ema_slow": {
+          "default": 55,
+          "min": 30,
+          "max": 100
+        },
+        "vol_lookback": {
+          "default": 60,
+          "min": 20,
+          "max": 120
+        },
+        "min_vol_pct": {
+          "default": 40,
+          "min": 20,
+          "max": 70
+        },
+        "sl_mult": {
+          "default": 2.0,
+          "min": 1.0,
+          "max": 4.0
+        },
+        "tp_mult": {
+          "default": 3.0,
+          "min": 1.5,
+          "max": 6.0
+        }
+      },
+      "expected_trades_per_year": 65,
+      "expected_failure_conditions": "Extended sub-40th percentile volatility regimes lasting >3 months with no directional conviction"
+    },
+    "code": "class Strategy:\n    PARAMS = {\n        \"ema_fast\": {\"default\": 21, \"min\": 10, \"max\": 50},\n        \"ema_slow\": {\"default\": 55, \"min\": 30, \"max\": 100},\n        \"vol_lookback\": {\"default\": 60, \"min\": 20, \"max\": 120},\n        \"min_vol_pct\": {\"default\": 40, \"min\": 20, \"max\": 70},\n        \"sl_mult\": {\"default\": 2.0, \"min\": 1.0, \"max\": 4.0},\n        \"tp_mult\": {\"default\": 3.0, \"min\": 1.5, \"max\": 6.0}\n    }\n\n    def __init__(self, params):\n        self.params = params\n\n    def on_bar(self, bars):\n        if len(bars) < 60:\n            return None\n\n        # Compute indicators\n        ema_f = ema(bars, self.params[\"ema_fast\"])\n        ema_s = ema(bars, self.params[\"ema_slow\"])\n        macd_line, signal_line, hist = macd(bars, 12, 26, 9)\n        vol_pct = vol_percentile(bars, atr_n=14, lookback=self.params[\"vol_lookback\"])\n        atr_val = atr(bars, 14)\n        in_session = is_session(bars, \"london_ny\")\n\n        # Safety checks for NaN/invalid values\n        if np.isnan(atr_val) or atr_val <= 0:\n            return None\n        if np.isnan(vol_pct) or np.isnan(hist) or np.isnan(ema_f.iloc[-1]) or np.isnan(ema_s.iloc[-1]):\n            return None\n\n        # Current bar values\n        curr_ema_f = float(ema_f.iloc[-1])\n        curr_ema_s = float(ema_s.iloc[-1])\n        curr_hist = float(hist.iloc[-1])\n        curr_vol_pct = float(vol_pct.iloc[-1])\n        curr_in_session = bool(in_session.iloc[-1])\n\n        # Parameter extraction\n        min_vol = self.params[\"min_vol_pct\"] / 100.0\n        sl_dist = max(5.0, float(atr_val * self.params[\"sl_mult\"]))\n        tp_dist = max(1.50, float(atr_val * self.params[\"tp_mult\"]))\n\n        # Entry logic\n        long_cond = (curr_ema_f > curr_ema_s) and (curr_hist > 0) and (curr_vol_pct > min_vol) and curr_in_session\n        short_cond = (curr_ema_f < curr_ema_s) and (curr_hist < 0) and (curr_vol_pct > min_vol) and curr_in_session\n\n        if long_cond:\n            return Signal.enter_long(sl_distance=sl_dist, tp_distance=tp_dist)\n        elif short_cond:\n            return Signal.enter_short(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        return None"
+  },
+  "source_hash": "b837ce6aca0c31b7",
+  "static_scan": {
+    "passed": true,
+    "violations": [],
+    "banned_imports": [],
+    "summary": "Clean"
+  },
+  "train_result": {
+    "trades": [],
+    "equity_curve_summary": {
+      "start": 100000.0,
+      "end": 100000.0,
+      "points": 4792
+    },
+    "metrics": {
+      "total_trades": 0,
+      "error": "no_trades",
+      "total_net_pnl": 0.0,
+      "total_gross_pnl": 0.0,
+      "total_costs": 0.0,
+      "cost_gross_ratio": 0.0,
+      "total_return_pct": 0.0,
+      "final_equity": 100000.0,
+      "cagr": 0.0,
+      "sharpe": 0.0,
+      "sortino": 0.0,
+      "calmar": 0.0,
+      "omega": 0.0,
+      "max_drawdown": 0.0,
+      "average_drawdown": 0.0,
+      "max_drawdown_bars": 0,
+      "max_drawdown_days": 0.0,
+      "time_under_water": 0.0,
+      "ulcer_index": 0.0,
+      "recovery_factor": 0.0,
+      "exposure_pct": 0.0,
+      "buy_and_hold_return_pct": 50.06,
+      "beta": 0.0,
+      "monthly_table": {
+        "2021": {
+          "09": 0.0,
+          "10": 0.0,
+          "11": 0.0,
+          "12": 0.0
+        },
+        "2022": {
+          "01": 0.0,
+          "02": 0.0,
+          "03": 0.0,
+          "04": 0.0,
+          "05": 0.0,
+          "06": 0.0,
+          "07": 0.0,
+          "08": 0.0,
+          "09": 0.0,
+          "10": 0.0,
+          "11": 0.0,
+          "12": 0.0
+        },
+        "2023": {
+          "01": 0.0,
+          "02": 0.0,
+          "03": 0.0,
+          "04": 0.0,
+          "05": 0.0,
+          "06": 0.0,
+          "07": 0.0,
+          "08": 0.0,
+          "09": 0.0,
+          "10": 0.0,
+          "11": 0.0,
+          "12": 0.0
+        },
+        "2024": {
+          "01": 0.0,
+          "02": 0.0,
+          "03": 0.0,
+          "04": 0.0,
+          "05": 0.0,
+          "06": 0.0,
+          "07": 0.0,
+          "08": 0.0,
+          "09": 0.0
+        }
+      },
+      "yearly_table": {
+        "2021": {
+          "return_pct": 0.0,
+          "net_pnl": 0.0
+        },
+        "2022": {
+          "return_pct": 0.0,
+          "net_pnl": 0.0
+        },
+        "2023": {
+          "return_pct": 0.0,
+          "net_pnl": 0.0
+        },
+        "2024": {
+          "return_pct": 0.0,
+          "net_pnl": 0.0
+        }
+      },
+      "yearly_pnl": {
+        "2021": 0.0,
+        "2022": 0.0,
+        "2023": 0.0,
+        "2024": 0.0
+      },
+      "status": "completed"
+    },
+    "metadata": {
+      "timeframe": "4h",
+      "split": "train",
+      "file_hash": "13cca08dbe905fc78c70785dcf1939a0bd28b5ff60490e6fddce9c9e031c6fd7",
+      "slice_hash": "da62aec838ca05daf840f3ccbef1432b5c9094a7d8f465c406182998c945d74c",
+      "total_bars": 4792,
+      "live_bars": 4792,
+      "warmup_bars": 0,
+      "skipped_min_lot": 0,
+      "skipped_margin": 0,
+      "forced_closes": 0,
+      "strategy_errors": 0,
+      "first_strategy_error": null
+    },
+    "status": "completed",
+    "wall_seconds": 0.18,
+    "created_at": "2026-10-05 17:46:16.743000"
+  },
+  "train_gates": {
+    "all_passed": false,
+    "stopped_at": "minimum_sample",
+    "robustness_score": 0.0,
+    "status": "rejected",
+    "gates": [
+      {
+        "name": "policy_scan",
+        "passed": true,
+        "category": "safety",
+        "details": {
+          "passed": true,
+          "violations": [],
+          "banned_imports": [],
+          "summary": "Clean"
+        },
+        "public_summary": "passed: policy_scan"
+      },
+      {
+        "name": "smoke_run",
+        "passed": true,
+        "category": "clean_load",
+        "details": {
+          "detail": "Sandbox instantiation succeeded."
+        },
+        "public_summary": "passed: smoke_run"
+      },
+      {
+        "name": "determinism",
+        "passed": true,
+        "category": "determinism",
+        "details": {
+          "passed": true,
+          "first_diverging_bar": null,
+          "first_diverging_timestamp": null,
+          "diverging_field": null,
+          "detail": "Bit-identical signal tapes produced on two independent runs with seed=42."
+        },
+        "public_summary": "passed: determinism"
+      },
+      {
+        "name": "truncation",
+        "passed": true,
+        "category": "truncation",
+        "details": {
+          "passed": true,
+          "num_cuts": 20,
+          "first_diverging_bar": null,
+          "first_diverging_timestamp": null,
+          "diverging_field": null,
+          "detail": "Verified signal identity T_c[0..c] == T_full[0..c] across 20 cut points (tolerance 1e-9)."
+        },
+        "public_summary": "passed: truncation"
+      },
+      {
+        "name": "signal_validity",
+        "passed": true,
+        "category": "signal_valid",
+        "details": {
+          "failures": []
+        },
+        "public_summary": "passed: signal_validity"
+      },
+      {
+        "name": "train_backtest",
+        "passed": true,
+        "category": "train_simulation_success",
+        "details": {
+          "trades": 0,
+          "net_pnl": 0.0
+        },
+        "public_summary": "passed: train_backtest"
+      },
+      {
+        "name": "minimum_sample",
+        "passed": false,
+        "category": "sample_size",
+        "details": {
+          "total_trades": 0,
+          "min_trades": 100,
+          "trades_per_year": 0.0,
+          "min_tpy": 15,
+          "failures": [
+            "trades=0 < 100",
+            "trades_per_year=0.0 < 15"
+          ]
+        },
+        "public_summary": "failed: sample_size"
+      }
+    ],
+    "candidate_data": {}
+  },
+  "status": "rejected",
+  "rejected_at": "minimum_sample",
+  "started_at": "2026-10-05 17:40:57.248000",
+  "finished_at": "2026-10-05 17:46:16.743000",
+  "wall_seconds": 319.49,
+  "llm_calls": 0,
+  "llm_tokens": 0
+}

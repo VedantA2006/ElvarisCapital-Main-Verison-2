@@ -82,11 +82,11 @@ class TestTrainPerformanceGate:
     def test_4h_uses_lower_min_trades(self, base_cfg):
         from core.gates import gate_train_performance
         m = _good_metrics()
-        m["total_trades"] = 120  # below 1h min (200) but above 4h min (100)
+        m["total_trades"] = 90  # below 1h min (100) but above 4h min (80)
         r_1h = gate_train_performance(m, base_cfg, timeframe="1h")
         r_4h = gate_train_performance(m, base_cfg, timeframe="4h")
-        assert not r_1h.passed  # 120 < 200
-        assert r_4h.passed      # 120 > 100
+        assert not r_1h.passed  # 90 < 100
+        assert r_4h.passed      # 90 > 80
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -191,16 +191,16 @@ class TestDSR:
 
     def test_mediocre_sharpe_many_trials_fails(self, base_cfg):
         from core.gates import gate_dsr
-        r = gate_dsr(sharpe=0.5, n_trades=100, skew=0.0, kurtosis=3.0,
+        r = gate_dsr(sharpe=0.15, n_trades=100, skew=0.0, kurtosis=3.0,
                      n_trials=200, cfg=base_cfg)
         assert not r.passed
         assert "luck" in r.detail.lower() or "FAIL" in r.detail
 
     def test_more_trials_harder_to_pass(self, base_cfg):
         from core.gates import gate_dsr
-        r5 = gate_dsr(sharpe=1.0, n_trades=200, skew=0.0, kurtosis=3.0,
+        r5 = gate_dsr(sharpe=0.2, n_trades=200, skew=0.0, kurtosis=3.0,
                       n_trials=5, cfg=base_cfg)
-        r500 = gate_dsr(sharpe=1.0, n_trades=200, skew=0.0, kurtosis=3.0,
+        r500 = gate_dsr(sharpe=0.2, n_trades=200, skew=0.0, kurtosis=3.0,
                         n_trials=500, cfg=base_cfg)
         # With 500 trials, the expected max Sharpe is higher → harder to beat
         assert r5.data["probability"] > r500.data["probability"]

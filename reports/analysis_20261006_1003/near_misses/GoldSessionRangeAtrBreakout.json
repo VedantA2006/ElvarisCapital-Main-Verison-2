@@ -1,0 +1,364 @@
+{
+  "_id": "6ac3d75c1e98da606df98956",
+  "trial_id": "trial-c1ae13cdb338",
+  "strategy_name": "GoldSessionRangeAtrBreakout",
+  "timeframe": "4h",
+  "idea": {
+    "spec": {
+      "name": "GoldSessionRangeAtrBreakout",
+      "timeframe": "4h",
+      "hypothesis": "XAUUSD exhibits persistent intraday range expansion following the establishment of a consolidated Asian session range. Institutional order flow accumulates during low-volatility Asian hours and executes aggressively at London/NY open, causing breakouts that persist for multiple 4h bars. Retail traders fading these breakouts or entering prematurely during Asia provide the counterparty liquidity. This strategy captures the initial momentum burst by requiring a confirmed close outside the Asian range with ATR-based volatility validation to avoid false breaks.",
+      "concept_family": "trend",
+      "indicators_used": [
+        "session_range",
+        "atr",
+        "is_session"
+      ],
+      "entry_logic": "Long when current 4h bar closes above Asian session high AND ATR(14) > threshold AND no position open. Short when current 4h bar closes below Asian session low AND ATR(14) > threshold AND no position open. Only valid if breakout occurs during London or NY session.",
+      "exit_logic": "Stop loss distance = max(5.0, ATR * sl_mult). Take profit distance = max(8.0, ATR * tp_mult). Both distances are positive USD points derived from current ATR.",
+      "filters": [
+        "Breakout must occur during London or NY session",
+        "ATR must be positive and non-NaN",
+        "Cooldown of 3 bars after any trade exit"
+      ],
+      "session_filter": "london_ny",
+      "direction": "both",
+      "parameters": {
+        "atr_period": {
+          "default": 14,
+          "min": 8,
+          "max": 30
+        },
+        "sl_mult": {
+          "default": 1.5,
+          "min": 1.0,
+          "max": 3.0
+        },
+        "tp_mult": {
+          "default": 2.5,
+          "min": 1.5,
+          "max": 4.0
+        },
+        "cooldown_bars": {
+          "default": 3,
+          "min": 1,
+          "max": 6
+        }
+      },
+      "expected_trades_per_year": 65,
+      "expected_failure_conditions": "Extended Asian-range consolidation without London/NY follow-through; major news events causing gap reversals through the range"
+    },
+    "code": "class Strategy:\n    PARAMS = {\n        \"atr_period\": {\"default\": 14, \"min\": 8, \"max\": 30},\n        \"sl_mult\": {\"default\": 1.5, \"min\": 1.0, \"max\": 3.0},\n        \"tp_mult\": {\"default\": 2.5, \"min\": 1.5, \"max\": 4.0},\n        \"cooldown_bars\": {\"default\": 3, \"min\": 1, \"max\": 6}\n    }\n\n    def __init__(self, params):\n        self.params = params\n        self.last_trade_bar = -999\n        self.in_position = False\n\n    def on_bar(self, bars):\n        if len(bars) < 60:\n            return None\n\n        # Cooldown check\n        current_bar_idx = len(bars) - 1\n        if current_bar_idx - self.last_trade_bar < self.params[\"cooldown_bars\"]:\n            return None\n\n        # Get indicators\n        atr_series = atr(bars, self.params[\"atr_period\"])\n        atr_val = float(atr_series.iloc[-1])\n        if np.isnan(atr_val) or atr_val <= 0:\n            return None\n\n        # Session filter: only trade in London or NY\n        london_mask = is_session(bars, \"london\")\n        ny_mask = is_session(bars, \"ny\")\n        active_session = bool(london_mask.iloc[-1] or ny_mask.iloc[-1])\n        if not active_session:\n            return None\n\n        # Get Asian session range (strictly closed data)\n        asian_range = session_range(bars, \"asia\")\n        asian_high = float(asian_range[\"high\"].iloc[-1])\n        asian_low = float(asian_range[\"low\"].iloc[-1])\n        if np.isnan(asian_high) or np.isnan(asian_low) or asian_high <= asian_low:\n            return None\n\n        close_price = float(bars[\"close\"].iloc[-1])\n\n        # Entry logic\n        if not self.in_position:\n            # Long breakout\n            if close_price > asian_high:\n                sl_dist = max(5.0, float(atr_val * self.params[\"sl_mult\"]))\n                tp_dist = max(8.0, float(atr_val * self.params[\"tp_mult\"]))\n                self.in_position = True\n                self.last_trade_bar = current_bar_idx\n                return Signal.enter_long(sl_distance=sl_dist, tp_distance=tp_dist)\n\n            # Short breakout\n            elif close_price < asian_low:\n                sl_dist = max(5.0, float(atr_val * self.params[\"sl_mult\"]))\n                tp_dist = max(8.0, float(atr_val * self.params[\"tp_mult\"]))\n                self.in_position = True\n                self.last_trade_bar = current_bar_idx\n                return Signal.enter_short(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        else:\n            # Position management handled by platform via SL/TP\n            # No manual close signals needed unless adding trailing logic\n            pass\n\n        return None"
+  },
+  "source_hash": "1e579ebc4871d3a0",
+  "static_scan": {
+    "passed": true,
+    "violations": [],
+    "banned_imports": [],
+    "summary": "Clean"
+  },
+  "train_result": {
+    "trades": [
+      {
+        "trade_id": 0,
+        "entry_bar_idx": 65,
+        "exit_bar_idx": 65,
+        "entry_time": "2021-10-08T12:00:00+00:00",
+        "exit_time": "2021-10-08T12:00:00+00:00",
+        "direction": "LONG",
+        "lots": 0.84,
+        "entry_price": 1762.2212925,
+        "exit_price": 1780.834848484608,
+        "gross_pnl": 1614.2153,
+        "spread_cost": 21.0,
+        "slippage_cost": 29.6766,
+        "commission": 5.88,
+        "swap_cost": -0.0,
+        "net_pnl": 1557.6587,
+        "bars_held": 0,
+        "exit_reason": "take_profit",
+        "tag": "",
+        "pnl_r": 1.5753,
+        "mae": 573.16,
+        "mfe": 1596.56,
+        "initial_sl_distance": 11.1681
+      }
+    ],
+    "equity_curve_summary": {
+      "start": 100000.0,
+      "end": 101557.66,
+      "points": 4792
+    },
+    "metrics": {
+      "total_trades": 1,
+      "winners": 1,
+      "losers": 0,
+      "win_rate": 1.0,
+      "total_net_pnl": 1557.66,
+      "total_gross_pnl": 1614.22,
+      "total_costs": 56.56,
+      "spread_cost_total": 21.0,
+      "slippage_cost_total": 29.68,
+      "commission_total": 5.88,
+      "swap_cost_total": 0.0,
+      "cost_gross_ratio": 0.035,
+      "profit_factor": 999.0,
+      "expectancy": 1557.66,
+      "expectancy_usd": 1557.66,
+      "expectancy_r": 1.5753,
+      "avg_win": 1557.66,
+      "avg_loss": 0.0,
+      "payoff": 0.0,
+      "payoff_ratio": 0.0,
+      "largest_win": 1557.66,
+      "largest_loss": 0.0,
+      "max_consecutive_wins": 1,
+      "max_consecutive_losses": 0,
+      "avg_holding_bars": 0.0,
+      "avg_holding_hours": 0.0,
+      "exposure_pct": 0.0,
+      "trades_per_month": 0.03,
+      "trades_per_year": 0.3,
+      "years_covered": 2.997,
+      "long_trades": 1,
+      "short_trades": 0,
+      "long_win_rate": 1.0,
+      "short_win_rate": 0.0,
+      "profit_concentration_top5pct": 1.0,
+      "yearly_pnl": {
+        "2021": 1557.66,
+        "2022": 0.0,
+        "2023": 0.0,
+        "2024": 0.0
+      },
+      "total_return_pct": 1.56,
+      "final_equity": 101557.66,
+      "cagr": 0.52,
+      "sharpe": 0.5208,
+      "sortino": 99.0,
+      "calmar": 0.0,
+      "omega": 99.0,
+      "max_drawdown": 0.0,
+      "average_drawdown": 0.0,
+      "max_drawdown_bars": 0,
+      "max_drawdown_days": 0.0,
+      "time_under_water": 0.0,
+      "ulcer_index": 0.0,
+      "recovery_factor": 0.0,
+      "long_breakdown": {
+        "trades": 1,
+        "win_rate": 1.0,
+        "net_pnl": 1557.66,
+        "profit_factor": 999.0
+      },
+      "short_breakdown": {
+        "trades": 0,
+        "win_rate": 0.0,
+        "net_pnl": 0.0,
+        "profit_factor": 0.0
+      },
+      "exit_reasons": {
+        "take_profit": {
+          "count": 1,
+          "net_pnl": 1557.66,
+          "pct_of_trades": 1.0
+        }
+      },
+      "avg_mae": 573.16,
+      "avg_mfe": 1596.56,
+      "monthly_table": {
+        "2021": {
+          "09": 0.0,
+          "10": 1.56,
+          "11": 0.0,
+          "12": 0.0
+        },
+        "2022": {
+          "01": 0.0,
+          "02": 0.0,
+          "03": 0.0,
+          "04": 0.0,
+          "05": 0.0,
+          "06": 0.0,
+          "07": 0.0,
+          "08": 0.0,
+          "09": 0.0,
+          "10": 0.0,
+          "11": 0.0,
+          "12": 0.0
+        },
+        "2023": {
+          "01": 0.0,
+          "02": 0.0,
+          "03": 0.0,
+          "04": 0.0,
+          "05": 0.0,
+          "06": 0.0,
+          "07": 0.0,
+          "08": 0.0,
+          "09": 0.0,
+          "10": 0.0,
+          "11": 0.0,
+          "12": 0.0
+        },
+        "2024": {
+          "01": 0.0,
+          "02": 0.0,
+          "03": 0.0,
+          "04": 0.0,
+          "05": 0.0,
+          "06": 0.0,
+          "07": 0.0,
+          "08": 0.0,
+          "09": 0.0
+        }
+      },
+      "average_monthly_return_pct": 0.04,
+      "median_monthly_return_pct": 0.0,
+      "best_month_pct": 1.56,
+      "worst_month_pct": 0.0,
+      "pct_profitable_months": 0.027,
+      "avg_winning_month_pct": 1.56,
+      "avg_losing_month_pct": 0.0,
+      "average_monthly_max_drawdown": 0.0,
+      "yearly_table": {
+        "2021": {
+          "return_pct": 1.56,
+          "net_pnl": 1557.66,
+          "trades": 1
+        },
+        "2022": {
+          "return_pct": 0.0,
+          "net_pnl": 0.0
+        },
+        "2023": {
+          "return_pct": 0.0,
+          "net_pnl": 0.0
+        },
+        "2024": {
+          "return_pct": 0.0,
+          "net_pnl": 0.0
+        }
+      },
+      "buy_and_hold_return_pct": 50.06,
+      "beta": 0.0001,
+      "status": "completed"
+    },
+    "metadata": {
+      "timeframe": "4h",
+      "split": "train",
+      "file_hash": "13cca08dbe905fc78c70785dcf1939a0bd28b5ff60490e6fddce9c9e031c6fd7",
+      "slice_hash": "da62aec838ca05daf840f3ccbef1432b5c9094a7d8f465c406182998c945d74c",
+      "total_bars": 4792,
+      "live_bars": 4792,
+      "warmup_bars": 0,
+      "skipped_min_lot": 0,
+      "skipped_margin": 0,
+      "forced_closes": 0,
+      "strategy_errors": 0,
+      "first_strategy_error": null
+    },
+    "status": "completed",
+    "wall_seconds": 0.248,
+    "created_at": "2026-10-05 16:59:08.216000"
+  },
+  "train_gates": {
+    "all_passed": false,
+    "stopped_at": "minimum_sample",
+    "robustness_score": 0.0,
+    "status": "rejected",
+    "gates": [
+      {
+        "name": "policy_scan",
+        "passed": true,
+        "category": "safety",
+        "details": {
+          "passed": true,
+          "violations": [],
+          "banned_imports": [],
+          "summary": "Clean"
+        },
+        "public_summary": "passed: policy_scan"
+      },
+      {
+        "name": "smoke_run",
+        "passed": true,
+        "category": "clean_load",
+        "details": {
+          "detail": "Sandbox instantiation succeeded."
+        },
+        "public_summary": "passed: smoke_run"
+      },
+      {
+        "name": "determinism",
+        "passed": true,
+        "category": "determinism",
+        "details": {
+          "passed": true,
+          "first_diverging_bar": null,
+          "first_diverging_timestamp": null,
+          "diverging_field": null,
+          "detail": "Bit-identical signal tapes produced on two independent runs with seed=42."
+        },
+        "public_summary": "passed: determinism"
+      },
+      {
+        "name": "truncation",
+        "passed": true,
+        "category": "truncation",
+        "details": {
+          "passed": true,
+          "num_cuts": 20,
+          "first_diverging_bar": null,
+          "first_diverging_timestamp": null,
+          "diverging_field": null,
+          "detail": "Verified signal identity T_c[0..c] == T_full[0..c] across 20 cut points (tolerance 1e-9)."
+        },
+        "public_summary": "passed: truncation"
+      },
+      {
+        "name": "signal_validity",
+        "passed": true,
+        "category": "signal_valid",
+        "details": {
+          "failures": []
+        },
+        "public_summary": "passed: signal_validity"
+      },
+      {
+        "name": "train_backtest",
+        "passed": true,
+        "category": "train_simulation_success",
+        "details": {
+          "trades": 1,
+          "net_pnl": 1557.66
+        },
+        "public_summary": "passed: train_backtest"
+      },
+      {
+        "name": "minimum_sample",
+        "passed": false,
+        "category": "sample_size",
+        "details": {
+          "total_trades": 1,
+          "min_trades": 100,
+          "trades_per_year": 0.3,
+          "min_tpy": 15,
+          "failures": [
+            "trades=1 < 100",
+            "trades_per_year=0.3 < 15"
+          ]
+        },
+        "public_summary": "failed: sample_size"
+      }
+    ],
+    "candidate_data": {}
+  },
+  "status": "rejected",
+  "rejected_at": "minimum_sample",
+  "started_at": "2026-10-05 16:56:55.752000",
+  "finished_at": "2026-10-05 16:59:08.216000",
+  "wall_seconds": 132.46,
+  "llm_calls": 0,
+  "llm_tokens": 0
+}

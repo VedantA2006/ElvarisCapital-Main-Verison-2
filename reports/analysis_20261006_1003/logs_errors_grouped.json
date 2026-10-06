@@ -1,0 +1,8 @@
+{
+  "verify-data found CRITICAL errors - stopping. Fix the data b": {
+    "count": 1,
+    "first_seen": "2026-10-04T09:18:45.281646+00:00",
+    "last_seen": "2026-10-04T09:18:45.281646+00:00",
+    "example": "verify-data found CRITICAL errors - stopping. Fix the data before any run."
+  }
+}

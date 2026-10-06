@@ -1,0 +1,212 @@
+{
+  "swallowed_exceptions_count": 12,
+  "swallowed_exceptions": [
+    {
+      "file": "core/indicators.py",
+      "line": 148,
+      "type": "except_Exception_pass"
+    },
+    {
+      "file": "core/indicators.py",
+      "line": 407,
+      "type": "except_Exception_pass"
+    },
+    {
+      "file": "core/indicators.py",
+      "line": 631,
+      "type": "except_Exception_pass"
+    },
+    {
+      "file": "core/indicators.py",
+      "line": 762,
+      "type": "except_Exception_pass"
+    },
+    {
+      "file": "llm/orchestrator.py",
+      "line": 118,
+      "type": "except_Exception_pass"
+    },
+    {
+      "file": "sandbox/child.py",
+      "line": 102,
+      "type": "except_Exception_pass"
+    },
+    {
+      "file": "scripts/export_analysis.py",
+      "line": 950,
+      "type": "except_Exception_pass"
+    },
+    {
+      "file": "scripts/export_analysis.py",
+      "line": 1280,
+      "type": "except_Exception_pass"
+    },
+    {
+      "file": "scripts/export_analysis.py",
+      "line": 183,
+      "type": "except_Exception_pass"
+    },
+    {
+      "file": "scripts/export_analysis.py",
+      "line": 830,
+      "type": "except_Exception_pass"
+    },
+    {
+      "file": "tests/regression/test_f3_sandbox.py",
+      "line": 90,
+      "type": "except_OSError_pass"
+    },
+    {
+      "file": "tests/repro/repro_exploits.py",
+      "line": 286,
+      "type": "except_Exception_pass"
+    }
+  ],
+  "mock_references_in_src": [
+    {
+      "file": "scripts/export_analysis.py",
+      "line": 892,
+      "name": "mocks"
+    },
+    {
+      "file": "scripts/export_analysis.py",
+      "line": 979,
+      "name": "mocks"
+    },
+    {
+      "file": "scripts/export_analysis.py",
+      "line": 937,
+      "name": "mocks"
+    },
+    {
+      "file": "scripts/export_analysis.py",
+      "line": 939,
+      "name": "mocks"
+    },
+    {
+      "file": "validation/gates.py",
+      "line": 489,
+      "name": "mock_prof_pct"
+    },
+    {
+      "file": "validation/gates.py",
+      "line": 489,
+      "name": "mock_sharpe_ratio"
+    },
+    {
+      "file": "validation/gates.py",
+      "line": 532,
+      "name": "mock_win_pct"
+    },
+    {
+      "file": "validation/gates.py",
+      "line": 532,
+      "name": "mock_efficiency"
+    },
+    {
+      "file": "validation/gates.py",
+      "line": 490,
+      "name": "mock_prof_pct"
+    },
+    {
+      "file": "validation/gates.py",
+      "line": 490,
+      "name": "mock_sharpe_ratio"
+    },
+    {
+      "file": "validation/gates.py",
+      "line": 533,
+      "name": "mock_win_pct"
+    },
+    {
+      "file": "validation/gates.py",
+      "line": 533,
+      "name": "mock_efficiency"
+    },
+    {
+      "file": "validation/gates.py",
+      "line": 497,
+      "name": "mock_prof_pct"
+    },
+    {
+      "file": "validation/gates.py",
+      "line": 497,
+      "name": "mock_sharpe_ratio"
+    },
+    {
+      "file": "validation/gates.py",
+      "line": 540,
+      "name": "mock_win_pct"
+    },
+    {
+      "file": "validation/gates.py",
+      "line": 540,
+      "name": "mock_efficiency"
+    }
+  ],
+  "hardcoded_constants_in_validation": 282,
+  "todos_count": 4,
+  "todos": [
+    {
+      "file": "scripts/export_analysis.py",
+      "line": 890,
+      "text": "print(\"[9/11] Auditing codebase for hygiene, swallows, TODOs, and constants...\")"
+    },
+    {
+      "file": "scripts/export_analysis.py",
+      "line": 914,
+      "text": "# Check for TODO/FIXME/HACK"
+    },
+    {
+      "file": "scripts/export_analysis.py",
+      "line": 916,
+      "text": "if any(w in line for w in [\"TODO\", \"FIXME\", \"HACK\"]):"
+    },
+    {
+      "file": "scripts/export_analysis.py",
+      "line": 1225,
+      "text": "w(f\"| **TODO / FIXME / HACK Annotations** | **{code_inv['todos_count']}** | Listed in `code_inventory.json` |\")"
+    }
+  ],
+  "prints_in_src": 307,
+  "files_over_800_lines": [
+    {
+      "file": "core/gates.py",
+      "lines": 951
+    },
+    {
+      "file": "core/indicators.py",
+      "lines": 1927
+    },
+    {
+      "file": "scripts/export_analysis.py",
+      "lines": 1355
+    },
+    {
+      "file": "validation/gates.py",
+      "lines": 1066
+    }
+  ],
+  "potential_dead_modules": [
+    "sandbox.child",
+    "scripts.export_analysis",
+    "validation.canaries.canary_01_shift_negative",
+    "validation.canaries.canary_02_shift_keyword",
+    "validation.canaries.canary_03_rolling_center",
+    "validation.canaries.canary_04_iloc_variable",
+    "validation.canaries.canary_05_numpy_base",
+    "validation.canaries.canary_06_csv_read",
+    "validation.canaries.canary_07_subclass_escape",
+    "validation.canaries.canary_08_env_read",
+    "validation.canaries.canary_09_infinite_loop",
+    "validation.canaries.canary_10_memory_bomb",
+    "validation.canaries.canary_11_network_call",
+    "validation.canaries.canary_12_file_write_read",
+    "validation.canaries.canary_13_full_sample_zscore",
+    "validation.canaries.canary_16_unseeded_random",
+    "validation.canaries.canary_17_wrong_side_stop",
+    "validation.canaries.canary_18_tiny_sl_huge_size",
+    "validation.canaries.canary_19_tp_smaller_spread",
+    "validation.canaries.canary_20_always_raises"
+  ]
+}

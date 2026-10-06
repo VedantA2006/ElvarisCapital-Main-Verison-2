@@ -1,0 +1,310 @@
+{
+  "_id": "6ac3dbb21e98da606df9897b",
+  "trial_id": "trial-b247573dbc53",
+  "strategy_name": "GoldHtfTrendVolPullback",
+  "timeframe": "1h",
+  "idea": {
+    "spec": {
+      "name": "GoldHtfTrendVolPullback",
+      "timeframe": "1h",
+      "hypothesis": "Institutional flows in XAUUSD are primarily directed by higher-timeframe (4H) macro trends. However, algorithmic execution desks often scale into positions during short-term pullbacks to minimize market impact. When the 4H trend is strongly established (ADX > threshold), retail traders frequently attempt counter-trend reversals on the 1H chart during minor retracements. These retail participants are forced out when the institutional trend resumes. By identifying 4H trend direction via closed-bar HTF ADX and EMA, and waiting for a 1H RSI pullback into oversold/overbought territory alongside a confirmed 1H swing breakout (BOS) in the direction of the macro trend, we capture the exact moment institutions resume their accumulation/distribution. The losing side consists of counter-trend retail traders trapped by the BOS trigger.",
+      "concept_family": "trend",
+      "indicators_used": [
+        "htf",
+        "rsi",
+        "atr",
+        "ema",
+        "bos"
+      ],
+      "entry_logic": "Long: 4H ADX > adx_thresh AND 4H Close > 4H EMA(20) AND 1H RSI(14) < rsi_pullback AND Bullish 1H BOS(swing_n=3). Short: Inverse conditions with Bearish BOS.",
+      "exit_logic": "Stop loss placed at ATR(14) * sl_mult distance away from entry. Take profit placed at ATR(14) * tp_mult distance away. Minimum SL enforced at 5.0 USD points, minimum TP at 1.50 USD points.",
+      "filters": [
+        "4H ADX trend filter",
+        "4H EMA directional filter",
+        "1H RSI pullback filter",
+        "1H BOS confirmation trigger"
+      ],
+      "session_filter": "none",
+      "direction": "both",
+      "parameters": {
+        "adx_thresh": {
+          "default": 25.0,
+          "min": 15.0,
+          "max": 40.0
+        },
+        "rsi_pullback": {
+          "default": 45.0,
+          "min": 25.0,
+          "max": 60.0
+        },
+        "swing_n": {
+          "default": 3,
+          "min": 2,
+          "max": 8
+        },
+        "sl_mult": {
+          "default": 1.5,
+          "min": 0.8,
+          "max": 3.0
+        },
+        "tp_mult": {
+          "default": 3.0,
+          "min": 1.5,
+          "max": 6.0
+        },
+        "cooldown": {
+          "default": 3,
+          "min": 1,
+          "max": 8
+        }
+      },
+      "expected_trades_per_year": 75,
+      "expected_failure_conditions": "Prolonged 4H ranging markets where ADX decays below threshold, or extreme news-driven volatility spikes that blow through ATR-based stop losses before structural pullbacks can form."
+    },
+    "code": "import numpy as np\nimport pandas as pd\nfrom core.indicators import htf, rsi, atr, ema, bos\n\nclass Strategy:\n    PARAMS = {\n        \"adx_thresh\": {\"default\": 25.0, \"min\": 15.0, \"max\": 40.0},\n        \"rsi_pullback\": {\"default\": 45.0, \"min\": 25.0, \"max\": 60.0},\n        \"swing_n\": {\"default\": 3, \"min\": 2, \"max\": 8},\n        \"sl_mult\": {\"default\": 1.5, \"min\": 0.8, \"max\": 3.0},\n        \"tp_mult\": {\"default\": 3.0, \"min\": 1.5, \"max\": 6.0},\n        \"cooldown\": {\"default\": 3, \"min\": 1, \"max\": 8}\n    }\n\n    def __init__(self, params):\n        self.params = params\n        self.last_trade_bar = -999\n\n    def on_bar(self, bars: pd.DataFrame):\n        # Warmup safety\n        if len(bars) < 60:\n            return None\n\n        current_idx = len(bars) - 1\n        if current_idx - self.last_trade_bar < int(self.params[\"cooldown\"]):\n            return None\n\n        # --- Higher Timeframe (4H) Context using strictly closed candles ---\n        try:\n            htf_adx = htf(bars, \"4h\", lambda df: df[\"adx\"])\n            htf_close = htf(bars, \"4h\", lambda df: df[\"close\"])\n            htf_ema = htf(bars, \"4h\", lambda df: ema(df, 20))\n        except Exception:\n            return None\n\n        if htf_adx is None or htf_close is None or htf_ema is None:\n            return None\n        if len(htf_adx) < 2 or len(htf_close) < 2 or len(htf_ema) < 2:\n            return None\n\n        # Use strictly the last fully closed 4H bar [-2] to prevent lookahead\n        prev_htf_adx = float(htf_adx.iloc[-2])\n        prev_htf_close = float(htf_close.iloc[-2])\n        prev_htf_ema = float(htf_ema.iloc[-2])\n\n        if np.isnan(prev_htf_adx) or np.isnan(prev_htf_close) or np.isnan(prev_htf_ema):\n            return None\n\n        htf_trending_up = (prev_htf_adx > self.params[\"adx_thresh\"]) and (prev_htf_close > prev_htf_ema)\n        htf_trending_down = (prev_htf_adx > self.params[\"adx_thresh\"]) and (prev_htf_close < prev_htf_ema)\n\n        if not htf_trending_up and not htf_trending_down:\n            return None\n\n        # --- 1H Indicators ---\n        rsi_val = rsi(bars, 14)\n        atr_val = atr(bars, 14)\n\n        curr_rsi = float(rsi_val.iloc[-1])\n        curr_atr = float(atr_val.iloc[-1])\n\n        if np.isnan(curr_rsi) or np.isnan(curr_atr) or curr_atr <= 0:\n            return None\n\n        # --- Market Structure (BOS) ---\n        swing_n = int(self.params[\"swing_n\"])\n        bull_bos, bear_bos = bos(bars, swing_n)\n\n        curr_bull_bos = bool(bull_bos.iloc[-1])\n        curr_bear_bos = bool(bear_bos.iloc[-1])\n\n        rsi_thresh = float(self.params[\"rsi_pullback\"])\n\n        # --- Entry Logic ---\n        # Long: 4H Uptrend + 1H RSI pulled back + 1H Bullish Break of Structure\n        if htf_trending_up and (curr_rsi < rsi_thresh) and curr_bull_bos:\n            sl_dist = max(5.0, float(curr_atr * self.params[\"sl_mult\"]))\n            tp_dist = max(1.50, float(curr_atr * self.params[\"tp_mult\"]))\n            self.last_trade_bar = current_idx\n            return Signal.enter_long(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        # Short: 4H Downtrend + 1H RSI pulled back (overbought) + 1H Bearish Break of Structure\n        if htf_trending_down and (curr_rsi > (100.0 - rsi_thresh)) and curr_bear_bos:\n            sl_dist = max(5.0, float(curr_atr * self.params[\"sl_mult\"]))\n            tp_dist = max(1.50, float(curr_atr * self.params[\"tp_mult\"]))\n            self.last_trade_bar = current_idx\n            return Signal.enter_short(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        return None"
+  },
+  "source_hash": "8b5b6e074f41f62d",
+  "static_scan": {
+    "passed": true,
+    "violations": [
+      {
+        "line": 41,
+        "col": 0,
+        "pattern": "regex_match",
+        "detail": "suspicious variable/comment name",
+        "severity": "warning"
+      }
+    ],
+    "banned_imports": [],
+    "summary": "1 warning(s)"
+  },
+  "train_result": {
+    "trades": [],
+    "equity_curve_summary": {
+      "start": 100000.0,
+      "end": 100000.0,
+      "points": 17720
+    },
+    "metrics": {
+      "total_trades": 0,
+      "error": "no_trades",
+      "total_net_pnl": 0.0,
+      "total_gross_pnl": 0.0,
+      "total_costs": 0.0,
+      "cost_gross_ratio": 0.0,
+      "total_return_pct": 0.0,
+      "final_equity": 100000.0,
+      "cagr": 0.0,
+      "sharpe": 0.0,
+      "sortino": 0.0,
+      "calmar": 0.0,
+      "omega": 0.0,
+      "max_drawdown": 0.0,
+      "average_drawdown": 0.0,
+      "max_drawdown_bars": 0,
+      "max_drawdown_days": 0.0,
+      "time_under_water": 0.0,
+      "ulcer_index": 0.0,
+      "recovery_factor": 0.0,
+      "exposure_pct": 0.0,
+      "buy_and_hold_return_pct": 50.06,
+      "beta": 0.0,
+      "monthly_table": {
+        "2021": {
+          "09": 0.0,
+          "10": 0.0,
+          "11": 0.0,
+          "12": 0.0
+        },
+        "2022": {
+          "01": 0.0,
+          "02": 0.0,
+          "03": 0.0,
+          "04": 0.0,
+          "05": 0.0,
+          "06": 0.0,
+          "07": 0.0,
+          "08": 0.0,
+          "09": 0.0,
+          "10": 0.0,
+          "11": 0.0,
+          "12": 0.0
+        },
+        "2023": {
+          "01": 0.0,
+          "02": 0.0,
+          "03": 0.0,
+          "04": 0.0,
+          "05": 0.0,
+          "06": 0.0,
+          "07": 0.0,
+          "08": 0.0,
+          "09": 0.0,
+          "10": 0.0,
+          "11": 0.0,
+          "12": 0.0
+        },
+        "2024": {
+          "01": 0.0,
+          "02": 0.0,
+          "03": 0.0,
+          "04": 0.0,
+          "05": 0.0,
+          "06": 0.0,
+          "07": 0.0,
+          "08": 0.0,
+          "09": 0.0
+        }
+      },
+      "yearly_table": {
+        "2021": {
+          "return_pct": 0.0,
+          "net_pnl": 0.0
+        },
+        "2022": {
+          "return_pct": 0.0,
+          "net_pnl": 0.0
+        },
+        "2023": {
+          "return_pct": 0.0,
+          "net_pnl": 0.0
+        },
+        "2024": {
+          "return_pct": 0.0,
+          "net_pnl": 0.0
+        }
+      },
+      "yearly_pnl": {
+        "2021": 0.0,
+        "2022": 0.0,
+        "2023": 0.0,
+        "2024": 0.0
+      },
+      "status": "completed"
+    },
+    "metadata": {
+      "timeframe": "1h",
+      "split": "train",
+      "file_hash": "2959682a19a528cdb8674ef61a9174aa4a9006d87ad4aa4d6d7010f2287e5ee1",
+      "slice_hash": "42a0ec00ad82e627aaaf92be13edc325178d07db31db7fb2d95181da445eca73",
+      "total_bars": 17720,
+      "live_bars": 17720,
+      "warmup_bars": 0,
+      "skipped_min_lot": 0,
+      "skipped_margin": 0,
+      "forced_closes": 0,
+      "strategy_errors": 0,
+      "first_strategy_error": null
+    },
+    "status": "completed",
+    "wall_seconds": 0.892,
+    "created_at": "2026-10-05 17:17:38.411000"
+  },
+  "train_gates": {
+    "all_passed": false,
+    "stopped_at": "minimum_sample",
+    "robustness_score": 0.0,
+    "status": "rejected",
+    "gates": [
+      {
+        "name": "policy_scan",
+        "passed": true,
+        "category": "safety",
+        "details": {
+          "passed": true,
+          "violations": [
+            {
+              "line": 41,
+              "col": 0,
+              "pattern": "regex_match",
+              "detail": "suspicious variable/comment name",
+              "severity": "warning"
+            }
+          ],
+          "banned_imports": [],
+          "summary": "1 warning(s)"
+        },
+        "public_summary": "passed: policy_scan"
+      },
+      {
+        "name": "smoke_run",
+        "passed": true,
+        "category": "clean_load",
+        "details": {
+          "detail": "Sandbox instantiation succeeded."
+        },
+        "public_summary": "passed: smoke_run"
+      },
+      {
+        "name": "determinism",
+        "passed": true,
+        "category": "determinism",
+        "details": {
+          "passed": true,
+          "first_diverging_bar": null,
+          "first_diverging_timestamp": null,
+          "diverging_field": null,
+          "detail": "Bit-identical signal tapes produced on two independent runs with seed=42."
+        },
+        "public_summary": "passed: determinism"
+      },
+      {
+        "name": "truncation",
+        "passed": true,
+        "category": "truncation",
+        "details": {
+          "passed": true,
+          "num_cuts": 20,
+          "first_diverging_bar": null,
+          "first_diverging_timestamp": null,
+          "diverging_field": null,
+          "detail": "Verified signal identity T_c[0..c] == T_full[0..c] across 20 cut points (tolerance 1e-9)."
+        },
+        "public_summary": "passed: truncation"
+      },
+      {
+        "name": "signal_validity",
+        "passed": true,
+        "category": "signal_valid",
+        "details": {
+          "failures": []
+        },
+        "public_summary": "passed: signal_validity"
+      },
+      {
+        "name": "train_backtest",
+        "passed": true,
+        "category": "train_simulation_success",
+        "details": {
+          "trades": 0,
+          "net_pnl": 0.0
+        },
+        "public_summary": "passed: train_backtest"
+      },
+      {
+        "name": "minimum_sample",
+        "passed": false,
+        "category": "sample_size",
+        "details": {
+          "total_trades": 0,
+          "min_trades": 200,
+          "trades_per_year": 0.0,
+          "min_tpy": 30,
+          "failures": [
+            "trades=0 < 200",
+            "trades_per_year=0.0 < 30"
+          ]
+        },
+        "public_summary": "failed: sample_size"
+      }
+    ],
+    "candidate_data": {}
+  },
+  "status": "rejected",
+  "rejected_at": "minimum_sample",
+  "started_at": "2026-10-05 17:13:28.628000",
+  "finished_at": "2026-10-05 17:17:38.411000",
+  "wall_seconds": 249.78,
+  "llm_calls": 0,
+  "llm_tokens": 0
+}

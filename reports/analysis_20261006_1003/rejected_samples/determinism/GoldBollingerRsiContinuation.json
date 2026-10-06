@@ -1,0 +1,119 @@
+{
+  "_id": "6ac3cf131e98da606df98905",
+  "trial_id": "trial-510f94c75733",
+  "strategy_name": "GoldBollingerRsiContinuation",
+  "timeframe": "4h",
+  "idea": {
+    "spec": {
+      "name": "GoldBollingerRsiContinuation",
+      "timeframe": "4h",
+      "hypothesis": "Institutional macro flows in XAUUSD are driven by real interest rate differentials, central bank accumulation, and geopolitical hedging. When price breaks beyond the 2-standard deviation Bollinger Band, it signifies a statistically extreme move often initiated by large-scale order flow absorption or stop-loss cascades. Retail traders typically attempt to fade these extremes (mean-reversion bias), providing liquidity to institutional trend followers. By requiring RSI > 50 for longs and < 50 for shorts, we filter out exhausted momentum spikes and ensure the underlying directional thrust remains intact. The losing side consists of retail counter-trend traders and early profit-takers whose stops fuel the continuation.",
+      "concept_family": "trend",
+      "indicators_used": [
+        "bollinger",
+        "rsi",
+        "atr"
+      ],
+      "entry_logic": "Long: Current 4h bar closes strictly above the upper Bollinger Band AND current RSI is greater than 50. Short: Current 4h bar closes strictly below the lower Bollinger Band AND current RSI is less than 50. Enforce a cooldown of 3 bars after any trade exit or entry to prevent overtrading clustered signals.",
+      "exit_logic": "Stop loss distance is calculated as ATR(14) multiplied by sl_mult (minimum 5.0 USD points). Take profit distance is calculated as Stop Loss distance multiplied by tp_mult (minimum 1.50 USD points).",
+      "filters": [
+        "RSI momentum alignment (>50 for long, <50 for short)",
+        "3-bar cooldown period"
+      ],
+      "session_filter": "none",
+      "direction": "both",
+      "parameters": {
+        "bb_period": {
+          "default": 20,
+          "min": 10,
+          "max": 50
+        },
+        "bb_std": {
+          "default": 2.0,
+          "min": 1.5,
+          "max": 3.0
+        },
+        "rsi_period": {
+          "default": 14,
+          "min": 5,
+          "max": 30
+        },
+        "atr_period": {
+          "default": 14,
+          "min": 7,
+          "max": 30
+        },
+        "sl_mult": {
+          "default": 1.5,
+          "min": 0.5,
+          "max": 3.0
+        },
+        "tp_mult": {
+          "default": 2.0,
+          "min": 1.0,
+          "max": 4.0
+        }
+      },
+      "expected_trades_per_year": 65,
+      "expected_failure_conditions": "Protracted low-volatility summer chop where price repeatedly pierces bands without follow-through, leading to whipsaw losses before the cooldown prevents further entries."
+    },
+    "code": "import numpy as np\nimport pandas as pd\nfrom core.indicators import bollinger, rsi, atr\n\nclass Strategy:\n    PARAMS = {\n        \"bb_period\": {\"default\": 20, \"min\": 10, \"max\": 50},\n        \"bb_std\": {\"default\": 2.0, \"min\": 1.5, \"max\": 3.0},\n        \"rsi_period\": {\"default\": 14, \"min\": 5, \"max\": 30},\n        \"atr_period\": {\"default\": 14, \"min\": 7, \"max\": 30},\n        \"sl_mult\": {\"default\": 1.5, \"min\": 0.5, \"max\": 3.0},\n        \"tp_mult\": {\"default\": 2.0, \"min\": 1.0, \"max\": 4.0}\n    }\n\n    def __init__(self, params):\n        self.params = params\n        self.last_trade_bar = -999\n\n    def on_bar(self, bars: pd.DataFrame):\n        if len(bars) < 60:\n            return None\n\n        i = len(bars) - 1\n        cooldown = 3\n        if (i - self.last_trade_bar) < cooldown:\n            return None\n\n        bb_period = int(self.params[\"bb_period\"])\n        bb_std = float(self.params[\"bb_std\"])\n        rsi_period = int(self.params[\"rsi_period\"])\n        atr_period = int(self.params[\"atr_period\"])\n\n        bb = bollinger(bars, bb_period, bb_std)\n        r = rsi(bars, rsi_period)\n        a = atr(bars, atr_period)\n\n        close_val = float(bars[\"close\"].iloc[i])\n        upper_val = float(bb[\"upper\"].iloc[i])\n        lower_val = float(bb[\"lower\"].iloc[i])\n        rsi_val = float(r.iloc[i])\n        atr_val = float(a.iloc[i])\n\n        if np.isnan(upper_val) or np.isnan(lower_val) or np.isnan(rsi_val) or np.isnan(atr_val) or atr_val <= 0:\n            return None\n\n        sl_dist = max(5.0, float(atr_val * self.params[\"sl_mult\"]))\n        tp_dist = max(1.50, float(sl_dist * self.params[\"tp_mult\"]))\n\n        # Long Entry: Close breaks above Upper BB + RSI confirms bullish momentum\n        if close_val > upper_val and rsi_val > 50.0:\n            self.last_trade_bar = i\n            return Signal.enter_long(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        # Short Entry: Close breaks below Lower BB + RSI confirms bearish momentum\n        if close_val < lower_val and rsi_val < 50.0:\n            self.last_trade_bar = i\n            return Signal.enter_short(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        return None"
+  },
+  "source_hash": "4ef217dddcb22f35",
+  "static_scan": {
+    "passed": true,
+    "violations": [],
+    "banned_imports": [],
+    "summary": "Clean"
+  },
+  "train_gates": {
+    "all_passed": false,
+    "stopped_at": "determinism",
+    "robustness_score": 0.0,
+    "status": "rejected",
+    "gates": [
+      {
+        "name": "policy_scan",
+        "passed": true,
+        "category": "safety",
+        "details": {
+          "passed": true,
+          "violations": [],
+          "banned_imports": [],
+          "summary": "Clean"
+        },
+        "public_summary": "passed: policy_scan"
+      },
+      {
+        "name": "smoke_run",
+        "passed": true,
+        "category": "clean_load",
+        "details": {
+          "detail": "Sandbox instantiation succeeded."
+        },
+        "public_summary": "passed: smoke_run"
+      },
+      {
+        "name": "determinism",
+        "passed": false,
+        "category": "lookahead_leak",
+        "details": {
+          "passed": false,
+          "first_diverging_bar": null,
+          "first_diverging_timestamp": null,
+          "diverging_field": null,
+          "detail": "Run 1 failed with error: Traceback (most recent call last):\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\core\\backtester.py\", line 284, in generate_signal_tape\n    sig = strat_obj.on_bar(bars.iloc[start_i : i + 1])\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\core\\sandbox.py\", line 61, in on_bar\n    return self._proc.on_bar(bars)\n           ^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\sandbox\\runner.py\", line 292, in on_bar\n    raise SandboxError(f\"Strategy error on bar {i}: {err_type}: {msg}\\n{tb}\")\nsandbox.runner.SandboxError: Strategy error on bar 59: TypeError: tuple indices must be integers or slices, not str\nTraceback (most recent call last):\n  File \"C:\\Users\\vedan\\Desktop\\ELVS LABS VERSION2.0\\quantforge\\sandbox\\child.py\", line 201, in child_main\n    sig = strategy_instance.on_bar(bars_copy)\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<strategy>\", line 38, in on_bar\nTypeError: tuple indices must be integers or slices, not str\n\n"
+        },
+        "public_summary": "failed: lookahead_leak"
+      }
+    ],
+    "candidate_data": {}
+  },
+  "status": "rejected",
+  "rejected_at": "determinism",
+  "started_at": "2026-10-05 16:21:05.907000",
+  "finished_at": "2026-10-05 16:23:47.388000",
+  "wall_seconds": 161.48,
+  "llm_calls": 1,
+  "llm_tokens": 0
+}

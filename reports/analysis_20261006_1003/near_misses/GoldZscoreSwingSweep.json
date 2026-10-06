@@ -1,0 +1,294 @@
+{
+  "_id": "6ac4201167f0fa3d35d7b5d6",
+  "trial_id": "trial-caf9274c9e0d",
+  "strategy_name": "GoldZscoreSwingSweep",
+  "timeframe": "4h",
+  "idea": {
+    "spec": {
+      "name": "GoldZscoreSwingSweep",
+      "timeframe": "4h",
+      "hypothesis": "Institutional players in XAUUSD frequently engineer liquidity sweeps of recent swing highs/lows to fill large orders before reversing price. Retail breakout traders get trapped on the wrong side, providing liquidity. By combining confirmed swing levels with statistical extremes (Z-score) and structural confirmation (CHoCH), we capture high-probability mean-reversion trades immediately after stop hunts. The losing side consists of retail momentum/breakout traders who buy the new high or sell the new low just as institutions reverse the market.",
+      "concept_family": "mean_reversion",
+      "indicators_used": [
+        "swing_high",
+        "swing_low",
+        "zscore",
+        "choch",
+        "atr",
+        "is_session"
+      ],
+      "entry_logic": "Long: Price sweeps a confirmed swing low (low_sweep == True), Z-score is below -threshold (statistical extreme), and a bullish Change of Character (CHoCH) confirms reversal. Short: Price sweeps a confirmed swing high (high_sweep == True), Z-score is above +threshold, and a bearish CHoCH confirms reversal.",
+      "exit_logic": "Stop loss is placed at ATR * sl_mult distance beyond entry to allow for noise. Take profit is set at ATR * tp_mult to capture the mean reversion move back toward fair value.",
+      "filters": [
+        "Z-score extreme threshold",
+        "Bullish/Bearish CHoCH confirmation",
+        "London or NY session active"
+      ],
+      "session_filter": "london_ny",
+      "direction": "both",
+      "parameters": {
+        "swing_n": {
+          "default": 3,
+          "min": 2,
+          "max": 6
+        },
+        "zscore_period": {
+          "default": 20,
+          "min": 10,
+          "max": 50
+        },
+        "zscore_thresh": {
+          "default": 1.8,
+          "min": 1.2,
+          "max": 2.8
+        },
+        "atr_period": {
+          "default": 14,
+          "min": 7,
+          "max": 21
+        },
+        "sl_mult": {
+          "default": 1.5,
+          "min": 1.0,
+          "max": 3.0
+        },
+        "tp_mult": {
+          "default": 2.5,
+          "min": 1.5,
+          "max": 4.0
+        }
+      },
+      "expected_trades_per_year": 65,
+      "expected_failure_conditions": "Strong macroeconomic trending events where liquidity sweeps are not reversed but instead act as genuine breakouts, leading to consecutive stop-outs during sustained directional flows."
+    },
+    "code": "import numpy as np\nimport pandas as pd\n\nclass Strategy:\n    PARAMS = {\n        \"swing_n\": {\"default\": 3, \"min\": 2, \"max\": 6},\n        \"zscore_period\": {\"default\": 20, \"min\": 10, \"max\": 50},\n        \"zscore_thresh\": {\"default\": 1.8, \"min\": 1.2, \"max\": 2.8},\n        \"atr_period\": {\"default\": 14, \"min\": 7, \"max\": 21},\n        \"sl_mult\": {\"default\": 1.5, \"min\": 1.0, \"max\": 3.0},\n        \"tp_mult\": {\"default\": 2.5, \"min\": 1.5, \"max\": 4.0},\n    }\n\n    def __init__(self, params):\n        self.params = params\n\n    def on_bar(self, bars):\n        if len(bars) < 60:\n            return None\n\n        from core.indicators import zscore, atr, liquidity_sweep, choch, is_session\n\n        # Session filter: only trade during London or NY for sufficient liquidity\n        in_london = bool(is_session(bars, \"london\").iloc[-1])\n        in_ny = bool(is_session(bars, \"ny\").iloc[-1])\n        if not (in_london or in_ny):\n            return None\n\n        # Core indicators\n        zs = zscore(bars, period=self.params[\"zscore_period\"])\n        atr_series = atr(bars, period=self.params[\"atr_period\"])\n        \n        atr_val = float(atr_series.iloc[-1])\n        zs_val = float(zs.iloc[-1])\n\n        # Safety checks for NaN and positive values\n        if np.isnan(atr_val) or atr_val <= 0:\n            return None\n        if np.isnan(zs_val):\n            return None\n\n        # Market structure signals\n        high_sweep, low_sweep = liquidity_sweep(bars, swing_n=int(self.params[\"swing_n\"]))\n        bull_choch, bear_choch = choch(bars, swing_n=int(self.params[\"swing_n\"]))\n\n        hs = bool(high_sweep.iloc[-1])\n        ls = bool(low_sweep.iloc[-1])\n        b_choch = bool(bull_choch.iloc[-1])\n        s_choch = bool(bear_choch.iloc[-1])\n\n        thresh = self.params[\"zscore_thresh\"]\n\n        # Calculate safe distances\n        sl_dist = max(5.0, float(atr_val * self.params[\"sl_mult\"]))\n        tp_dist = max(1.5, float(atr_val * self.params[\"tp_mult\"]))\n\n        # Long Entry: Liquidity sweep of lows + Oversold Z-score + Bullish CHoCH\n        if ls and zs_val < -thresh and b_choch:\n            return Signal.enter_long(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        # Short Entry: Liquidity sweep of highs + Overbought Z-score + Bearish CHoCH\n        if hs and zs_val > thresh and s_choch:\n            return Signal.enter_short(sl_distance=sl_dist, tp_distance=tp_dist)\n\n        return None\n"
+  },
+  "source_hash": "bc6c8ffe8c95f8a8",
+  "static_scan": {
+    "passed": true,
+    "violations": [],
+    "banned_imports": [],
+    "summary": "Clean"
+  },
+  "train_result": {
+    "trades": [],
+    "equity_curve_summary": {
+      "start": 100000.0,
+      "end": 100000.0,
+      "points": 4792
+    },
+    "metrics": {
+      "total_trades": 0,
+      "error": "no_trades",
+      "total_net_pnl": 0.0,
+      "total_gross_pnl": 0.0,
+      "total_costs": 0.0,
+      "cost_gross_ratio": 0.0,
+      "total_return_pct": 0.0,
+      "final_equity": 100000.0,
+      "cagr": 0.0,
+      "sharpe": 0.0,
+      "sortino": 0.0,
+      "calmar": 0.0,
+      "omega": 0.0,
+      "max_drawdown": 0.0,
+      "average_drawdown": 0.0,
+      "max_drawdown_bars": 0,
+      "max_drawdown_days": 0.0,
+      "time_under_water": 0.0,
+      "ulcer_index": 0.0,
+      "recovery_factor": 0.0,
+      "exposure_pct": 0.0,
+      "buy_and_hold_return_pct": 50.06,
+      "beta": 0.0,
+      "monthly_table": {
+        "2021": {
+          "09": 0.0,
+          "10": 0.0,
+          "11": 0.0,
+          "12": 0.0
+        },
+        "2022": {
+          "01": 0.0,
+          "02": 0.0,
+          "03": 0.0,
+          "04": 0.0,
+          "05": 0.0,
+          "06": 0.0,
+          "07": 0.0,
+          "08": 0.0,
+          "09": 0.0,
+          "10": 0.0,
+          "11": 0.0,
+          "12": 0.0
+        },
+        "2023": {
+          "01": 0.0,
+          "02": 0.0,
+          "03": 0.0,
+          "04": 0.0,
+          "05": 0.0,
+          "06": 0.0,
+          "07": 0.0,
+          "08": 0.0,
+          "09": 0.0,
+          "10": 0.0,
+          "11": 0.0,
+          "12": 0.0
+        },
+        "2024": {
+          "01": 0.0,
+          "02": 0.0,
+          "03": 0.0,
+          "04": 0.0,
+          "05": 0.0,
+          "06": 0.0,
+          "07": 0.0,
+          "08": 0.0,
+          "09": 0.0
+        }
+      },
+      "yearly_table": {
+        "2021": {
+          "return_pct": 0.0,
+          "net_pnl": 0.0
+        },
+        "2022": {
+          "return_pct": 0.0,
+          "net_pnl": 0.0
+        },
+        "2023": {
+          "return_pct": 0.0,
+          "net_pnl": 0.0
+        },
+        "2024": {
+          "return_pct": 0.0,
+          "net_pnl": 0.0
+        }
+      },
+      "yearly_pnl": {
+        "2021": 0.0,
+        "2022": 0.0,
+        "2023": 0.0,
+        "2024": 0.0
+      },
+      "status": "completed"
+    },
+    "metadata": {
+      "timeframe": "4h",
+      "split": "train",
+      "file_hash": "13cca08dbe905fc78c70785dcf1939a0bd28b5ff60490e6fddce9c9e031c6fd7",
+      "slice_hash": "da62aec838ca05daf840f3ccbef1432b5c9094a7d8f465c406182998c945d74c",
+      "total_bars": 4792,
+      "live_bars": 4792,
+      "warmup_bars": 0,
+      "skipped_min_lot": 0,
+      "skipped_margin": 0,
+      "forced_closes": 0,
+      "strategy_errors": 0,
+      "first_strategy_error": null
+    },
+    "status": "completed",
+    "wall_seconds": 0.187,
+    "created_at": "2026-10-05 22:09:21.585000"
+  },
+  "train_gates": {
+    "all_passed": false,
+    "stopped_at": "minimum_sample",
+    "robustness_score": 0.0,
+    "status": "rejected",
+    "gates": [
+      {
+        "name": "policy_scan",
+        "passed": true,
+        "category": "safety",
+        "details": {
+          "passed": true,
+          "violations": [],
+          "banned_imports": [],
+          "summary": "Clean"
+        },
+        "public_summary": "passed: policy_scan"
+      },
+      {
+        "name": "smoke_run",
+        "passed": true,
+        "category": "clean_load",
+        "details": {
+          "detail": "Sandbox instantiation succeeded."
+        },
+        "public_summary": "passed: smoke_run"
+      },
+      {
+        "name": "determinism",
+        "passed": true,
+        "category": "determinism",
+        "details": {
+          "passed": true,
+          "first_diverging_bar": null,
+          "first_diverging_timestamp": null,
+          "diverging_field": null,
+          "detail": "Bit-identical signal tapes produced on two independent runs with seed=42."
+        },
+        "public_summary": "passed: determinism"
+      },
+      {
+        "name": "truncation",
+        "passed": true,
+        "category": "truncation",
+        "details": {
+          "passed": true,
+          "num_cuts": 20,
+          "first_diverging_bar": null,
+          "first_diverging_timestamp": null,
+          "diverging_field": null,
+          "detail": "Verified signal identity T_c[0..c] == T_full[0..c] across 20 cut points (tolerance 1e-9)."
+        },
+        "public_summary": "passed: truncation"
+      },
+      {
+        "name": "signal_validity",
+        "passed": true,
+        "category": "signal_valid",
+        "details": {
+          "failures": []
+        },
+        "public_summary": "passed: signal_validity"
+      },
+      {
+        "name": "train_backtest",
+        "passed": true,
+        "category": "train_simulation_success",
+        "details": {
+          "trades": 0,
+          "net_pnl": 0.0
+        },
+        "public_summary": "passed: train_backtest"
+      },
+      {
+        "name": "minimum_sample",
+        "passed": false,
+        "category": "sample_size",
+        "details": {
+          "total_trades": 0,
+          "min_trades": 80,
+          "trades_per_year": 0.0,
+          "min_tpy": 15,
+          "failures": [
+            "trades=0 < 80",
+            "trades_per_year=0.0 < 15"
+          ]
+        },
+        "public_summary": "failed: sample_size"
+      }
+    ],
+    "candidate_data": {}
+  },
+  "status": "rejected",
+  "rejected_at": "minimum_sample",
+  "started_at": "2026-10-05 22:05:29.412000",
+  "finished_at": "2026-10-05 22:09:21.585000",
+  "wall_seconds": 232.17,
+  "llm_calls": 0,
+  "llm_tokens": 0
+}
